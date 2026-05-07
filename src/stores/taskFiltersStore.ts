@@ -44,8 +44,13 @@ export const useTaskFiltersStore = create<TaskFiltersState>((set) => ({
 
 // Convert the store state + the current user's id into RPC parameters.
 // `priority` is applied client-side (rpc_list_tasks doesn't take it).
+export type TaskFilterFields = Pick<
+  TaskFiltersState,
+  'bucket' | 'branch' | 'status' | 'priority' | 'assignedTo' | 'search'
+>;
+
 export function filtersToRpcParams(
-  state: TaskFiltersState,
+  state: TaskFilterFields,
   currentUserId: string | undefined,
 ): TaskListFilters {
   const today = new Date().toISOString().slice(0, 10);
