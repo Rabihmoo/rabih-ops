@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-const BUCKET = 'task-attachments';
+const BUCKET = 'rabih-ops-attachments';
 
 const ALLOWED_MIME = new Set([
   'image/jpeg',
@@ -32,9 +32,16 @@ export function validateFile(file: File): string | null {
   return null;
 }
 
-export async function uploadTaskAttachment(taskId: string, file: File): Promise<UploadedFile> {
+// Path convention is enforced by the RPC and the storage policy:
+//   <entity_type>/<entity_id>/<uuid>-<safe-filename>
+// entity_type matches the RPC's expectation (e.g. 'task', 'follow_up').
+export async function uploadEntityAttachment(
+  entityType: string,
+  entityId: string,
+  file: File,
+): Promise<UploadedFile> {
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200);
-  const objectKey = `tasks/${taskId}/${crypto.randomUUID()}-${safeName}`;
+  const objectKey = `${entityType}/${entityId}/${crypto.randomUUID()}-${safeName}`;
   const { error } = await supabase.storage
     .from(BUCKET)
     .upload(objectKey, file, { contentType: file.type, upsert: false });
@@ -46,6 +53,11 @@ export async function uploadTaskAttachment(taskId: string, file: File): Promise<
     fileSize: file.size,
   };
 }
+
+// Backwards-compatible thin alias for the Tasks module callsite. Future modules
+// should call uploadEntityAttachment directly.
+export const uploadTaskAttachment = (taskId: string, file: File): Promise<UploadedFile> =>
+  uploadEntityAttachment('task', taskId, file);
 
 export async function getAttachmentSignedUrl(storagePath: string): Promise<string> {
   const { data, error } = await supabase.storage

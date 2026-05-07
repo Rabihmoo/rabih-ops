@@ -1,8 +1,8 @@
 import { callRpc } from './rpc';
 import type {
   TaskRow,
-  TaskCommentRow,
-  TaskAttachmentRow,
+  CommentRow,
+  AttachmentRow,
   TaskStatus,
   TaskPriority,
   TaskCategory,
@@ -47,11 +47,11 @@ export interface TaskAuditEntry {
   user_name: string;
 }
 
-export interface TaskCommentWithAuthor extends TaskCommentRow {
+export interface TaskCommentWithAuthor extends CommentRow {
   author_name: string;
 }
 
-export interface TaskAttachmentWithUploader extends TaskAttachmentRow {
+export interface TaskAttachmentWithUploader extends AttachmentRow {
   uploader_name: string;
 }
 
@@ -121,8 +121,8 @@ export async function deleteTask(taskId: string): Promise<{ success: boolean; id
   return callRpc<{ success: boolean; id: string }>('rpc_delete_task', { p_task_id: taskId });
 }
 
-export async function addTaskComment(taskId: string, body: string): Promise<TaskCommentRow> {
-  return callRpc<TaskCommentRow>('rpc_add_task_comment', { p_task_id: taskId, p_body: body });
+export async function addTaskComment(taskId: string, body: string): Promise<CommentRow> {
+  return callRpc<CommentRow>('rpc_add_task_comment', { p_task_id: taskId, p_body: body });
 }
 
 export async function deleteTaskComment(commentId: string): Promise<{ success: boolean; id: string }> {
@@ -139,8 +139,8 @@ export interface AttachFileInput {
   fileSize: number;
 }
 
-export async function attachFileToTask(input: AttachFileInput): Promise<TaskAttachmentRow> {
-  return callRpc<TaskAttachmentRow>('rpc_attach_file_to_task', {
+export async function attachFileToTask(input: AttachFileInput): Promise<AttachmentRow> {
+  return callRpc<AttachmentRow>('rpc_attach_file_to_task', {
     p_task_id: input.taskId,
     p_storage_path: input.storagePath,
     p_file_name: input.fileName,
