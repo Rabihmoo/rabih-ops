@@ -1,3 +1,6 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useTaskList } from '@/hooks/useTasks';
 import { useTaskFiltersStore } from '@/stores/taskFiltersStore';
 import { TaskFilterBar } from '@/components/tasks/TaskFilterBar';
@@ -5,14 +8,22 @@ import { TaskListItem } from '@/components/tasks/TaskListItem';
 
 export function TasksPage() {
   const { data, isLoading, error } = useTaskList();
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-4">
       <div className="flex items-baseline justify-between gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
-        <span className="text-muted-foreground text-xs">
-          {data ? `${data.length} task${data.length === 1 ? '' : 's'}` : ''}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-muted-foreground text-xs">
+            {data ? `${data.length} task${data.length === 1 ? '' : 's'}` : ''}
+          </span>
+          <Button size="sm" asChild>
+            <Link to="/tasks/new">
+              <Plus className="mr-1 h-4 w-4" /> New task
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <TaskFilterBar />
@@ -33,7 +44,7 @@ export function TasksPage() {
           <ul>
             {data.map((task) => (
               <li key={task.id}>
-                <TaskListItem task={task} />
+                <TaskListItem task={task} onSelect={(id) => navigate(`/tasks/${id}`)} />
               </li>
             ))}
           </ul>

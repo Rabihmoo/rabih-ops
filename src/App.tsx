@@ -4,6 +4,8 @@ import { AppLayout } from './components/layout/AppLayout';
 import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
 import { TasksPage } from './pages/Tasks';
+import { TaskNewPage } from './pages/TaskNew';
+import { TaskDetailPage } from './pages/TaskDetail';
 import { FollowUpsPage } from './pages/FollowUps';
 import { InspectionsPage } from './pages/Inspections';
 import { SettingsPage } from './pages/Settings';
@@ -25,6 +27,8 @@ export default function App() {
         >
           <Route path="/" element={<DashboardPage />} />
           <Route path="/tasks" element={<TasksPage />} />
+          <Route path="/tasks/new" element={<TaskNewPage />} />
+          <Route path="/tasks/:id" element={<TaskDetailPage />} />
           <Route path="/follow-ups" element={<FollowUpsPage />} />
           <Route path="/inspections" element={<InspectionsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
