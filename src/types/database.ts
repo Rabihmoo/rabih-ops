@@ -268,6 +268,99 @@ export type Database = {
           },
         ]
       }
+      task_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size: number
+          id: string
+          mime_type: string
+          storage_path: string
+          task_id: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size: number
+          id?: string
+          mime_type: string
+          storage_path: string
+          task_id: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          id?: string
+          mime_type?: string
+          storage_path?: string
+          task_id?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_attachments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_comments: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -448,6 +541,20 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_add_task_comment: {
+        Args: { p_body: string; p_task_id: string }
+        Returns: Json
+      }
+      rpc_attach_file_to_task: {
+        Args: {
+          p_file_name: string
+          p_file_size: number
+          p_mime_type: string
+          p_storage_path: string
+          p_task_id: string
+        }
+        Returns: Json
+      }
       rpc_bootstrap_user: { Args: { p_full_name?: string }; Returns: Json }
       rpc_complete_inspection: {
         Args: { p_inspection_id: string; p_result: string }
@@ -491,7 +598,22 @@ export type Database = {
         Returns: Json
       }
       rpc_delete_task: { Args: { p_task_id: string }; Returns: Json }
+      rpc_delete_task_comment: { Args: { p_comment_id: string }; Returns: Json }
+      rpc_get_task: { Args: { p_task_id: string }; Returns: Json }
       rpc_get_user_dashboard: { Args: { p_user_id?: string }; Returns: Json }
+      rpc_list_tasks: {
+        Args: {
+          p_assigned_to?: string
+          p_branch?: string
+          p_due_after?: string
+          p_due_before?: string
+          p_include_done?: boolean
+          p_limit?: number
+          p_search?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
       rpc_mark_follow_up_done: {
         Args: { p_follow_up_id: string; p_outcome?: string }
         Returns: Json
@@ -499,6 +621,10 @@ export type Database = {
       rpc_process_whatsapp_command: {
         Args: { p_command: string; p_params?: Json; p_phone: string }
         Returns: string
+      }
+      rpc_remove_task_attachment: {
+        Args: { p_attachment_id: string }
+        Returns: Json
       }
       rpc_resolve_finding: {
         Args: { p_finding_id: string; p_resolution_note?: string }
@@ -688,6 +814,8 @@ export type FindingStatus = 'open' | 'in_progress' | 'resolved' | 'escalated';
 export type UserRow = Database['public']['Tables']['users']['Row'];
 export type BranchRow = Database['public']['Tables']['branches']['Row'];
 export type TaskRow = Database['public']['Tables']['tasks']['Row'];
+export type TaskCommentRow = Database['public']['Tables']['task_comments']['Row'];
+export type TaskAttachmentRow = Database['public']['Tables']['task_attachments']['Row'];
 export type FollowUpRow = Database['public']['Tables']['follow_ups']['Row'];
 export type InspectionRow = Database['public']['Tables']['inspections']['Row'];
 export type InspectionFindingRow = Database['public']['Tables']['inspection_findings']['Row'];
