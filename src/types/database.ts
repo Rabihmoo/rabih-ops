@@ -1,5 +1,660 @@
-// Hand-written types mirroring supabase/migrations. Replace with
-// `supabase gen types typescript` output once DB is deployed.
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
+  public: {
+    Tables: {
+      audit_log: {
+        Row: {
+          action: string
+          after_state: Json | null
+          before_state: Json | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: number
+          ip_address: string | null
+          source: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          after_state?: Json | null
+          before_state?: Json | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: number
+          ip_address?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          after_state?: Json | null
+          before_state?: Json | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: number
+          ip_address?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branches: {
+        Row: {
+          code: string
+          color: string
+          created_at: string
+          name: string
+        }
+        Insert: {
+          code: string
+          color: string
+          created_at?: string
+          name: string
+        }
+        Update: {
+          code?: string
+          color?: string
+          created_at?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      follow_ups: {
+        Row: {
+          assigned_to: string | null
+          branch: string | null
+          category: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          due_date: string
+          id: string
+          notes: string | null
+          outcome: string | null
+          person: string
+          priority: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          branch?: string | null
+          category: string
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          deleted_at?: string | null
+          due_date: string
+          id?: string
+          notes?: string | null
+          outcome?: string | null
+          person: string
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          branch?: string | null
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          due_date?: string
+          id?: string
+          notes?: string | null
+          outcome?: string | null
+          person?: string
+          priority?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_ups_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_branch_fkey"
+            columns: ["branch"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "follow_ups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspection_findings: {
+        Row: {
+          action_required: string | null
+          created_at: string
+          description: string
+          follow_up_date: string | null
+          id: string
+          inspection_id: string
+          resolution_note: string | null
+          resolved_at: string | null
+          responsible: string | null
+          severity: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action_required?: string | null
+          created_at?: string
+          description: string
+          follow_up_date?: string | null
+          id?: string
+          inspection_id: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          responsible?: string | null
+          severity: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action_required?: string | null
+          created_at?: string
+          description?: string
+          follow_up_date?: string | null
+          id?: string
+          inspection_id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          responsible?: string | null
+          severity?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_findings_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspections: {
+        Row: {
+          area: string
+          branch: string
+          created_at: string
+          deleted_at: string | null
+          general_notes: string | null
+          id: string
+          inspected_by: string
+          inspection_date: string
+          result: string
+          updated_at: string
+        }
+        Insert: {
+          area: string
+          branch: string
+          created_at?: string
+          deleted_at?: string | null
+          general_notes?: string | null
+          id?: string
+          inspected_by: string
+          inspection_date: string
+          result?: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          branch?: string
+          created_at?: string
+          deleted_at?: string | null
+          general_notes?: string | null
+          id?: string
+          inspected_by?: string
+          inspection_date?: string
+          result?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspections_branch_fkey"
+            columns: ["branch"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "inspections_inspected_by_fkey"
+            columns: ["inspected_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          assigned_to: string | null
+          branch: string
+          category: string
+          completed_at: string | null
+          completion_note: string | null
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          branch: string
+          category: string
+          completed_at?: string | null
+          completion_note?: string | null
+          created_at?: string
+          created_by: string
+          deleted_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          branch?: string
+          category?: string
+          completed_at?: string | null
+          completion_note?: string | null
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_branch_fkey"
+            columns: ["branch"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          branches: string[]
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          phone: string | null
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          branches?: string[]
+          created_at?: string
+          email: string
+          full_name: string
+          id: string
+          phone?: string | null
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          branches?: string[]
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          created_at: string
+          direction: string
+          error: string | null
+          id: string
+          message_text: string
+          parsed_command: string | null
+          parsed_params: Json | null
+          phone: string
+          response_text: string | null
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          error?: string | null
+          id?: string
+          message_text: string
+          parsed_command?: string | null
+          parsed_params?: Json | null
+          phone: string
+          response_text?: string | null
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          error?: string | null
+          id?: string
+          message_text?: string
+          parsed_command?: string | null
+          parsed_params?: Json | null
+          phone?: string
+          response_text?: string | null
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      _audit: {
+        Args: {
+          p_action: string
+          p_after: Json
+          p_before: Json
+          p_entity_id: string
+          p_entity_type: string
+          p_source?: string
+        }
+        Returns: undefined
+      }
+      _can_mutate: { Args: never; Returns: boolean }
+      _require_auth: { Args: never; Returns: string }
+      _require_branch_access: { Args: { p_branch: string }; Returns: undefined }
+      current_user_can_access_branch: {
+        Args: { p_branch: string }
+        Returns: boolean
+      }
+      current_user_role: { Args: never; Returns: string }
+      rpc_add_inspection_finding: {
+        Args: {
+          p_action_required?: string
+          p_description: string
+          p_follow_up_date?: string
+          p_inspection_id: string
+          p_responsible?: string
+          p_severity: string
+        }
+        Returns: Json
+      }
+      rpc_bootstrap_user: { Args: { p_full_name?: string }; Returns: Json }
+      rpc_complete_inspection: {
+        Args: { p_inspection_id: string; p_result: string }
+        Returns: Json
+      }
+      rpc_complete_task: {
+        Args: { p_completion_note?: string; p_task_id: string }
+        Returns: Json
+      }
+      rpc_create_follow_up: {
+        Args: {
+          p_branch: string
+          p_category: string
+          p_due_date: string
+          p_notes?: string
+          p_person: string
+          p_priority?: string
+          p_title: string
+        }
+        Returns: Json
+      }
+      rpc_create_inspection: {
+        Args: {
+          p_area: string
+          p_branch: string
+          p_date: string
+          p_general_notes?: string
+        }
+        Returns: Json
+      }
+      rpc_create_task: {
+        Args: {
+          p_assigned_to?: string
+          p_branch: string
+          p_category: string
+          p_description?: string
+          p_due_date?: string
+          p_priority?: string
+          p_title: string
+        }
+        Returns: Json
+      }
+      rpc_delete_task: { Args: { p_task_id: string }; Returns: Json }
+      rpc_get_user_dashboard: { Args: { p_user_id?: string }; Returns: Json }
+      rpc_mark_follow_up_done: {
+        Args: { p_follow_up_id: string; p_outcome?: string }
+        Returns: Json
+      }
+      rpc_process_whatsapp_command: {
+        Args: { p_command: string; p_params?: Json; p_phone: string }
+        Returns: string
+      }
+      rpc_resolve_finding: {
+        Args: { p_finding_id: string; p_resolution_note?: string }
+        Returns: Json
+      }
+      rpc_snooze_follow_up: {
+        Args: {
+          p_follow_up_id: string
+          p_new_due_date: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
+      rpc_update_task: {
+        Args: { p_task_id: string; p_updates: Json }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
+
+// =========================================================
+// Convenience aliases — hand-maintained, safe to edit
+// =========================================================
+// Strict union types: Postgres CHECK constraints aren't reflected by
+// `gen types`, so the generated rows widen these to `string`. Keep these
+// unions in sync with the migrations and use them in forms/dropdowns.
 
 export type Role = 'admin' | 'ceo' | 'manager' | 'viewer';
 
@@ -29,123 +684,12 @@ export type InspectionResult = 'pending' | 'pass' | 'issues_found' | 'failed';
 export type FindingSeverity = 'minor' | 'major' | 'critical';
 export type FindingStatus = 'open' | 'in_progress' | 'resolved' | 'escalated';
 
-export interface UserRow {
-  id: string;
-  email: string;
-  full_name: string;
-  role: Role;
-  branches: string[];
-  phone: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface BranchRow {
-  code: string;
-  name: string;
-  color: string;
-  created_at: string;
-}
-
-export interface TaskRow {
-  id: string;
-  title: string;
-  description: string | null;
-  branch: string;
-  category: TaskCategory;
-  priority: TaskPriority;
-  status: TaskStatus;
-  due_date: string | null;
-  assigned_to: string | null;
-  created_by: string;
-  completed_at: string | null;
-  completion_note: string | null;
-  deleted_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface FollowUpRow {
-  id: string;
-  title: string;
-  person: string;
-  branch: string | null;
-  category: FollowUpCategory;
-  due_date: string;
-  priority: TaskPriority;
-  status: FollowUpStatus;
-  notes: string | null;
-  outcome: string | null;
-  assigned_to: string | null;
-  created_by: string;
-  completed_at: string | null;
-  deleted_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface InspectionRow {
-  id: string;
-  branch: string;
-  area: InspectionArea;
-  inspection_date: string;
-  result: InspectionResult;
-  general_notes: string | null;
-  inspected_by: string;
-  deleted_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface InspectionFindingRow {
-  id: string;
-  inspection_id: string;
-  severity: FindingSeverity;
-  description: string;
-  action_required: string | null;
-  responsible: string | null;
-  follow_up_date: string | null;
-  status: FindingStatus;
-  resolved_at: string | null;
-  resolution_note: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface AuditLogRow {
-  id: number;
-  user_id: string | null;
-  action: string;
-  entity_type: string;
-  entity_id: string | null;
-  before_state: unknown;
-  after_state: unknown;
-  ip_address: string | null;
-  source: 'web' | 'whatsapp' | 'api' | null;
-  created_at: string;
-}
-
-type TableDef<Row> = {
-  Row: Row;
-  Insert: Partial<Row>;
-  Update: Partial<Row>;
-  Relationships: [];
-};
-
-export interface Database {
-  public: {
-    Tables: {
-      users: TableDef<UserRow>;
-      branches: TableDef<BranchRow>;
-      tasks: TableDef<TaskRow>;
-      follow_ups: TableDef<FollowUpRow>;
-      inspections: TableDef<InspectionRow>;
-      inspection_findings: TableDef<InspectionFindingRow>;
-      audit_log: TableDef<AuditLogRow>;
-    };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
-    Enums: Record<string, never>;
-    CompositeTypes: Record<string, never>;
-  };
-}
+// Named row aliases — keep existing imports stable.
+export type UserRow = Database['public']['Tables']['users']['Row'];
+export type BranchRow = Database['public']['Tables']['branches']['Row'];
+export type TaskRow = Database['public']['Tables']['tasks']['Row'];
+export type FollowUpRow = Database['public']['Tables']['follow_ups']['Row'];
+export type InspectionRow = Database['public']['Tables']['inspections']['Row'];
+export type InspectionFindingRow = Database['public']['Tables']['inspection_findings']['Row'];
+export type AuditLogRow = Database['public']['Tables']['audit_log']['Row'];
+export type WhatsappMessageRow = Database['public']['Tables']['whatsapp_messages']['Row'];
