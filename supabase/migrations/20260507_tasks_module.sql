@@ -95,64 +95,13 @@ create policy task_attachments_select_visible on public.task_attachments
   );
 
 -- =========================================================
--- Storage bucket: task-attachments
+-- Storage bucket — REMOVED in 20260508/20260509 refactor
 -- =========================================================
-
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values (
-  'task-attachments',
-  'task-attachments',
-  false,
-  10485760,
-  array[
-    'image/jpeg','image/png','image/webp','image/gif',
-    'application/pdf',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'text/plain','text/csv'
-  ]
-)
-on conflict (id) do update
-  set public             = excluded.public,
-      file_size_limit    = excluded.file_size_limit,
-      allowed_mime_types = excluded.allowed_mime_types;
-
--- Storage RLS: path convention tasks/<task_id>/<file>. Authenticated users can
--- upload to a path under a task they have branch access to, and read attachments
--- only via a metadata row they can already see (which already enforces branch).
-drop policy if exists task_attachments_storage_select on storage.objects;
-create policy task_attachments_storage_select on storage.objects
-  for select to authenticated
-  using (
-    bucket_id = 'task-attachments'
-    and exists (
-      select 1
-        from public.task_attachments a
-        join public.tasks t on t.id = a.task_id
-       where a.storage_path = name
-         and t.deleted_at is null
-         and public.current_user_can_access_branch(t.branch)
-    )
-  );
-
-drop policy if exists task_attachments_storage_insert on storage.objects;
-create policy task_attachments_storage_insert on storage.objects
-  for insert to authenticated
-  with check (
-    bucket_id = 'task-attachments'
-    and split_part(name, '/', 1) = 'tasks'
-    and exists (
-      select 1 from public.tasks t
-      where t.id = (split_part(name, '/', 2))::uuid
-        and t.deleted_at is null
-        and public.current_user_can_access_branch(t.branch)
-    )
-  );
-
--- No DELETE policy on storage.objects: orphan files are accepted for V1
--- (sweep job ships in Phase 9). RPC removes the metadata row only.
+-- The task-attachments bucket and its storage.objects policies have been
+-- replaced by the polymorphic rabih-ops-attachments bucket (see migration
+-- 20260508_shared_comments_attachments.sql). The original CREATE for the
+-- task-attachments bucket was removed from this file so re-runs of db:push
+-- don't resurrect it; the bucket itself was deleted via Storage REST API.
 
 -- =========================================================
 -- RPC: rpc_list_tasks
