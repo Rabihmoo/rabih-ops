@@ -8,6 +8,7 @@ import { TaskForm } from '@/components/tasks/TaskForm';
 import { TaskAuditList } from '@/components/tasks/TaskAuditList';
 import { CommentList } from '@/components/tasks/CommentList';
 import { AttachmentList } from '@/components/tasks/AttachmentList';
+import { useCanMutate } from '@/hooks/usePermissions';
 import {
   useTaskDetail,
   useUpdateTask,
@@ -26,6 +27,7 @@ export function TaskDetailPage() {
   const update = useUpdateTask();
   const complete = useCompleteTask();
   const remove = useDeleteTask();
+  const canMutate = useCanMutate();
 
   const [editing, setEditing] = useState(false);
 
@@ -80,35 +82,44 @@ export function TaskDetailPage() {
 
       <div className="flex items-start justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{task.title}</h1>
-        <div className="flex shrink-0 gap-2">
-          {!editing && task.status !== 'done' && (
-            <Button
-              size="sm"
-              onClick={handleComplete}
-              disabled={complete.isPending}
-            >
-              {complete.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              Mark done
-            </Button>
-          )}
-          {!editing && (
-            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-              Edit
-            </Button>
-          )}
-          {!editing && (
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={remove.isPending}
-            >
-              Delete
-            </Button>
-          )}
-        </div>
+        {canMutate && (
+          <div className="flex shrink-0 gap-2">
+            {!editing && task.status !== 'done' && (
+              <Button
+                size="sm"
+                onClick={handleComplete}
+                disabled={complete.isPending}
+                data-testid="task-complete-button"
+              >
+                {complete.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Mark done
+              </Button>
+            )}
+            {!editing && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditing(true)}
+                data-testid="task-edit-button"
+              >
+                Edit
+              </Button>
+            )}
+            {!editing && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={remove.isPending}
+                data-testid="task-delete-button"
+              >
+                Delete
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {editing ? (

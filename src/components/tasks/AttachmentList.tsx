@@ -7,6 +7,7 @@ import {
   useAttachFileToTask,
   useRemoveTaskAttachment,
 } from '@/hooks/useTasks';
+import { useCanMutate } from '@/hooks/usePermissions';
 import {
   getAttachmentSignedUrl,
   uploadTaskAttachment,
@@ -33,11 +34,7 @@ export function AttachmentList({
   const remove = useRemoveTaskAttachment();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-
-  const canMutate =
-    profile?.role === 'admin' ||
-    profile?.role === 'ceo' ||
-    profile?.role === 'manager';
+  const canMutate = useCanMutate();
 
   const handlePick = () => fileRef.current?.click();
 
@@ -143,7 +140,7 @@ export function AttachmentList({
       )}
 
       {canMutate && (
-        <div className="space-y-1">
+        <div className="space-y-1" data-testid="attachment-uploader">
           <input
             ref={fileRef}
             type="file"

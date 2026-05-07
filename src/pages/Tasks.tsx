@@ -3,12 +3,14 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTaskList } from '@/hooks/useTasks';
 import { useTaskFiltersStore } from '@/stores/taskFiltersStore';
+import { useCanMutate } from '@/hooks/usePermissions';
 import { TaskFilterBar } from '@/components/tasks/TaskFilterBar';
 import { TaskListItem } from '@/components/tasks/TaskListItem';
 
 export function TasksPage() {
   const { data, isLoading, error } = useTaskList();
   const navigate = useNavigate();
+  const canMutate = useCanMutate();
 
   return (
     <div className="space-y-4">
@@ -18,11 +20,13 @@ export function TasksPage() {
           <span className="text-muted-foreground text-xs">
             {data ? `${data.length} task${data.length === 1 ? '' : 's'}` : ''}
           </span>
-          <Button size="sm" asChild>
-            <Link to="/tasks/new">
-              <Plus className="mr-1 h-4 w-4" /> New task
-            </Link>
-          </Button>
+          {canMutate && (
+            <Button size="sm" asChild>
+              <Link to="/tasks/new" data-testid="new-task-button">
+                <Plus className="mr-1 h-4 w-4" /> New task
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 

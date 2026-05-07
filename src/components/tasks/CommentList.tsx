@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toaster';
 import { useAuthStore } from '@/stores/authStore';
 import { useAddTaskComment, useDeleteTaskComment } from '@/hooks/useTasks';
+import { useCanMutate } from '@/hooks/usePermissions';
 import type { TaskCommentWithAuthor } from '@/lib/tasks';
 
 function relativeTime(iso: string): string {
@@ -30,11 +31,7 @@ export function CommentList({
   const add = useAddTaskComment();
   const remove = useDeleteTaskComment();
   const [body, setBody] = useState('');
-
-  const canMutate =
-    profile?.role === 'admin' ||
-    profile?.role === 'ceo' ||
-    profile?.role === 'manager';
+  const canMutate = useCanMutate();
 
   const handleAdd = async () => {
     const trimmed = body.trim();
@@ -104,7 +101,7 @@ export function CommentList({
       )}
 
       {canMutate && (
-        <div className="space-y-2">
+        <div className="space-y-2" data-testid="comment-composer">
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
