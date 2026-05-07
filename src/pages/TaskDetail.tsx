@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/toaster';
 import { TaskForm } from '@/components/tasks/TaskForm';
 import { TaskAuditList } from '@/components/tasks/TaskAuditList';
+import { CommentList } from '@/components/tasks/CommentList';
+import { AttachmentList } from '@/components/tasks/AttachmentList';
 import {
   useTaskDetail,
   useUpdateTask,
@@ -47,7 +49,7 @@ export function TaskDetailPage() {
     );
   }
   if (!data) return null;
-  const { task, audit } = data;
+  const { task, audit, comments, attachments } = data;
 
   const handleUpdate = async (payload: UpdateTaskInput) => {
     await update.mutateAsync({ taskId, updates: payload });
@@ -156,6 +158,24 @@ export function TaskDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Comments</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CommentList taskId={taskId} comments={comments} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Attachments</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AttachmentList taskId={taskId} attachments={attachments} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
