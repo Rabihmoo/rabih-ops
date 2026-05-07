@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      attachments: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          file_name: string
+          file_size: number
+          id: string
+          mime_type: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          file_name: string
+          file_size: number
+          id?: string
+          mime_type: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          file_name?: string
+          file_size?: number
+          id?: string
+          mime_type?: string
+          storage_path?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -81,6 +125,47 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      comments: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          deleted_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       follow_ups: {
         Row: {
@@ -268,99 +353,6 @@ export type Database = {
           },
         ]
       }
-      task_attachments: {
-        Row: {
-          created_at: string
-          file_name: string
-          file_size: number
-          id: string
-          mime_type: string
-          storage_path: string
-          task_id: string
-          uploaded_by: string
-        }
-        Insert: {
-          created_at?: string
-          file_name: string
-          file_size: number
-          id?: string
-          mime_type: string
-          storage_path: string
-          task_id: string
-          uploaded_by: string
-        }
-        Update: {
-          created_at?: string
-          file_name?: string
-          file_size?: number
-          id?: string
-          mime_type?: string
-          storage_path?: string
-          task_id?: string
-          uploaded_by?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_attachments_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_attachments_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      task_comments: {
-        Row: {
-          author_id: string
-          body: string
-          created_at: string
-          deleted_at: string | null
-          id: string
-          task_id: string
-          updated_at: string
-        }
-        Insert: {
-          author_id: string
-          body: string
-          created_at?: string
-          deleted_at?: string | null
-          id?: string
-          task_id: string
-          updated_at?: string
-        }
-        Update: {
-          author_id?: string
-          body?: string
-          created_at?: string
-          deleted_at?: string | null
-          id?: string
-          task_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_comments_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_comments_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -511,6 +503,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _add_attachment: {
+        Args: {
+          p_entity_id: string
+          p_entity_type: string
+          p_file_name: string
+          p_file_size: number
+          p_mime_type: string
+          p_storage_path: string
+        }
+        Returns: Json
+      }
+      _add_comment: {
+        Args: { p_body: string; p_entity_id: string; p_entity_type: string }
+        Returns: Json
+      }
       _audit: {
         Args: {
           p_action: string
@@ -522,7 +529,13 @@ export type Database = {
         }
         Returns: undefined
       }
+      _can_access_entity: {
+        Args: { p_entity_id: string; p_entity_type: string }
+        Returns: boolean
+      }
       _can_mutate: { Args: never; Returns: boolean }
+      _delete_comment: { Args: { p_comment_id: string }; Returns: Json }
+      _remove_attachment: { Args: { p_attachment_id: string }; Returns: Json }
       _require_auth: { Args: never; Returns: string }
       _require_branch_access: { Args: { p_branch: string }; Returns: undefined }
       current_user_can_access_branch: {
@@ -810,14 +823,17 @@ export type InspectionResult = 'pending' | 'pass' | 'issues_found' | 'failed';
 export type FindingSeverity = 'minor' | 'major' | 'critical';
 export type FindingStatus = 'open' | 'in_progress' | 'resolved' | 'escalated';
 
+// Polymorphic entity_type literal — extend as new modules ship.
+export type EntityType = 'task' | 'follow_up' | 'inspection';
+
 // Named row aliases — keep existing imports stable.
 export type UserRow = Database['public']['Tables']['users']['Row'];
 export type BranchRow = Database['public']['Tables']['branches']['Row'];
 export type TaskRow = Database['public']['Tables']['tasks']['Row'];
-export type TaskCommentRow = Database['public']['Tables']['task_comments']['Row'];
-export type TaskAttachmentRow = Database['public']['Tables']['task_attachments']['Row'];
 export type FollowUpRow = Database['public']['Tables']['follow_ups']['Row'];
 export type InspectionRow = Database['public']['Tables']['inspections']['Row'];
 export type InspectionFindingRow = Database['public']['Tables']['inspection_findings']['Row'];
+export type CommentRow = Database['public']['Tables']['comments']['Row'];
+export type AttachmentRow = Database['public']['Tables']['attachments']['Row'];
 export type AuditLogRow = Database['public']['Tables']['audit_log']['Row'];
 export type WhatsappMessageRow = Database['public']['Tables']['whatsapp_messages']['Row'];
