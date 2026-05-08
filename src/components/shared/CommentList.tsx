@@ -3,9 +3,12 @@ import { Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toaster';
 import { useAuthStore } from '@/stores/authStore';
-import { useAddTaskComment, useDeleteTaskComment } from '@/hooks/useTasks';
 import { useCanMutate } from '@/hooks/usePermissions';
-import type { TaskCommentWithAuthor } from '@/lib/tasks';
+import type { CommentRow } from '@/types/database';
+
+export interface CommentWithAuthor extends CommentRow {
+  author_name: string;
+}
 
 function relativeTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -20,16 +23,22 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
+// Entity-agnostic comment list. Callers wire in onAdd / onDelete from their
+// module's mutation hooks, e.g. useAddTaskComment / useAddFollowUpComment.
 export function CommentList({
-  taskId,
   comments,
+  onAdd,
+  onDelete,
+  isAdding,
+  isDeleting,
 }: {
-  taskId: string;
-  comments: TaskCommentWithAuthor[];
+  comments: CommentWithAuthor[];
+  onAdd: (body: string) => Promise<unknown>;
+  onDelete: (commentId: string) => Promise<unknown>;
+  isAdding?: boolean;
+  isDeleting?: boolean;
 }) {
   const profile = useAuthStore((s) => s.profile);
-  const add = useAddTaskComment();
-  const remove = useDeleteTaskComment();
   const [body, setBody] = useState('');
   const canMutate = useCanMutate();
 
@@ -37,7 +46,7 @@ export function CommentList({
     const trimmed = body.trim();
     if (!trimmed) return;
     try {
-      await add.mutateAsync({ taskId, body: trimmed });
+      await onAdd(trimmed);
       setBody('');
     } catch (err) {
       toast({
@@ -51,7 +60,7 @@ export function CommentList({
   const handleDelete = async (commentId: string) => {
     if (!confirm('Delete this comment?')) return;
     try {
-      await remove.mutateAsync({ commentId, taskId });
+      await onDelete(commentId);
     } catch (err) {
       toast({
         title: 'Could not delete comment',
@@ -86,7 +95,8 @@ export function CommentList({
                     <button
                       type="button"
                       onClick={() => handleDelete(c.id)}
-                      className="text-muted-foreground hover:text-destructive"
+                      disabled={isDeleting}
+                      className="text-muted-foreground hover:text-destructive disabled:opacity-50"
                       aria-label="Delete comment"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -110,12 +120,8 @@ export function CommentList({
             className="bg-card border-border focus:ring-ring w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2"
             maxLength={5000}
           />
-          <Button
-            size="sm"
-            disabled={!body.trim() || add.isPending}
-            onClick={handleAdd}
-          >
-            {add.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button size="sm" disabled={!body.trim() || isAdding} onClick={handleAdd}>
+            {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Post comment
           </Button>
         </div>

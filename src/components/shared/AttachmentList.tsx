@@ -3,18 +3,19 @@ import { Loader2, Paperclip, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toaster';
 import { useAuthStore } from '@/stores/authStore';
-import {
-  useAttachFileToTask,
-  useRemoveTaskAttachment,
-} from '@/hooks/useTasks';
 import { useCanMutate } from '@/hooks/usePermissions';
 import {
   getAttachmentSignedUrl,
-  uploadTaskAttachment,
+  uploadEntityAttachment,
   validateFile,
   MAX_FILE_BYTES,
+  type UploadedFile,
 } from '@/lib/storage';
-import type { TaskAttachmentWithUploader } from '@/lib/tasks';
+import type { AttachmentRow, EntityType } from '@/types/database';
+
+export interface AttachmentWithUploader extends AttachmentRow {
+  uploader_name: string;
+}
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -22,16 +23,28 @@ function formatBytes(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
+// Entity-agnostic attachment list. The component owns the Storage upload
+// (because the path convention is universal) and emits onAttach with the
+// resulting metadata; the caller wires onAttach into their module's
+// rpc_attach_file_to_<entity>. onRemove takes the attachment id.
 export function AttachmentList({
-  taskId,
+  entityType,
+  entityId,
   attachments,
+  onAttach,
+  onRemove,
+  isAttaching,
+  isRemoving,
 }: {
-  taskId: string;
-  attachments: TaskAttachmentWithUploader[];
+  entityType: EntityType;
+  entityId: string;
+  attachments: AttachmentWithUploader[];
+  onAttach: (uploaded: UploadedFile) => Promise<unknown>;
+  onRemove: (attachmentId: string) => Promise<unknown>;
+  isAttaching?: boolean;
+  isRemoving?: boolean;
 }) {
   const profile = useAuthStore((s) => s.profile);
-  const attach = useAttachFileToTask();
-  const remove = useRemoveTaskAttachment();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const canMutate = useCanMutate();
@@ -40,7 +53,7 @@ export function AttachmentList({
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    e.target.value = ''; // allow re-uploading the same file later
+    e.target.value = '';
     if (!file) return;
     const err = validateFile(file);
     if (err) {
@@ -49,14 +62,8 @@ export function AttachmentList({
     }
     setUploading(true);
     try {
-      const uploaded = await uploadTaskAttachment(taskId, file);
-      await attach.mutateAsync({
-        taskId,
-        storagePath: uploaded.storagePath,
-        fileName: uploaded.fileName,
-        mimeType: uploaded.mimeType,
-        fileSize: uploaded.fileSize,
-      });
+      const uploaded = await uploadEntityAttachment(entityType, entityId, file);
+      await onAttach(uploaded);
       toast({ title: 'File uploaded' });
     } catch (err2) {
       toast({
@@ -85,7 +92,7 @@ export function AttachmentList({
   const handleRemove = async (attachmentId: string) => {
     if (!confirm('Remove this attachment?')) return;
     try {
-      await remove.mutateAsync({ attachmentId, taskId });
+      await onRemove(attachmentId);
     } catch (err) {
       toast({
         title: 'Could not remove attachment',
@@ -94,6 +101,8 @@ export function AttachmentList({
       });
     }
   };
+
+  const busy = uploading || !!isAttaching;
 
   return (
     <div className="space-y-3">
@@ -127,7 +136,8 @@ export function AttachmentList({
                   <button
                     type="button"
                     onClick={() => handleRemove(a.id)}
-                    className="text-muted-foreground hover:text-destructive shrink-0"
+                    disabled={isRemoving}
+                    className="text-muted-foreground hover:text-destructive shrink-0 disabled:opacity-50"
                     aria-label="Remove attachment"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -148,8 +158,8 @@ export function AttachmentList({
             onChange={handleFile}
             accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
           />
-          <Button size="sm" variant="outline" onClick={handlePick} disabled={uploading}>
-            {uploading ? (
+          <Button size="sm" variant="outline" onClick={handlePick} disabled={busy}>
+            {busy ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Paperclip className="mr-2 h-4 w-4" />

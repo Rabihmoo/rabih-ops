@@ -1,14 +1,25 @@
-import type { TaskAuditEntry } from '@/lib/tasks';
+// Generic audit timeline used by every module's detail view.
+export interface AuditEntry {
+  id: number;
+  action: string;
+  before_state: unknown;
+  after_state: unknown;
+  created_at: string;
+  user_id: string | null;
+  user_name: string;
+}
 
 const ACTION_VERB: Record<string, string> = {
   create: 'Created',
   update: 'Updated',
   complete: 'Completed',
+  snooze: 'Snoozed',
   delete: 'Deleted',
   comment: 'Added a comment',
   comment_delete: 'Removed a comment',
   attach: 'Attached a file',
   detach: 'Removed an attachment',
+  resolve: 'Resolved',
 };
 
 const TRACKED_FIELDS = [
@@ -20,6 +31,10 @@ const TRACKED_FIELDS = [
   'branch',
   'assigned_to',
   'due_date',
+  'snoozed_until',
+  'task_id',
+  'person',
+  'outcome',
 ] as const;
 
 function diffSummary(before: unknown, after: unknown): string[] {
@@ -55,7 +70,7 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export function TaskAuditList({ entries }: { entries: TaskAuditEntry[] }) {
+export function AuditList({ entries }: { entries: AuditEntry[] }) {
   if (entries.length === 0) {
     return <div className="text-muted-foreground text-sm">No audit entries yet.</div>;
   }
@@ -63,16 +78,17 @@ export function TaskAuditList({ entries }: { entries: TaskAuditEntry[] }) {
     <ol className="space-y-3">
       {entries.map((e) => {
         const verb = ACTION_VERB[e.action] ?? e.action;
-        const diff = e.action === 'update' ? diffSummary(e.before_state, e.after_state) : [];
+        const diff =
+          e.action === 'update' || e.action === 'snooze'
+            ? diffSummary(e.before_state, e.after_state)
+            : [];
         return (
           <li key={e.id} className="border-border border-l-2 pl-3">
             <div className="text-sm">
               <span className="font-medium">{e.user_name}</span>{' '}
               <span className="text-muted-foreground">{verb}</span>
             </div>
-            <div className="text-muted-foreground text-xs">
-              {relativeTime(e.created_at)}
-            </div>
+            <div className="text-muted-foreground text-xs">{relativeTime(e.created_at)}</div>
             {diff.length > 0 && (
               <ul className="text-muted-foreground mt-1 space-y-0.5 text-xs">
                 {diff.map((d) => (

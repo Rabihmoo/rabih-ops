@@ -5,15 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/toaster';
 import { TaskForm } from '@/components/tasks/TaskForm';
-import { TaskAuditList } from '@/components/tasks/TaskAuditList';
-import { CommentList } from '@/components/tasks/CommentList';
-import { AttachmentList } from '@/components/tasks/AttachmentList';
+import { AuditList } from '@/components/shared/AuditList';
+import { CommentList } from '@/components/shared/CommentList';
+import { AttachmentList } from '@/components/shared/AttachmentList';
 import { useCanMutate } from '@/hooks/usePermissions';
 import {
   useTaskDetail,
   useUpdateTask,
   useCompleteTask,
   useDeleteTask,
+  useAddTaskComment,
+  useDeleteTaskComment,
+  useAttachFileToTask,
+  useRemoveTaskAttachment,
 } from '@/hooks/useTasks';
 import type { UpdateTaskInput } from '@/lib/tasks';
 import type { TaskStatus } from '@/types/database';
@@ -27,6 +31,10 @@ export function TaskDetailPage() {
   const update = useUpdateTask();
   const complete = useCompleteTask();
   const remove = useDeleteTask();
+  const addComment = useAddTaskComment();
+  const deleteComment = useDeleteTaskComment();
+  const attach = useAttachFileToTask();
+  const removeAttachment = useRemoveTaskAttachment();
   const canMutate = useCanMutate();
 
   const [editing, setEditing] = useState(false);
@@ -175,7 +183,13 @@ export function TaskDetailPage() {
           <CardTitle className="text-base">Comments</CardTitle>
         </CardHeader>
         <CardContent>
-          <CommentList taskId={taskId} comments={comments} />
+          <CommentList
+            comments={comments}
+            onAdd={(body) => addComment.mutateAsync({ taskId, body })}
+            onDelete={(commentId) => deleteComment.mutateAsync({ commentId, taskId })}
+            isAdding={addComment.isPending}
+            isDeleting={deleteComment.isPending}
+          />
         </CardContent>
       </Card>
 
@@ -184,7 +198,25 @@ export function TaskDetailPage() {
           <CardTitle className="text-base">Attachments</CardTitle>
         </CardHeader>
         <CardContent>
-          <AttachmentList taskId={taskId} attachments={attachments} />
+          <AttachmentList
+            entityType="task"
+            entityId={taskId}
+            attachments={attachments}
+            onAttach={(uploaded) =>
+              attach.mutateAsync({
+                taskId,
+                storagePath: uploaded.storagePath,
+                fileName: uploaded.fileName,
+                mimeType: uploaded.mimeType,
+                fileSize: uploaded.fileSize,
+              })
+            }
+            onRemove={(attachmentId) =>
+              removeAttachment.mutateAsync({ attachmentId, taskId })
+            }
+            isAttaching={attach.isPending}
+            isRemoving={removeAttachment.isPending}
+          />
         </CardContent>
       </Card>
 
@@ -193,7 +225,7 @@ export function TaskDetailPage() {
           <CardTitle className="text-base">Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          <TaskAuditList entries={audit} />
+          <AuditList entries={audit} />
         </CardContent>
       </Card>
     </div>
