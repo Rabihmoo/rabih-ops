@@ -1,4 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+
+// Load .env and .env.local so the auth fixture can read the Supabase secrets
+// during local runs. In CI these values come from the workflow `env:` block
+// (GitHub Actions secrets) so dotenv has nothing to override.
+dotenv.config({ path: '.env' });
+dotenv.config({ path: '.env.local', override: true });
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -12,8 +19,21 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile-chrome', use: { ...devices['Pixel 5'] } },
+    {
+      name: 'setup',
+      testDir: './tests/fixtures',
+      testMatch: /auth\.setup\.ts/,
+    },
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'mobile-chrome',
+      use: { ...devices['Pixel 5'] },
+      dependencies: ['setup'],
+    },
   ],
   webServer: {
     command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4173',

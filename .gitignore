@@ -14,3 +14,4 @@ test-results/
 .cache/
 *.tsbuildinfo
 supabase/.temp/
+tests/fixtures/.auth/
