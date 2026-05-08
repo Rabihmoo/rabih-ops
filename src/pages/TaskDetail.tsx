@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/toaster';
@@ -8,6 +8,7 @@ import { TaskForm } from '@/components/tasks/TaskForm';
 import { AuditList } from '@/components/shared/AuditList';
 import { CommentList } from '@/components/shared/CommentList';
 import { AttachmentList } from '@/components/shared/AttachmentList';
+import { FollowUpListItem } from '@/components/follow-ups/FollowUpListItem';
 import { useCanMutate } from '@/hooks/usePermissions';
 import {
   useTaskDetail,
@@ -19,6 +20,7 @@ import {
   useAttachFileToTask,
   useRemoveTaskAttachment,
 } from '@/hooks/useTasks';
+import { useFollowUpsForTask } from '@/hooks/useFollowUps';
 import type { UpdateTaskInput } from '@/lib/tasks';
 import type { TaskStatus } from '@/types/database';
 
@@ -35,6 +37,7 @@ export function TaskDetailPage() {
   const deleteComment = useDeleteTaskComment();
   const attach = useAttachFileToTask();
   const removeAttachment = useRemoveTaskAttachment();
+  const followUps = useFollowUpsForTask(taskId);
   const canMutate = useCanMutate();
 
   const [editing, setEditing] = useState(false);
@@ -177,6 +180,42 @@ export function TaskDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base">Follow-ups</CardTitle>
+          {canMutate && (
+            <Button size="sm" variant="outline" asChild>
+              <Link
+                to={`/follow-ups/new?task_id=${taskId}`}
+                data-testid="add-follow-up-button"
+              >
+                <Plus className="mr-1 h-4 w-4" /> Add follow-up
+              </Link>
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {followUps.isLoading && (
+            <div className="text-muted-foreground text-sm">Loading…</div>
+          )}
+          {followUps.data && followUps.data.length === 0 && (
+            <div className="text-muted-foreground text-sm">No follow-ups linked yet.</div>
+          )}
+          {followUps.data && followUps.data.length > 0 && (
+            <ul className="-mx-6">
+              {followUps.data.map((fu) => (
+                <li key={fu.id}>
+                  <FollowUpListItem
+                    followUp={fu}
+                    onSelect={(id) => navigate(`/follow-ups/${id}`)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
