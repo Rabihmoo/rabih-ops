@@ -176,13 +176,15 @@ export type Database = {
           created_at: string
           created_by: string
           deleted_at: string | null
+          description: string | null
           due_date: string
           id: string
-          notes: string | null
           outcome: string | null
-          person: string
+          person: string | null
           priority: string
+          snoozed_until: string | null
           status: string
+          task_id: string | null
           title: string
           updated_at: string
         }
@@ -194,13 +196,15 @@ export type Database = {
           created_at?: string
           created_by: string
           deleted_at?: string | null
+          description?: string | null
           due_date: string
           id?: string
-          notes?: string | null
           outcome?: string | null
-          person: string
+          person?: string | null
           priority?: string
+          snoozed_until?: string | null
           status?: string
+          task_id?: string | null
           title: string
           updated_at?: string
         }
@@ -212,13 +216,15 @@ export type Database = {
           created_at?: string
           created_by?: string
           deleted_at?: string | null
+          description?: string | null
           due_date?: string
           id?: string
-          notes?: string | null
           outcome?: string | null
-          person?: string
+          person?: string | null
           priority?: string
+          snoozed_until?: string | null
           status?: string
+          task_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -242,6 +248,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
@@ -543,6 +556,10 @@ export type Database = {
         Returns: boolean
       }
       current_user_role: { Args: never; Returns: string }
+      rpc_add_follow_up_comment: {
+        Args: { p_body: string; p_follow_up_id: string }
+        Returns: Json
+      }
       rpc_add_inspection_finding: {
         Args: {
           p_action_required?: string
@@ -556,6 +573,16 @@ export type Database = {
       }
       rpc_add_task_comment: {
         Args: { p_body: string; p_task_id: string }
+        Returns: Json
+      }
+      rpc_attach_file_to_follow_up: {
+        Args: {
+          p_file_name: string
+          p_file_size: number
+          p_follow_up_id: string
+          p_mime_type: string
+          p_storage_path: string
+        }
         Returns: Json
       }
       rpc_attach_file_to_task: {
@@ -579,12 +606,14 @@ export type Database = {
       }
       rpc_create_follow_up: {
         Args: {
-          p_branch: string
+          p_assigned_to?: string
+          p_branch?: string
           p_category: string
+          p_description?: string
           p_due_date: string
-          p_notes?: string
-          p_person: string
+          p_person?: string
           p_priority?: string
+          p_task_id?: string
           p_title: string
         }
         Returns: Json
@@ -610,10 +639,30 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_delete_follow_up_comment: {
+        Args: { p_comment_id: string }
+        Returns: Json
+      }
       rpc_delete_task: { Args: { p_task_id: string }; Returns: Json }
       rpc_delete_task_comment: { Args: { p_comment_id: string }; Returns: Json }
+      rpc_get_follow_up: { Args: { p_follow_up_id: string }; Returns: Json }
       rpc_get_task: { Args: { p_task_id: string }; Returns: Json }
       rpc_get_user_dashboard: { Args: { p_user_id?: string }; Returns: Json }
+      rpc_list_follow_ups: {
+        Args: {
+          p_assigned_to?: string
+          p_branch?: string
+          p_category?: string
+          p_due_after?: string
+          p_due_before?: string
+          p_include_done?: boolean
+          p_limit?: number
+          p_search?: string
+          p_status?: string
+          p_task_id?: string
+        }
+        Returns: Json
+      }
       rpc_list_tasks: {
         Args: {
           p_assigned_to?: string
@@ -635,6 +684,10 @@ export type Database = {
         Args: { p_command: string; p_params?: Json; p_phone: string }
         Returns: string
       }
+      rpc_remove_follow_up_attachment: {
+        Args: { p_attachment_id: string }
+        Returns: Json
+      }
       rpc_remove_task_attachment: {
         Args: { p_attachment_id: string }
         Returns: Json
@@ -649,6 +702,10 @@ export type Database = {
           p_new_due_date: string
           p_reason?: string
         }
+        Returns: Json
+      }
+      rpc_update_follow_up: {
+        Args: { p_follow_up_id: string; p_updates: Json }
         Returns: Json
       }
       rpc_update_task: {
