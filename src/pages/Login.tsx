@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,9 +24,9 @@ export function LoginPage() {
     defaultValues: { email: '' },
   });
 
-  if (session) {
-    navigate('/', { replace: true });
-  }
+  useEffect(() => {
+    if (session) navigate('/', { replace: true });
+  }, [session, navigate]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
