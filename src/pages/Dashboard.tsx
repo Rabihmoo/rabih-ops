@@ -3,9 +3,12 @@ import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowRight,
+  Bell,
+  CircleDollarSign,
   Clock,
   ListChecks,
   Loader2,
+  PackageCheck,
   PhoneCall,
   ShieldAlert,
   ShieldCheck,
@@ -21,9 +24,22 @@ import { useFollowUpFiltersStore } from '@/stores/followUpFiltersStore';
 import { listTasks, type TaskListFilters } from '@/lib/tasks';
 import { listFollowUps, effectiveDueDate } from '@/lib/follow-ups';
 import { listCriticalFindings, type CriticalFinding } from '@/lib/inspections';
+import {
+  formatCurrency,
+  formatQty,
+  listPurchaseDashboard,
+  type PendingDelivery,
+  type PurchaseReminder,
+  type UnpaidPurchase,
+} from '@/lib/purchase-requests';
 import { BRANCHES, type BranchCode } from '@/lib/branches';
 import { EmptyState } from '@/components/shared/EmptyState';
-import type { FollowUpRow, TaskPriority, TaskRow } from '@/types/database';
+import type {
+  Currency,
+  FollowUpRow,
+  TaskPriority,
+  TaskRow,
+} from '@/types/database';
 
 // =========================================================
 // Data hooks (unchanged from prior dashboard)
@@ -97,6 +113,13 @@ function useDashboardCriticalFindings() {
   return useQuery({
     queryKey: ['inspections', 'dashboard', 'critical-findings'],
     queryFn: () => listCriticalFindings(20),
+  });
+}
+
+function useDashboardPurchases() {
+  return useQuery({
+    queryKey: ['purchases', 'dashboard'],
+    queryFn: () => listPurchaseDashboard(20),
   });
 }
 
@@ -430,6 +453,10 @@ export function DashboardPage() {
   const waiting = useBucketTasks('waiting', userId);
   const followUpsToday = useFollowUpsDueToday();
   const criticalFindings = useDashboardCriticalFindings();
+  const purchases = useDashboardPurchases();
+  const pendingDeliveries = purchases.data?.pending_deliveries ?? [];
+  const unpaidPurchases = purchases.data?.unpaid ?? [];
+  const purchaseReminders = purchases.data?.reminders_today ?? [];
 
   const displayName = profile?.full_name ?? session?.user.email?.split('@')[0] ?? 'there';
   const greeting = timeOfDayGreeting();
@@ -451,13 +478,17 @@ export function DashboardPage() {
     !overdue.isLoading &&
     !today.isLoading &&
     !followUpsToday.isLoading &&
-    !criticalFindings.isLoading;
+    !criticalFindings.isLoading &&
+    !purchases.isLoading;
   const allClear =
     ready &&
     (overdue.data?.length ?? 0) === 0 &&
     (today.data?.length ?? 0) === 0 &&
     (followUpsToday.data?.length ?? 0) === 0 &&
-    (criticalFindings.data?.length ?? 0) === 0;
+    (criticalFindings.data?.length ?? 0) === 0 &&
+    pendingDeliveries.length === 0 &&
+    unpaidPurchases.length === 0 &&
+    purchaseReminders.length === 0;
 
   return (
     <div className="space-y-6">
@@ -555,6 +586,60 @@ export function DashboardPage() {
             />
           )}
 
+          {(pendingDeliveries.length > 0 ||
+            unpaidPurchases.length > 0 ||
+            purchaseReminders.length > 0) && (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              {pendingDeliveries.length > 0 && (
+                <CompactList
+                  label="Pending deliveries"
+                  tone={
+                    pendingDeliveries.some((p) => p.is_overdue)
+                      ? 'destructive'
+                      : 'warning'
+                  }
+                  count={pendingDeliveries.length}
+                  items={pendingDeliveries}
+                  isLoading={false}
+                  emptyText="No deliveries scheduled."
+                  viewAllTo="/purchases"
+                  onViewAll={() => {}}
+                  renderItem={(p) => (
+                    <DashboardPendingDeliveryRow key={p.id} delivery={p} />
+                  )}
+                />
+              )}
+              {unpaidPurchases.length > 0 && (
+                <CompactList
+                  label="Unpaid purchases"
+                  tone="warning"
+                  count={unpaidPurchases.length}
+                  items={unpaidPurchases}
+                  isLoading={false}
+                  emptyText="Everything's paid up."
+                  viewAllTo="/purchases"
+                  onViewAll={() => {}}
+                  renderItem={(p) => <DashboardUnpaidRow key={p.id} purchase={p} />}
+                />
+              )}
+              {purchaseReminders.length > 0 && (
+                <CompactList
+                  label="Reminders today"
+                  tone="primary"
+                  count={purchaseReminders.length}
+                  items={purchaseReminders}
+                  isLoading={false}
+                  emptyText="No reminders today."
+                  viewAllTo="/purchases"
+                  onViewAll={() => {}}
+                  renderItem={(p) => (
+                    <DashboardReminderRow key={p.id} reminder={p} />
+                  )}
+                />
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <CompactList
               label="Overdue"
@@ -607,6 +692,133 @@ const AREA_LABEL_DASH: Record<string, string> = {
   staff_area: 'Staff area',
   full_branch: 'Full branch',
 };
+
+function BranchInline({ branch }: { branch: string | null }) {
+  if (!branch) return null;
+  const meta = (
+    BRANCHES as Record<string, { name: string; color: string } | undefined>
+  )[branch as BranchCode];
+  if (!meta) return null;
+  return (
+    <span className="text-foreground/85 inline-flex items-center gap-1.5">
+      <span
+        aria-hidden
+        className="h-1.5 w-1.5 rounded-full"
+        style={{ backgroundColor: meta.color }}
+      />
+      {meta.name}
+    </span>
+  );
+}
+
+function shortDate(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function DashboardPendingDeliveryRow({ delivery }: { delivery: PendingDelivery }) {
+  return (
+    <Link
+      to={`/purchases/${delivery.id}`}
+      className="hover:bg-surface-1 -mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="text-foreground line-clamp-1 text-sm font-medium">
+          {delivery.title}
+        </div>
+        <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
+          <span className="truncate">{delivery.supplier_name}</span>
+          <span className="text-subtle-foreground">·</span>
+          <BranchInline branch={delivery.branch} />
+          {delivery.qty_ordered != null && delivery.qty_received != null && (
+            <>
+              <span className="text-subtle-foreground">·</span>
+              <span className="tabular-nums">
+                {formatQty(delivery.qty_received)} / {formatQty(delivery.qty_ordered)}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+      <span
+        className={cn(
+          'shrink-0 text-xs font-medium tabular-nums',
+          delivery.is_overdue ? 'text-destructive-ink' : 'text-warning-ink',
+        )}
+      >
+        {delivery.is_overdue && (
+          <PackageCheck className="mr-1 inline h-3 w-3 -translate-y-px" />
+        )}
+        {shortDate(delivery.expected_delivery_date)}
+      </span>
+    </Link>
+  );
+}
+
+function DashboardUnpaidRow({ purchase }: { purchase: UnpaidPurchase }) {
+  const remaining =
+    purchase.total_amount != null
+      ? purchase.total_amount - (purchase.amount_paid ?? 0)
+      : null;
+  return (
+    <Link
+      to={`/purchases/${purchase.id}`}
+      className="hover:bg-surface-1 -mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="text-foreground line-clamp-1 text-sm font-medium">
+          {purchase.title}
+        </div>
+        <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
+          <span className="truncate">{purchase.supplier_name}</span>
+          <span className="text-subtle-foreground">·</span>
+          <BranchInline branch={purchase.branch} />
+          <span className="text-subtle-foreground">·</span>
+          <span className="capitalize">{purchase.payment_status}</span>
+        </div>
+      </div>
+      <span className="text-warning-ink shrink-0 text-xs font-semibold tabular-nums">
+        <CircleDollarSign className="mr-1 inline h-3 w-3 -translate-y-px" />
+        {remaining != null
+          ? formatCurrency(remaining, purchase.currency as Currency)
+          : formatCurrency(purchase.total_amount, purchase.currency as Currency)}
+      </span>
+    </Link>
+  );
+}
+
+function DashboardReminderRow({ reminder }: { reminder: PurchaseReminder }) {
+  return (
+    <Link
+      to={`/purchases/${reminder.id}`}
+      className="hover:bg-surface-1 -mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="text-foreground line-clamp-1 text-sm font-medium">
+          {reminder.title}
+        </div>
+        <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
+          <span className="truncate">{reminder.supplier_name}</span>
+          <span className="text-subtle-foreground">·</span>
+          <BranchInline branch={reminder.branch} />
+          {reminder.expected_delivery_date && (
+            <>
+              <span className="text-subtle-foreground">·</span>
+              <span>delivery {shortDate(reminder.expected_delivery_date)}</span>
+            </>
+          )}
+        </div>
+      </div>
+      <span className="text-primary-ink shrink-0 text-xs font-semibold uppercase tracking-wider">
+        <Bell className="mr-1 inline h-3 w-3 -translate-y-px" />
+        today
+      </span>
+    </Link>
+  );
+}
 
 function DashboardCriticalFindingRow({ finding }: { finding: CriticalFinding }) {
   const branchMeta = (
