@@ -12,7 +12,6 @@ import type {
   TaskCategory,
   TaskPriority,
   TaskRow,
-  TaskStatus,
 } from '@/types/database';
 import type { CreateTaskInput, UpdateTaskInput } from '@/lib/tasks';
 
@@ -26,7 +25,23 @@ const CATEGORIES: TaskCategory[] = [
   'other',
 ];
 const PRIORITIES: TaskPriority[] = ['urgent', 'normal', 'low'];
-const STATUSES: TaskStatus[] = ['todo', 'in_progress', 'blocked', 'done', 'cancelled'];
+
+// Helpers for the datetime-local <input> fields (no timezone bytes).
+// We round-trip through the user's local timezone — the reminder engine in
+// Phase B will assume Africa/Maputo as the canonical business timezone.
+function toLocalInputValue(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function fromLocalInputValue(local: string): string | null {
+  if (!local) return null;
+  const d = new Date(local);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
 
 const baseSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
@@ -34,9 +49,11 @@ const baseSchema = z.object({
   branch: z.string().min(1, 'Branch is required'),
   category: z.enum(CATEGORIES as [TaskCategory, ...TaskCategory[]]),
   priority: z.enum(PRIORITIES as [TaskPriority, ...TaskPriority[]]),
-  status: z.enum(STATUSES as [TaskStatus, ...TaskStatus[]]).optional(),
   due_date: z.string().optional().or(z.literal('')),
   assignment: z.enum(['me', 'unassigned']),
+  start_reminder_at: z.string().optional().or(z.literal('')),
+  follow_up_reminder_at: z.string().optional().or(z.literal('')),
+  deadline_reminder_at: z.string().optional().or(z.literal('')),
 });
 
 type FormValues = z.infer<typeof baseSchema>;
@@ -72,10 +89,12 @@ export function TaskForm({
           branch: initial.branch,
           category: initial.category as TaskCategory,
           priority: initial.priority as TaskPriority,
-          status: initial.status as TaskStatus,
           due_date: initial.due_date ?? '',
           assignment:
             initial.assigned_to && initial.assigned_to === profile?.id ? 'me' : 'unassigned',
+          start_reminder_at: toLocalInputValue(initial.start_reminder_at),
+          follow_up_reminder_at: toLocalInputValue(initial.follow_up_reminder_at),
+          deadline_reminder_at: toLocalInputValue(initial.deadline_reminder_at),
         }
       : {
           title: '',
@@ -85,6 +104,9 @@ export function TaskForm({
           priority: 'normal',
           due_date: '',
           assignment: 'unassigned',
+          start_reminder_at: '',
+          follow_up_reminder_at: '',
+          deadline_reminder_at: '',
         },
   });
 
@@ -96,6 +118,10 @@ export function TaskForm({
       const description =
         values.description && values.description.length > 0 ? values.description : null;
 
+      const start_reminder_at = fromLocalInputValue(values.start_reminder_at ?? '');
+      const follow_up_reminder_at = fromLocalInputValue(values.follow_up_reminder_at ?? '');
+      const deadline_reminder_at = fromLocalInputValue(values.deadline_reminder_at ?? '');
+
       if (isEdit) {
         const payload: UpdateTaskInput = {
           title: values.title,
@@ -103,9 +129,11 @@ export function TaskForm({
           branch: values.branch,
           category: values.category,
           priority: values.priority,
-          status: values.status,
           due_date,
           assigned_to,
+          start_reminder_at,
+          follow_up_reminder_at,
+          deadline_reminder_at,
         };
         await onSubmit(payload);
       } else {
@@ -117,6 +145,9 @@ export function TaskForm({
           priority: values.priority,
           due_date,
           assigned_to,
+          start_reminder_at,
+          follow_up_reminder_at,
+          deadline_reminder_at,
         };
         await onSubmit(payload);
       }
@@ -197,19 +228,6 @@ export function TaskForm({
           <Input id="due_date" type="date" {...form.register('due_date')} />
         </div>
 
-        {isEdit && (
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <select id="status" className={fieldClass} {...form.register('status')}>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s.replace('_', ' ')}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
         <div className="space-y-2">
           <Label>Assignment</Label>
           <div className="flex gap-3 text-sm">
@@ -221,6 +239,40 @@ export function TaskForm({
               <input type="radio" value="me" {...form.register('assignment')} />
               Me ({profile?.full_name ?? 'current user'})
             </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-border space-y-3 rounded-md border p-4">
+        <div className="text-section-label">Reminders (optional)</div>
+        <p className="text-muted-foreground text-xs">
+          Set when the system should nudge you. Reminder firing arrives in Phase B; values
+          stored on the task are used as soon as the engine ships.
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="start_reminder_at">Start by</Label>
+            <Input
+              id="start_reminder_at"
+              type="datetime-local"
+              {...form.register('start_reminder_at')}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="follow_up_reminder_at">Mid-task check</Label>
+            <Input
+              id="follow_up_reminder_at"
+              type="datetime-local"
+              {...form.register('follow_up_reminder_at')}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="deadline_reminder_at">Pre-deadline</Label>
+            <Input
+              id="deadline_reminder_at"
+              type="datetime-local"
+              {...form.register('deadline_reminder_at')}
+            />
           </div>
         </div>
       </div>

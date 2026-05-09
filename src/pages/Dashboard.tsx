@@ -6,13 +6,15 @@ import {
   Bell,
   CircleDollarSign,
   Clock,
+  Hand,
   ListChecks,
   Loader2,
   PackageCheck,
   PhoneCall,
+  Repeat2,
   ShieldAlert,
   ShieldCheck,
-  Users,
+  TimerReset,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -62,7 +64,19 @@ function useBucketTasks(bucket: TaskBucket, userId: string | undefined) {
       filters = { ...filters, assignedTo: userId ?? null };
       break;
     case 'waiting':
-      // No created_by filter at the RPC; client-filtered below.
+      filters = { ...filters, status: 'waiting_for_someone' };
+      break;
+    case 'delayed':
+      filters = { ...filters, status: 'delayed' };
+      break;
+    case 'repeat':
+      filters = { ...filters, status: 'needs_repeat' };
+      break;
+    case 'history':
+      filters = { ...filters, includeDone: true, includeArchived: true };
+      break;
+    case 'active':
+    default:
       break;
   }
 
@@ -75,17 +89,8 @@ function useBucketTasks(bucket: TaskBucket, userId: string | undefined) {
           (t) =>
             t.due_date != null &&
             t.due_date < today &&
-            t.status !== 'done' &&
-            t.status !== 'cancelled',
-        );
-      }
-      if (bucket === 'waiting') {
-        if (!userId) return [];
-        return rows.filter(
-          (t) =>
-            t.created_by === userId &&
-            t.assigned_to !== null &&
-            t.assigned_to !== userId,
+            t.status !== 'finished' &&
+            t.status !== 'archived',
         );
       }
       return rows;
@@ -451,6 +456,8 @@ export function DashboardPage() {
   const today = useBucketTasks('today', userId);
   const mine = useBucketTasks('mine', userId);
   const waiting = useBucketTasks('waiting', userId);
+  const delayed = useBucketTasks('delayed', userId);
+  const repeat = useBucketTasks('repeat', userId);
   const followUpsToday = useFollowUpsDueToday();
   const criticalFindings = useDashboardCriticalFindings();
   const purchases = useDashboardPurchases();
@@ -479,11 +486,17 @@ export function DashboardPage() {
     !today.isLoading &&
     !followUpsToday.isLoading &&
     !criticalFindings.isLoading &&
+    !waiting.isLoading &&
+    !delayed.isLoading &&
+    !repeat.isLoading &&
     !purchases.isLoading;
   const allClear =
     ready &&
     (overdue.data?.length ?? 0) === 0 &&
     (today.data?.length ?? 0) === 0 &&
+    (waiting.data?.length ?? 0) === 0 &&
+    (delayed.data?.length ?? 0) === 0 &&
+    (repeat.data?.length ?? 0) === 0 &&
     (followUpsToday.data?.length ?? 0) === 0 &&
     (criticalFindings.data?.length ?? 0) === 0 &&
     pendingDeliveries.length === 0 &&
@@ -539,13 +552,31 @@ export function DashboardPage() {
           onView={goToTasksBucket('mine')}
         />
         <StatTile
-          label="Waiting on others"
-          tone="muted"
-          icon={Users}
+          label="Waiting"
+          tone="warning"
+          icon={Hand}
           count={waiting.data?.length ?? null}
           isLoading={waiting.isLoading}
           to="/tasks"
           onView={goToTasksBucket('waiting')}
+        />
+        <StatTile
+          label="Delayed"
+          tone="destructive"
+          icon={TimerReset}
+          count={delayed.data?.length ?? null}
+          isLoading={delayed.isLoading}
+          to="/tasks"
+          onView={goToTasksBucket('delayed')}
+        />
+        <StatTile
+          label="Needs repeat"
+          tone="destructive"
+          icon={Repeat2}
+          count={repeat.data?.length ?? null}
+          isLoading={repeat.isLoading}
+          to="/tasks"
+          onView={goToTasksBucket('repeat')}
         />
         <StatTile
           label="Follow-ups today"
@@ -677,6 +708,52 @@ export function DashboardPage() {
               )}
             />
           </div>
+
+          {((waiting.data?.length ?? 0) > 0 ||
+            (delayed.data?.length ?? 0) > 0 ||
+            (repeat.data?.length ?? 0) > 0) && (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              {(waiting.data?.length ?? 0) > 0 && (
+                <CompactList
+                  label="Waiting on others"
+                  tone="warning"
+                  count={waiting.data?.length ?? 0}
+                  items={waiting.data ?? []}
+                  isLoading={waiting.isLoading}
+                  emptyText="No tasks waiting."
+                  viewAllTo="/tasks"
+                  onViewAll={goToTasksBucket('waiting')}
+                  renderItem={(t) => <DashboardTaskRow key={t.id} task={t} now={now} />}
+                />
+              )}
+              {(delayed.data?.length ?? 0) > 0 && (
+                <CompactList
+                  label="Delayed"
+                  tone="destructive"
+                  count={delayed.data?.length ?? 0}
+                  items={delayed.data ?? []}
+                  isLoading={delayed.isLoading}
+                  emptyText="Nothing flagged delayed."
+                  viewAllTo="/tasks"
+                  onViewAll={goToTasksBucket('delayed')}
+                  renderItem={(t) => <DashboardTaskRow key={t.id} task={t} now={now} />}
+                />
+              )}
+              {(repeat.data?.length ?? 0) > 0 && (
+                <CompactList
+                  label="Needs repeat"
+                  tone="destructive"
+                  count={repeat.data?.length ?? 0}
+                  items={repeat.data ?? []}
+                  isLoading={repeat.isLoading}
+                  emptyText="Nothing flagged for repeat."
+                  viewAllTo="/tasks"
+                  onViewAll={goToTasksBucket('repeat')}
+                  renderItem={(t) => <DashboardTaskRow key={t.id} task={t} now={now} />}
+                />
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

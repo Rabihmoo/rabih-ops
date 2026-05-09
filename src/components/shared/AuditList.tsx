@@ -14,7 +14,7 @@ export interface AuditEntry {
 const ACTION_VERB: Record<string, string> = {
   create: 'Created',
   update: 'Updated',
-  complete: 'Completed',
+  complete: 'Marked finished',
   snooze: 'Snoozed',
   delete: 'Deleted',
   comment: 'Added a comment',
@@ -22,6 +22,16 @@ const ACTION_VERB: Record<string, string> = {
   attach: 'Attached a file',
   detach: 'Removed an attachment',
   resolve: 'Resolved',
+  // Task lifecycle (Phase A)
+  status_change: 'Changed status',
+  wait: 'Marked waiting',
+  resume: 'Resumed',
+  delay: 'Marked delayed',
+  request_repeat: 'Requested repeat',
+  archive: 'Archived',
+  reminders_set: 'Updated reminders',
+  recurring_create: 'Created recurring template',
+  recurring_spawn: 'Spawned a recurring instance',
   // Purchasing-specific
   submit: 'Submitted for approval',
   approve: 'Approved and ordered',
@@ -48,6 +58,15 @@ const ACTION_TONE: Record<string, string> = {
   delivery: 'bg-primary',
   payment: 'bg-success',
   cancel: 'bg-destructive',
+  status_change: 'bg-primary',
+  wait: 'bg-warning',
+  resume: 'bg-primary',
+  delay: 'bg-destructive',
+  request_repeat: 'bg-destructive',
+  archive: 'bg-muted-foreground',
+  reminders_set: 'bg-muted-foreground',
+  recurring_create: 'bg-primary',
+  recurring_spawn: 'bg-primary',
 };
 
 const TRACKED_FIELDS = [
@@ -63,6 +82,15 @@ const TRACKED_FIELDS = [
   'task_id',
   'person',
   'outcome',
+  // Task lifecycle (Phase A)
+  'waiting_on_user_id',
+  'waiting_on_label',
+  'delay_reason',
+  'repeat_reason',
+  'completion_note',
+  'start_reminder_at',
+  'follow_up_reminder_at',
+  'deadline_reminder_at',
   // Purchasing
   'supplier_name',
   'payment_status',
@@ -121,7 +149,15 @@ export function AuditList({ entries }: { entries: AuditEntry[] }) {
         const verb = ACTION_VERB[e.action] ?? e.action;
         const tone = ACTION_TONE[e.action] ?? 'bg-muted-foreground';
         const diff =
-          e.action === 'update' || e.action === 'snooze'
+          e.action === 'update' ||
+          e.action === 'snooze' ||
+          e.action === 'status_change' ||
+          e.action === 'wait' ||
+          e.action === 'resume' ||
+          e.action === 'delay' ||
+          e.action === 'request_repeat' ||
+          e.action === 'reminders_set' ||
+          e.action === 'complete'
             ? diffSummary(e.before_state, e.after_state)
             : [];
         return (

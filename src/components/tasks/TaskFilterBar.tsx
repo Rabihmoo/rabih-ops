@@ -12,11 +12,23 @@ const BUCKETS: { id: TaskBucket; label: string }[] = [
   { id: 'today', label: 'Today' },
   { id: 'overdue', label: 'Overdue' },
   { id: 'mine', label: 'My tasks' },
-  { id: 'waiting', label: 'Waiting on others' },
-  { id: 'all', label: 'All' },
+  { id: 'waiting', label: 'Waiting' },
+  { id: 'delayed', label: 'Delayed' },
+  { id: 'repeat', label: 'Needs repeat' },
+  { id: 'active', label: 'Active' },
+  { id: 'history', label: 'History' },
 ];
 
-const STATUSES: TaskStatus[] = ['todo', 'in_progress', 'blocked', 'done', 'cancelled'];
+const STATUSES: TaskStatus[] = [
+  'not_started',
+  'started',
+  'working',
+  'waiting_for_someone',
+  'delayed',
+  'needs_repeat',
+  'finished',
+  'archived',
+];
 const PRIORITIES: TaskPriority[] = ['urgent', 'normal', 'low'];
 
 export function TaskFilterBar() {
@@ -64,7 +76,7 @@ export function TaskFilterBar() {
             <option value="">Any status</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s.replace('_', ' ')}
+                {s.replace(/_/g, ' ')}
               </option>
             ))}
           </select>

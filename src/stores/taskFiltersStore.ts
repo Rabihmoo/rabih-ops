@@ -5,13 +5,21 @@ import type { TaskPriority, TaskStatus } from '@/types/database';
 // Bucket presets that drive the dashboard tiles + the default list view.
 // Buckets compose with the granular filters below; e.g. bucket='today'
 // + branch='salt' lists today's SALT tasks only.
-export type TaskBucket = 'all' | 'today' | 'overdue' | 'mine' | 'waiting';
+export type TaskBucket =
+  | 'today'
+  | 'overdue'
+  | 'mine'
+  | 'waiting'
+  | 'delayed'
+  | 'repeat'
+  | 'active'
+  | 'history';
 
 export interface TaskFiltersState {
   bucket: TaskBucket;
-  branch: string | null; // null = all accessible
+  branch: string | null;
   status: TaskStatus | null;
-  priority: TaskPriority | null; // applied client-side after fetch
+  priority: TaskPriority | null;
   assignedTo: string | null;
   search: string;
 
@@ -60,6 +68,7 @@ export function filtersToRpcParams(
     assignedTo: state.assignedTo,
     search: state.search.trim() || null,
     includeDone: false,
+    includeArchived: false,
   };
 
   switch (state.bucket) {
@@ -69,17 +78,26 @@ export function filtersToRpcParams(
       break;
     case 'overdue':
       params.dueBefore = today;
-      // Drop the lower bound so older items show. RPC also filters out cancelled+done.
       break;
     case 'mine':
       if (currentUserId) params.assignedTo = currentUserId;
       break;
     case 'waiting':
-      // 'waiting on others' = created by me, assigned to someone else.
-      // RPC has no created_by filter — applied client-side from the result.
+      params.status = 'waiting_for_someone';
       break;
-    case 'all':
+    case 'delayed':
+      params.status = 'delayed';
+      break;
+    case 'repeat':
+      params.status = 'needs_repeat';
+      break;
+    case 'history':
+      params.includeDone = true;
+      params.includeArchived = true;
+      break;
+    case 'active':
     default:
+      // active = default: not finished, not archived, not template
       break;
   }
 

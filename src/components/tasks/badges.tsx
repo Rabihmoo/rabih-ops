@@ -1,21 +1,21 @@
 import { cn } from '@/lib/utils';
 import { BRANCHES, type BranchCode } from '@/lib/branches';
-import type { TaskPriority, TaskStatus } from '@/types/database';
+import { TASK_STATUS_LABEL, isClosedTaskStatus } from '@/lib/tasks';
+import type { FollowUpStatus, TaskPriority, TaskStatus } from '@/types/database';
 
-const STATUS_LABEL: Record<TaskStatus, string> = {
-  todo: 'To do',
-  in_progress: 'In progress',
-  blocked: 'Blocked',
-  done: 'Done',
-  cancelled: 'Cancelled',
-};
+// Cross-module status accepted by due-tone helpers + DueDateBadge. Tasks and
+// follow-ups have different status enums but share the same row chrome.
+export type DueToneStatus = TaskStatus | FollowUpStatus;
 
 const STATUS_CLASSES: Record<TaskStatus, string> = {
-  todo: 'bg-muted text-muted-foreground',
-  in_progress: 'bg-primary-soft text-primary-ink',
-  blocked: 'bg-warning-soft text-warning-ink',
-  done: 'bg-success-soft text-success-ink',
-  cancelled: 'bg-muted text-subtle-foreground line-through',
+  not_started: 'bg-muted text-muted-foreground',
+  started: 'bg-primary-soft/60 text-primary-ink',
+  working: 'bg-primary-soft text-primary-ink',
+  waiting_for_someone: 'bg-warning-soft text-warning-ink',
+  delayed: 'bg-destructive-soft text-destructive-ink',
+  finished: 'bg-success-soft text-success-ink',
+  needs_repeat: 'bg-destructive-soft text-destructive-ink',
+  archived: 'bg-muted text-subtle-foreground',
 };
 
 const PILL_BASE =
@@ -29,8 +29,12 @@ export function StatusBadge({
   className?: string;
 }) {
   return (
-    <span className={cn(PILL_BASE, STATUS_CLASSES[status], className)}>
-      {STATUS_LABEL[status]}
+    <span
+      className={cn(PILL_BASE, STATUS_CLASSES[status], className)}
+      data-testid="task-status-badge"
+      data-status={status}
+    >
+      {TASK_STATUS_LABEL[status]}
     </span>
   );
 }
@@ -89,15 +93,20 @@ export function BranchBadge({ branch, className }: { branch: string; className?:
 
 // Returns the urgency tone of a task row based on status + due date + priority.
 // Drives both the left-edge bar on list rows and the colour of the due-date label.
-export type RowTone = 'destructive' | 'warning' | 'primary' | 'muted';
+export type RowTone = 'destructive' | 'warning' | 'primary' | 'muted' | 'success';
 
 export function computeDueTone(
   dueDate: string | null,
-  status: TaskStatus | 'pending' | 'snoozed',
+  status: DueToneStatus,
   priority?: TaskPriority,
 ): RowTone {
-  const closed = status === 'done' || status === 'cancelled';
-  if (closed) return 'muted';
+  // Closed states (finished/archived/done/cancelled) are visually demoted
+  // regardless of date.
+  if (status === 'finished' || status === 'done') return 'success';
+  if (status === 'archived' || status === 'cancelled') return 'muted';
+  // delayed and needs_repeat always carry weight regardless of date.
+  if (status === 'delayed' || status === 'needs_repeat') return 'destructive';
+  if (status === 'waiting_for_someone') return 'warning';
   if (!dueDate) return priority === 'urgent' ? 'destructive' : 'muted';
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -106,7 +115,7 @@ export function computeDueTone(
   if (diff < 0) return 'destructive';
   if (diff === 0) return 'warning';
   if (priority === 'urgent') return 'destructive';
-  if (status === 'in_progress') return 'primary';
+  if (status === 'working' || status === 'started') return 'primary';
   return 'muted';
 }
 
@@ -114,6 +123,7 @@ const TONE_TEXT: Record<RowTone, string> = {
   destructive: 'text-destructive-ink',
   warning: 'text-warning-ink',
   primary: 'text-primary-ink',
+  success: 'text-success-ink',
   muted: 'text-muted-foreground',
 };
 
@@ -121,6 +131,7 @@ export const TONE_BAR: Record<RowTone, string> = {
   destructive: 'bg-destructive',
   warning: 'bg-warning',
   primary: 'bg-primary',
+  success: 'bg-success',
   muted: 'bg-transparent',
 };
 
@@ -130,7 +141,7 @@ export function DueDateBadge({
   className,
 }: {
   dueDate: string | null;
-  status: TaskStatus | 'pending' | 'snoozed';
+  status: DueToneStatus;
   className?: string;
 }) {
   if (!dueDate) {
@@ -160,3 +171,6 @@ export function DueDateBadge({
     </span>
   );
 }
+
+// Re-export for callers that branch on closed/active.
+export { isClosedTaskStatus };

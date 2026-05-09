@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Plus } from 'lucide-react';
+import { ArrowLeft, Bell, Loader2, Plus, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/components/ui/toaster';
 import { TaskForm } from '@/components/tasks/TaskForm';
+import { TaskActions } from '@/components/tasks/TaskActions';
 import {
   BranchBadge,
   DueDateBadge,
@@ -21,7 +22,6 @@ import { useAuthStore } from '@/stores/authStore';
 import {
   useTaskDetail,
   useUpdateTask,
-  useCompleteTask,
   useDeleteTask,
   useAddTaskComment,
   useDeleteTaskComment,
@@ -29,6 +29,7 @@ import {
   useRemoveTaskAttachment,
 } from '@/hooks/useTasks';
 import { useFollowUpsForTask } from '@/hooks/useFollowUps';
+import { isClosedTaskStatus } from '@/lib/tasks';
 import type { UpdateTaskInput } from '@/lib/tasks';
 import type { TaskPriority, TaskStatus } from '@/types/database';
 
@@ -39,7 +40,6 @@ export function TaskDetailPage() {
 
   const { data, isLoading, error } = useTaskDetail(taskId);
   const update = useUpdateTask();
-  const complete = useCompleteTask();
   const remove = useDeleteTask();
   const addComment = useAddTaskComment();
   const deleteComment = useDeleteTaskComment();
@@ -74,7 +74,12 @@ export function TaskDetailPage() {
   const { task, audit, comments, attachments } = data;
   const status = task.status as TaskStatus;
   const priority = task.priority as TaskPriority;
-  const closed = status === 'done' || status === 'cancelled';
+  const closed = isClosedTaskStatus(status);
+  const isInstance = task.template_id != null;
+  const hasAnyReminder =
+    task.start_reminder_at != null ||
+    task.follow_up_reminder_at != null ||
+    task.deadline_reminder_at != null;
 
   const assigneeLabel =
     task.assigned_to == null
@@ -87,11 +92,6 @@ export function TaskDetailPage() {
     await update.mutateAsync({ taskId, updates: payload });
     setEditing(false);
     toast({ title: 'Task updated' });
-  };
-
-  const handleComplete = async () => {
-    await complete.mutateAsync({ taskId });
-    toast({ title: 'Task completed' });
   };
 
   const handleDelete = async () => {
@@ -126,27 +126,26 @@ export function TaskDetailPage() {
             <BranchBadge branch={task.branch} />
             {priority !== 'normal' && <PriorityBadge priority={priority} />}
             <DueDateBadge dueDate={task.due_date} status={status} />
+            {isInstance && (
+              <span className="text-subtle-foreground inline-flex items-center gap-1 text-[10px] uppercase tracking-wider">
+                <Repeat className="h-3 w-3" /> recurring instance
+              </span>
+            )}
             <span className="text-subtle-foreground text-xs">·</span>
             <span className="text-muted-foreground text-xs capitalize">
               {task.category.replace('_', ' ')}
             </span>
             <span className="text-subtle-foreground text-xs">·</span>
             <span className="text-muted-foreground text-xs">{assigneeLabel}</span>
+            {status === 'waiting_for_someone' && task.waiting_on_label && (
+              <span className="text-warning-ink text-xs">
+                · waiting on {task.waiting_on_label}
+              </span>
+            )}
           </div>
         </div>
         {canMutate && !editing && (
           <div className="flex shrink-0 flex-wrap gap-2">
-            {!closed && (
-              <Button
-                size="sm"
-                onClick={handleComplete}
-                disabled={complete.isPending}
-                data-testid="task-complete-button"
-              >
-                {complete.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Mark done
-              </Button>
-            )}
             <Button
               size="sm"
               variant="outline"
@@ -190,7 +189,7 @@ export function TaskDetailPage() {
           </CardContent>
         </Card>
       ) : (
-        (task.description || task.completion_note) && (
+        (task.description || task.completion_note || task.outcome) && (
           <Card>
             <CardContent className="space-y-4 p-5">
               {task.description && (
@@ -198,6 +197,14 @@ export function TaskDetailPage() {
                   <div className="text-section-label">Description</div>
                   <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
                     {task.description}
+                  </p>
+                </div>
+              )}
+              {task.outcome && (
+                <div className="space-y-2">
+                  <div className="text-section-label">Outcome</div>
+                  <p className="text-success-ink text-sm leading-relaxed whitespace-pre-wrap">
+                    {task.outcome}
                   </p>
                 </div>
               )}
@@ -212,6 +219,43 @@ export function TaskDetailPage() {
             </CardContent>
           </Card>
         )
+      )}
+
+      {/* Lifecycle actions — only shown to mutators when not editing */}
+      {!editing && canMutate && <TaskActions task={task} />}
+
+      {/* Reminders summary (Phase B will fire them; Phase A just stores) */}
+      {!editing && hasAnyReminder && (
+        <Card>
+          <CardContent className="space-y-2 p-5">
+            <div className="text-section-label flex items-center gap-2">
+              <Bell className="h-4 w-4" /> Reminders
+            </div>
+            <ul className="text-foreground/90 space-y-1 text-sm">
+              {task.start_reminder_at && (
+                <li>
+                  <span className="text-muted-foreground">Start by</span>{' '}
+                  {new Date(task.start_reminder_at).toLocaleString()}
+                </li>
+              )}
+              {task.follow_up_reminder_at && (
+                <li>
+                  <span className="text-muted-foreground">Mid-task check</span>{' '}
+                  {new Date(task.follow_up_reminder_at).toLocaleString()}
+                </li>
+              )}
+              {task.deadline_reminder_at && (
+                <li>
+                  <span className="text-muted-foreground">Pre-deadline</span>{' '}
+                  {new Date(task.deadline_reminder_at).toLocaleString()}
+                </li>
+              )}
+            </ul>
+            <p className="text-subtle-foreground text-xs">
+              Reminder firing arrives in Phase B; values are stored on the task today.
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Linked follow-ups */}

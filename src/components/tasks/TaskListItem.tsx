@@ -1,6 +1,7 @@
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
+import { isClosedTaskStatus } from '@/lib/tasks';
 import type { TaskRow, TaskStatus, TaskPriority } from '@/types/database';
 import {
   BranchBadge,
@@ -32,7 +33,8 @@ export function TaskListItem({
         ? 'Mine'
         : 'Assigned';
 
-  const closed = status === 'done' || status === 'cancelled';
+  const closed = isClosedTaskStatus(status);
+  const isInstance = task.template_id != null;
 
   return (
     <button
@@ -69,9 +71,17 @@ export function TaskListItem({
         </div>
         <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <StatusBadge status={status} />
+          {isInstance && (
+            <span className="text-subtle-foreground inline-flex items-center gap-1 text-[10px] uppercase tracking-wider">
+              <Repeat className="h-3 w-3" /> recurring
+            </span>
+          )}
           <BranchBadge branch={task.branch} />
           {priority !== 'normal' && <PriorityBadge priority={priority} />}
           <span className="text-subtle-foreground text-xs">{assigneeLabel}</span>
+          {status === 'waiting_for_someone' && task.waiting_on_label && (
+            <span className="text-warning-ink text-xs">→ {task.waiting_on_label}</span>
+          )}
         </div>
       </div>
       <ChevronRight

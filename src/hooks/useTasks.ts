@@ -11,10 +11,22 @@ import {
   deleteTaskComment,
   attachFileToTask,
   removeTaskAttachment,
+  setTaskStatus,
+  markTaskWaiting,
+  resumeWaitingTask,
+  markTaskDelayed,
+  requestTaskRepeat,
+  archiveTask,
+  setTaskReminders,
+  createRecurringTask,
+  spawnRecurringInstance,
   type CreateTaskInput,
   type UpdateTaskInput,
   type AttachFileInput,
+  type CreateRecurringTaskInput,
+  type SetTaskRemindersInput,
 } from '@/lib/tasks';
+import type { SimpleTaskStatus } from '@/types/database';
 import { useTaskFiltersStore, filtersToRpcParams } from '@/stores/taskFiltersStore';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -40,10 +52,6 @@ export function useTaskList() {
       const rows = await listTasks(params);
       const filtered = rows.filter((t) => {
         if (filters.priority && t.priority !== filters.priority) return false;
-        if (filters.bucket === 'waiting') {
-          if (t.created_by !== userId) return false;
-          if (t.assigned_to === userId || t.assigned_to === null) return false;
-        }
         return true;
       });
       return filtered;
@@ -87,9 +95,104 @@ export function useUpdateTask() {
 export function useCompleteTask() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: ({ taskId, note }: { taskId: string; note?: string }) =>
-      completeTask(taskId, note),
+    mutationFn: ({
+      taskId,
+      completionNote,
+      outcome,
+    }: {
+      taskId: string;
+      completionNote?: string | null;
+      outcome?: string | null;
+    }) => completeTask(taskId, { completionNote, outcome }),
     onSuccess: (_, { taskId }) => invalidate(taskId),
+  });
+}
+
+export function useSetTaskStatus() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ taskId, status }: { taskId: string; status: SimpleTaskStatus }) =>
+      setTaskStatus(taskId, status),
+    onSuccess: (_, { taskId }) => invalidate(taskId),
+  });
+}
+
+export function useMarkTaskWaiting() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (args: {
+      taskId: string;
+      userId?: string | null;
+      label?: string | null;
+      note?: string | null;
+    }) => markTaskWaiting(args),
+    onSuccess: (_, { taskId }) => invalidate(taskId),
+  });
+}
+
+export function useResumeWaitingTask() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ taskId, note }: { taskId: string; note?: string | null }) =>
+      resumeWaitingTask(taskId, note),
+    onSuccess: (_, { taskId }) => invalidate(taskId),
+  });
+}
+
+export function useMarkTaskDelayed() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ taskId, reason }: { taskId: string; reason: string }) =>
+      markTaskDelayed(taskId, reason),
+    onSuccess: (_, { taskId }) => invalidate(taskId),
+  });
+}
+
+export function useRequestTaskRepeat() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ taskId, reason }: { taskId: string; reason: string }) =>
+      requestTaskRepeat(taskId, reason),
+    onSuccess: (_, { taskId }) => invalidate(taskId),
+  });
+}
+
+export function useArchiveTask() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ taskId, reason }: { taskId: string; reason?: string | null }) =>
+      archiveTask(taskId, reason),
+    onSuccess: (_, { taskId }) => invalidate(taskId),
+  });
+}
+
+export function useSetTaskReminders() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (input: SetTaskRemindersInput) => setTaskReminders(input),
+    onSuccess: (_, { taskId }) => invalidate(taskId),
+  });
+}
+
+export function useCreateRecurringTask() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (input: CreateRecurringTaskInput) => createRecurringTask(input),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useSpawnRecurringInstance() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({
+      templateId,
+      targetDate,
+    }: {
+      templateId: string;
+      targetDate?: string | null;
+    }) => spawnRecurringInstance(templateId, targetDate),
+    onSuccess: (_, { templateId }) => invalidate(templateId),
   });
 }
 

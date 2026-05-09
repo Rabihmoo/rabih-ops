@@ -4,8 +4,10 @@ import type {
   CommentRow,
   AttachmentRow,
   TaskStatus,
+  SimpleTaskStatus,
   TaskPriority,
   TaskCategory,
+  RecurrenceCadence,
 } from '@/types/database';
 
 // =========================================================
@@ -20,6 +22,8 @@ export interface TaskListFilters {
   dueAfter?: string | null;
   search?: string | null;
   includeDone?: boolean;
+  includeArchived?: boolean;
+  includeTemplates?: boolean;
   limit?: number;
 }
 
@@ -32,6 +36,8 @@ export async function listTasks(filters: TaskListFilters = {}): Promise<TaskRow[
     p_due_after: filters.dueAfter ?? null,
     p_search: filters.search?.trim() ? filters.search.trim() : null,
     p_include_done: filters.includeDone ?? false,
+    p_include_archived: filters.includeArchived ?? false,
+    p_include_templates: filters.includeTemplates ?? false,
     p_limit: filters.limit ?? 100,
   });
   return result ?? [];
@@ -67,7 +73,7 @@ export async function getTask(taskId: string): Promise<TaskDetailPayload> {
 }
 
 // =========================================================
-// Write RPCs
+// Write RPCs — create / update / complete
 // =========================================================
 
 export interface CreateTaskInput {
@@ -78,6 +84,10 @@ export interface CreateTaskInput {
   due_date?: string | null;
   assigned_to?: string | null;
   description?: string | null;
+  status?: SimpleTaskStatus;
+  start_reminder_at?: string | null;
+  follow_up_reminder_at?: string | null;
+  deadline_reminder_at?: string | null;
 }
 
 export async function createTask(input: CreateTaskInput): Promise<TaskRow> {
@@ -89,6 +99,10 @@ export async function createTask(input: CreateTaskInput): Promise<TaskRow> {
     p_due_date: input.due_date ?? null,
     p_assigned_to: input.assigned_to ?? null,
     p_description: input.description ?? null,
+    p_status: input.status ?? 'not_started',
+    p_start_reminder_at: input.start_reminder_at ?? null,
+    p_follow_up_reminder_at: input.follow_up_reminder_at ?? null,
+    p_deadline_reminder_at: input.deadline_reminder_at ?? null,
   });
 }
 
@@ -98,9 +112,11 @@ export interface UpdateTaskInput {
   branch?: string;
   category?: TaskCategory;
   priority?: TaskPriority;
-  status?: TaskStatus;
   due_date?: string | null;
   assigned_to?: string | null;
+  start_reminder_at?: string | null;
+  follow_up_reminder_at?: string | null;
+  deadline_reminder_at?: string | null;
 }
 
 export async function updateTask(taskId: string, updates: UpdateTaskInput): Promise<TaskRow> {
@@ -110,12 +126,146 @@ export async function updateTask(taskId: string, updates: UpdateTaskInput): Prom
   });
 }
 
-export async function completeTask(taskId: string, completionNote?: string): Promise<TaskRow> {
+export async function completeTask(
+  taskId: string,
+  args: { completionNote?: string | null; outcome?: string | null } = {},
+): Promise<TaskRow> {
   return callRpc<TaskRow>('rpc_complete_task', {
     p_task_id: taskId,
-    p_completion_note: completionNote ?? null,
+    p_completion_note: args.completionNote ?? null,
+    p_outcome: args.outcome ?? null,
   });
 }
+
+// =========================================================
+// Lifecycle RPCs
+// =========================================================
+
+export async function setTaskStatus(taskId: string, status: SimpleTaskStatus): Promise<TaskRow> {
+  return callRpc<TaskRow>('rpc_set_task_status', {
+    p_task_id: taskId,
+    p_status: status,
+  });
+}
+
+export async function markTaskWaiting(args: {
+  taskId: string;
+  userId?: string | null;
+  label?: string | null;
+  note?: string | null;
+}): Promise<TaskRow> {
+  if (!args.userId && !(args.label && args.label.trim())) {
+    throw new Error('Either a user or a label is required to mark a task waiting.');
+  }
+  return callRpc<TaskRow>('rpc_mark_waiting', {
+    p_task_id: args.taskId,
+    p_user_id: args.userId ?? null,
+    p_label: args.label ?? null,
+    p_note: args.note ?? null,
+  });
+}
+
+export async function resumeWaitingTask(taskId: string, note?: string | null): Promise<TaskRow> {
+  return callRpc<TaskRow>('rpc_resume_waiting', {
+    p_task_id: taskId,
+    p_note: note ?? null,
+  });
+}
+
+export async function markTaskDelayed(taskId: string, reason: string): Promise<TaskRow> {
+  if (!reason || !reason.trim()) {
+    throw new Error('A delay reason is required.');
+  }
+  return callRpc<TaskRow>('rpc_mark_delayed', {
+    p_task_id: taskId,
+    p_reason: reason,
+  });
+}
+
+export async function requestTaskRepeat(taskId: string, reason: string): Promise<TaskRow> {
+  if (!reason || !reason.trim()) {
+    throw new Error('A repeat reason is required.');
+  }
+  return callRpc<TaskRow>('rpc_request_repeat', {
+    p_task_id: taskId,
+    p_reason: reason,
+  });
+}
+
+export async function archiveTask(taskId: string, reason?: string | null): Promise<TaskRow> {
+  return callRpc<TaskRow>('rpc_archive_task', {
+    p_task_id: taskId,
+    p_reason: reason ?? null,
+  });
+}
+
+export interface SetTaskRemindersInput {
+  taskId: string;
+  startReminderAt?: string | null;
+  followUpReminderAt?: string | null;
+  deadlineReminderAt?: string | null;
+  clear?: boolean;
+}
+
+export async function setTaskReminders(input: SetTaskRemindersInput): Promise<TaskRow> {
+  return callRpc<TaskRow>('rpc_set_task_reminders', {
+    p_task_id: input.taskId,
+    p_start_reminder_at: input.startReminderAt ?? null,
+    p_follow_up_reminder_at: input.followUpReminderAt ?? null,
+    p_deadline_reminder_at: input.deadlineReminderAt ?? null,
+    p_clear: input.clear ?? false,
+  });
+}
+
+// =========================================================
+// Recurring templates
+// =========================================================
+
+export interface CreateRecurringTaskInput {
+  branch: string;
+  category: TaskCategory;
+  title: string;
+  recurrence: RecurrenceCadence;
+  recurrence_time: string; // 'HH:MM' or 'HH:MM:SS' — Africa/Maputo
+  priority?: TaskPriority;
+  assigned_to?: string | null;
+  description?: string | null;
+  recurrence_dow?: number[] | null;
+  recurrence_dom?: number | null;
+  recurrence_month?: number | null;
+}
+
+export async function createRecurringTask(
+  input: CreateRecurringTaskInput,
+): Promise<TaskRow> {
+  return callRpc<TaskRow>('rpc_create_recurring_task', {
+    p_branch: input.branch,
+    p_category: input.category,
+    p_title: input.title,
+    p_recurrence: input.recurrence,
+    p_recurrence_time: input.recurrence_time,
+    p_priority: input.priority ?? 'normal',
+    p_assigned_to: input.assigned_to ?? null,
+    p_description: input.description ?? null,
+    p_recurrence_dow: input.recurrence_dow ?? null,
+    p_recurrence_dom: input.recurrence_dom ?? null,
+    p_recurrence_month: input.recurrence_month ?? null,
+  });
+}
+
+export async function spawnRecurringInstance(
+  templateId: string,
+  targetDate?: string | null,
+): Promise<TaskRow> {
+  return callRpc<TaskRow>('rpc_spawn_recurring_instance', {
+    p_template_id: templateId,
+    p_target_date: targetDate ?? null,
+  });
+}
+
+// =========================================================
+// Other (unchanged)
+// =========================================================
 
 export async function deleteTask(taskId: string): Promise<{ success: boolean; id: string }> {
   return callRpc<{ success: boolean; id: string }>('rpc_delete_task', { p_task_id: taskId });
@@ -155,4 +305,28 @@ export async function removeTaskAttachment(
   return callRpc<{ success: boolean; id: string }>('rpc_remove_task_attachment', {
     p_attachment_id: attachmentId,
   });
+}
+
+// =========================================================
+// Status display helpers (used in UI)
+// =========================================================
+
+export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
+  not_started: 'Not started',
+  started: 'Started',
+  working: 'Working',
+  waiting_for_someone: 'Waiting',
+  delayed: 'Delayed',
+  finished: 'Finished',
+  needs_repeat: 'Needs repeat',
+  archived: 'Archived',
+};
+
+// "Active" = on the operational radar; excludes finished + archived.
+export function isActiveTaskStatus(status: TaskStatus): boolean {
+  return status !== 'finished' && status !== 'archived';
+}
+
+export function isClosedTaskStatus(status: TaskStatus): boolean {
+  return status === 'finished' || status === 'archived';
 }

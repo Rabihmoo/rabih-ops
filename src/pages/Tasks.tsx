@@ -17,20 +17,17 @@ export function TasksPage() {
   const count = data?.length ?? 0;
 
   const todayIso = new Date().toISOString().slice(0, 10);
+  const isActive = (s: TaskStatus) => s !== 'finished' && s !== 'archived';
   const overdueCount =
     data?.filter(
       (t) =>
         t.due_date != null &&
         t.due_date < todayIso &&
-        (t.status as TaskStatus) !== 'done' &&
-        (t.status as TaskStatus) !== 'cancelled',
+        isActive(t.status as TaskStatus),
     ).length ?? 0;
   const todayCount =
     data?.filter(
-      (t) =>
-        t.due_date === todayIso &&
-        (t.status as TaskStatus) !== 'done' &&
-        (t.status as TaskStatus) !== 'cancelled',
+      (t) => t.due_date === todayIso && isActive(t.status as TaskStatus),
     ).length ?? 0;
   const urgentCount = data?.filter((t) => t.priority === 'urgent').length ?? 0;
 
@@ -109,32 +106,44 @@ function TasksEmpty() {
     },
     overdue: {
       title: 'Nothing is overdue',
-      description: 'You\'re ahead of schedule. Worth keeping it that way.',
+      description: "You're ahead of schedule. Worth keeping it that way.",
     },
     mine: {
       title: 'No tasks assigned to you',
       description: 'When someone hands you something, it will show up here.',
     },
     waiting: {
-      title: 'No outstanding hand-offs',
-      description:
-        'Tasks you have created and assigned to others will appear here while they work them.',
+      title: 'No tasks waiting on others',
+      description: 'Tasks marked waiting_for_someone will surface here.',
     },
-    all: {
-      title: 'No tasks match the current filters',
-      description: 'Loosen the filters above or clear them to see more.',
+    delayed: {
+      title: 'No tasks marked delayed',
+      description: 'Tasks explicitly marked delayed (with a reason) appear here.',
+    },
+    repeat: {
+      title: 'Nothing flagged needs_repeat',
+      description: 'Finished work that gets sent back for redo will land here.',
+    },
+    active: {
+      title: 'No active tasks match the current filters',
+      description: 'Active = anything not finished or archived. Loosen the filters above.',
+    },
+    history: {
+      title: 'No history yet',
+      description: 'Finished and archived tasks will appear here for the audit trail.',
     },
   };
 
+  const calmBuckets: typeof bucket[] = ['today', 'overdue', 'waiting', 'delayed', 'repeat'];
   const c = COPY[bucket];
   return (
     <EmptyState
-      icon={bucket === 'overdue' || bucket === 'today' ? CheckCircle2 : ListChecks}
+      icon={calmBuckets.includes(bucket) ? CheckCircle2 : ListChecks}
       title={c.title}
       description={c.description}
-      tone={bucket === 'overdue' || bucket === 'today' ? 'success' : 'muted'}
+      tone={calmBuckets.includes(bucket) ? 'success' : 'muted'}
       action={
-        canMutate && bucket !== 'overdue' && bucket !== 'today' ? (
+        canMutate && bucket !== 'overdue' && bucket !== 'today' && bucket !== 'history' ? (
           <Button size="sm" asChild>
             <Link to="/tasks/new">
               <Plus className="mr-1 h-4 w-4" /> New task

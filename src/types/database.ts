@@ -484,14 +484,30 @@ export type Database = {
           completion_note: string | null
           created_at: string
           created_by: string
+          deadline_reminder_at: string | null
+          delay_reason: string | null
           deleted_at: string | null
           description: string | null
           due_date: string | null
+          follow_up_reminder_at: string | null
           id: string
+          is_template: boolean
+          next_spawn_at: string | null
+          outcome: string | null
           priority: string
+          recurrence: string | null
+          recurrence_dom: number | null
+          recurrence_dow: number[] | null
+          recurrence_month: number | null
+          recurrence_time: string | null
+          repeat_reason: string | null
+          start_reminder_at: string | null
           status: string
+          template_id: string | null
           title: string
           updated_at: string
+          waiting_on_label: string | null
+          waiting_on_user_id: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -501,14 +517,30 @@ export type Database = {
           completion_note?: string | null
           created_at?: string
           created_by: string
+          deadline_reminder_at?: string | null
+          delay_reason?: string | null
           deleted_at?: string | null
           description?: string | null
           due_date?: string | null
+          follow_up_reminder_at?: string | null
           id?: string
+          is_template?: boolean
+          next_spawn_at?: string | null
+          outcome?: string | null
           priority?: string
+          recurrence?: string | null
+          recurrence_dom?: number | null
+          recurrence_dow?: number[] | null
+          recurrence_month?: number | null
+          recurrence_time?: string | null
+          repeat_reason?: string | null
+          start_reminder_at?: string | null
           status?: string
+          template_id?: string | null
           title: string
           updated_at?: string
+          waiting_on_label?: string | null
+          waiting_on_user_id?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -518,14 +550,30 @@ export type Database = {
           completion_note?: string | null
           created_at?: string
           created_by?: string
+          deadline_reminder_at?: string | null
+          delay_reason?: string | null
           deleted_at?: string | null
           description?: string | null
           due_date?: string | null
+          follow_up_reminder_at?: string | null
           id?: string
+          is_template?: boolean
+          next_spawn_at?: string | null
+          outcome?: string | null
           priority?: string
+          recurrence?: string | null
+          recurrence_dom?: number | null
+          recurrence_dow?: number[] | null
+          recurrence_month?: number | null
+          recurrence_time?: string | null
+          repeat_reason?: string | null
+          start_reminder_at?: string | null
           status?: string
+          template_id?: string | null
           title?: string
           updated_at?: string
+          waiting_on_label?: string | null
+          waiting_on_user_id?: string | null
         }
         Relationships: [
           {
@@ -545,6 +593,20 @@ export type Database = {
           {
             foreignKeyName: "tasks_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_waiting_on_user_id_fkey"
+            columns: ["waiting_on_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -659,6 +721,17 @@ export type Database = {
       _can_admin_purchases: { Args: never; Returns: boolean }
       _can_mutate: { Args: never; Returns: boolean }
       _delete_comment: { Args: { p_comment_id: string }; Returns: Json }
+      _next_spawn_at: {
+        Args: {
+          p_from?: string
+          p_recurrence: string
+          p_recurrence_dom: number
+          p_recurrence_dow: number[]
+          p_recurrence_month: number
+          p_recurrence_time: string
+        }
+        Returns: string
+      }
       _remove_attachment: { Args: { p_attachment_id: string }; Returns: Json }
       _require_auth: { Args: never; Returns: string }
       _require_branch_access: { Args: { p_branch: string }; Returns: undefined }
@@ -701,6 +774,10 @@ export type Database = {
           p_payment_method?: string
           p_total_amount?: number
         }
+        Returns: Json
+      }
+      rpc_archive_task: {
+        Args: { p_reason?: string; p_task_id: string }
         Returns: Json
       }
       rpc_attach_file_to_follow_up: {
@@ -753,7 +830,11 @@ export type Database = {
         Returns: Json
       }
       rpc_complete_task: {
-        Args: { p_completion_note?: string; p_task_id: string }
+        Args: {
+          p_completion_note?: string
+          p_outcome?: string
+          p_task_id: string
+        }
         Returns: Json
       }
       rpc_create_follow_up: {
@@ -797,14 +878,34 @@ export type Database = {
         }
         Returns: Json
       }
-      rpc_create_task: {
+      rpc_create_recurring_task: {
         Args: {
           p_assigned_to?: string
           p_branch: string
           p_category: string
           p_description?: string
-          p_due_date?: string
           p_priority?: string
+          p_recurrence: string
+          p_recurrence_dom?: number
+          p_recurrence_dow?: number[]
+          p_recurrence_month?: number
+          p_recurrence_time: string
+          p_title: string
+        }
+        Returns: Json
+      }
+      rpc_create_task: {
+        Args: {
+          p_assigned_to?: string
+          p_branch: string
+          p_category: string
+          p_deadline_reminder_at?: string
+          p_description?: string
+          p_due_date?: string
+          p_follow_up_reminder_at?: string
+          p_priority?: string
+          p_start_reminder_at?: string
+          p_status?: string
           p_title: string
         }
         Returns: Json
@@ -879,15 +980,30 @@ export type Database = {
           p_branch?: string
           p_due_after?: string
           p_due_before?: string
+          p_include_archived?: boolean
           p_include_done?: boolean
+          p_include_templates?: boolean
           p_limit?: number
           p_search?: string
           p_status?: string
         }
         Returns: Json
       }
+      rpc_mark_delayed: {
+        Args: { p_reason: string; p_task_id: string }
+        Returns: Json
+      }
       rpc_mark_follow_up_done: {
         Args: { p_follow_up_id: string; p_outcome?: string }
+        Returns: Json
+      }
+      rpc_mark_waiting: {
+        Args: {
+          p_label?: string
+          p_note?: string
+          p_task_id: string
+          p_user_id?: string
+        }
         Returns: Json
       }
       rpc_process_whatsapp_command: {
@@ -928,12 +1044,34 @@ export type Database = {
         Args: { p_attachment_id: string }
         Returns: Json
       }
+      rpc_request_repeat: {
+        Args: { p_reason: string; p_task_id: string }
+        Returns: Json
+      }
       rpc_resolve_finding: {
         Args: { p_finding_id: string; p_resolution_note?: string }
         Returns: Json
       }
+      rpc_resume_waiting: {
+        Args: { p_note?: string; p_task_id: string }
+        Returns: Json
+      }
       rpc_set_purchase_reminder: {
         Args: { p_id: string; p_reminder_date: string }
+        Returns: Json
+      }
+      rpc_set_task_reminders: {
+        Args: {
+          p_clear?: boolean
+          p_deadline_reminder_at?: string
+          p_follow_up_reminder_at?: string
+          p_start_reminder_at?: string
+          p_task_id: string
+        }
+        Returns: Json
+      }
+      rpc_set_task_status: {
+        Args: { p_status: string; p_task_id: string }
         Returns: Json
       }
       rpc_snooze_follow_up: {
@@ -946,6 +1084,10 @@ export type Database = {
       }
       rpc_soft_delete_purchase_request: {
         Args: { p_id: string }
+        Returns: Json
+      }
+      rpc_spawn_recurring_instance: {
+        Args: { p_target_date?: string; p_template_id: string }
         Returns: Json
       }
       rpc_submit_purchase_request: { Args: { p_id: string }; Returns: Json }
@@ -1111,7 +1253,22 @@ export const Constants = {
 
 export type Role = 'admin' | 'ceo' | 'manager' | 'viewer';
 
-export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'blocked' | 'cancelled';
+export type TaskStatus =
+  | 'not_started'
+  | 'started'
+  | 'working'
+  | 'waiting_for_someone'
+  | 'delayed'
+  | 'finished'
+  | 'needs_repeat'
+  | 'archived';
+// Statuses callable through rpc_set_task_status (simple transitions).
+// Special states (waiting/delayed/needs_repeat) require dedicated RPCs.
+export type SimpleTaskStatus = Extract<
+  TaskStatus,
+  'not_started' | 'started' | 'working' | 'finished' | 'archived'
+>;
+export type RecurrenceCadence = 'daily' | 'weekly' | 'monthly' | 'yearly';
 export type TaskPriority = 'urgent' | 'normal' | 'low';
 export type TaskCategory =
   | 'operations'

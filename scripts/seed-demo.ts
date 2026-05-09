@@ -1,8 +1,8 @@
 // One-shot demo seed runner. Uses node fetch (same path as db-push.ts) so the
 // Cloudflare WAF doesn't block the request.
 //
-// Run: tsx scripts/seed-demo.ts (env loaded by playwright.config dotenv elsewhere)
-//      or: node --env-file=.env.local --experimental-strip-types scripts/seed-demo.ts
+// Run: tsx scripts/seed-demo.ts [path/to/seed.sql]
+//      defaults to scripts/seed-demo.sql when no path given
 import { readFileSync } from 'node:fs';
 
 const token = process.env.SUPABASE_ACCESS_TOKEN;
@@ -12,7 +12,9 @@ if (!token || !projectRef) {
   process.exit(1);
 }
 
-const sql = readFileSync('scripts/seed-demo.sql', 'utf8');
+const seedPath = process.argv[2] ?? 'scripts/seed-demo.sql';
+const sql = readFileSync(seedPath, 'utf8');
+console.log(`→ running ${seedPath}`);
 
 const res = await fetch(
   `https://api.supabase.com/v1/projects/${projectRef}/database/query`,

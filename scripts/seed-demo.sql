@@ -18,6 +18,9 @@ declare
   v_task3      uuid;
   v_task4      uuid;
   v_task5      uuid;
+  v_task6      uuid;
+  v_task7      uuid;
+  v_template   uuid;
   v_followup1  uuid;
   v_followup2  uuid;
   v_followup3  uuid;
@@ -79,7 +82,7 @@ begin
     'Approved 3 of 4. Removed Frutas Mocambique — three late deliveries last month.'
   );
 
-  -- Task 5: blocked, urgent — surfaces the warning amber bar in list rows
+  -- Task 5: waiting on a supplier — exercises waiting_for_someone state
   select (rpc_create_task(
     p_branch       => 'cleaning',
     p_category     => 'maintenance',
@@ -89,10 +92,63 @@ begin
     p_assigned_to  => null,
     p_description  => 'On hold pending parts from the supplier. ETA Wednesday.'
   ) ->> 'id')::uuid into v_task5;
-  perform rpc_update_task(
+  perform rpc_mark_waiting(
     v_task5,
-    jsonb_build_object('status', 'blocked')
+    null,
+    'ECC Equipment',
+    'They confirmed shipment via WhatsApp on Monday. Awaiting tracking number.'
   );
+
+  -- Task 6: delayed — exercises the delayed state with a reason
+  select (rpc_create_task(
+    p_branch       => 'centralkitchen',
+    p_category     => 'training',
+    p_title        => 'Run knife-skills refresher with new line cooks',
+    p_priority     => 'normal',
+    p_due_date     => (current_date - 2)::date,
+    p_assigned_to  => 'a2ffab6b-28aa-4df7-9be4-4caf42d8708b'::uuid,
+    p_description  => 'Booked for Tuesday; rescheduled to next week.'
+  ) ->> 'id')::uuid into v_task6;
+  perform rpc_mark_delayed(
+    v_task6,
+    'Two of the three trainees called out sick. Rescheduled for next Tuesday.'
+  );
+
+  -- Task 7: finished and then sent back — exercises needs_repeat
+  select (rpc_create_task(
+    p_branch       => 'bbqhouse',
+    p_category     => 'social_media',
+    p_title        => 'Schedule weekend Instagram posts',
+    p_priority     => 'low',
+    p_due_date     => (current_date - 1)::date,
+    p_assigned_to  => null,
+    p_description  => 'Three posts: Friday DJ night, Saturday brunch, Sunday family lunch.'
+  ) ->> 'id')::uuid into v_task7;
+  perform rpc_complete_task(
+    v_task7,
+    p_completion_note => 'Posts queued in Buffer for the weekend.',
+    p_outcome         => 'Three posts scheduled.'
+  );
+  perform rpc_request_repeat(
+    v_task7,
+    'Hashtags missing on the brunch post and the cover image is portrait — needs landscape.'
+  );
+
+  -- Recurring template: weekly inventory count — exercises is_template visibility
+  -- Default list excludes templates; instances show up with the recurring badge.
+  select (rpc_create_recurring_task(
+    p_branch          => 'centralkitchen',
+    p_category        => 'operations',
+    p_title           => 'Weekly inventory count',
+    p_recurrence      => 'weekly',
+    p_recurrence_time => '09:00'::time,
+    p_priority        => 'normal',
+    p_assigned_to     => null,
+    p_description     => 'Walk every shelf with the count sheet. Reconcile against the POS.',
+    p_recurrence_dow  => array[1]::int[]   -- Mondays
+  ) ->> 'id')::uuid into v_template;
+  -- Spawn one due-today instance from the template so the seed shows the badge.
+  perform rpc_spawn_recurring_instance(v_template, current_date);
 
   -- =========================================================
   -- Follow-ups

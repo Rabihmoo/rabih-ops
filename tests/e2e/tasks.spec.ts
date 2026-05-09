@@ -42,6 +42,58 @@ test.describe('Tasks — admin happy path', () => {
     await page.goto('/follow-ups');
     await expect(page.getByTestId('new-follow-up-button')).toBeVisible();
   });
+
+  // Phase A — task lifecycle. Walks through create → mark waiting → resume →
+  // finish with an outcome. Asserts the new status badges appear and the
+  // lifecycle controls reach the right RPCs.
+  test('admin can drive a task through waiting → working → finished', async ({
+    page,
+  }) => {
+    const title = `Phase-A lifecycle ${Date.now()}`;
+    await page.goto('/tasks/new');
+    await page.getByLabel('Title').fill(title);
+    await page.getByLabel('Branch').selectOption('salt');
+    await page.getByLabel('Category').selectOption('operations');
+    await page.getByRole('button', { name: /create task/i }).click();
+    await page.waitForURL(/\/tasks\/[0-9a-f-]+$/, { timeout: 10_000 });
+
+    // Status badge tracks the lifecycle. Use the dedicated testid + data-status
+    // attribute since chip buttons reuse the same labels.
+    const statusBadge = page.getByTestId('task-status-badge');
+    await expect(statusBadge).toHaveAttribute('data-status', 'not_started');
+
+    // Mark waiting on a label, no note.
+    await page.getByTestId('task-mark-waiting-button').click();
+    await page.getByTestId('task-wait-label-input').fill('Charcoal supplier');
+    const waitingResp = page.waitForResponse((r) =>
+      r.url().includes('rpc_mark_waiting'),
+    );
+    await page.getByTestId('task-wait-submit-button').click();
+    expect((await waitingResp).status()).toBe(200);
+    await expect(statusBadge).toHaveAttribute('data-status', 'waiting_for_someone');
+
+    // Resume → working.
+    const resumeResp = page.waitForResponse((r) =>
+      r.url().includes('rpc_resume_waiting'),
+    );
+    await page.getByTestId('task-resume-waiting-button').click();
+    expect((await resumeResp).status()).toBe(200);
+    await expect(statusBadge).toHaveAttribute('data-status', 'working');
+
+    // Finish with an outcome — outcome stays in history.
+    await page.getByTestId('task-finish-button').click();
+    await page.getByTestId('task-outcome-input').fill('Cooler at 4°C, all green.');
+    const finishResp = page.waitForResponse((r) =>
+      r.url().includes('rpc_complete_task'),
+    );
+    await page.getByTestId('task-finish-submit-button').click();
+    expect((await finishResp).status()).toBe(200);
+    await expect(statusBadge).toHaveAttribute('data-status', 'finished');
+    // Outcome paragraph (the audit-log diff line also contains the same text).
+    await expect(
+      page.locator('p', { hasText: 'Cooler at 4°C, all green.' }),
+    ).toBeVisible();
+  });
 });
 
 // =========================================================
