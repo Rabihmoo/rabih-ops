@@ -12,6 +12,9 @@ import { FollowUpDetailPage } from './pages/FollowUpDetail';
 import { InspectionsPage } from './pages/Inspections';
 import { InspectionNewPage } from './pages/InspectionNew';
 import { InspectionDetailPage } from './pages/InspectionDetail';
+import { PurchasesPage } from './pages/Purchases';
+import { PurchaseNewPage } from './pages/PurchaseNew';
+import { PurchaseDetailPage } from './pages/PurchaseDetail';
 import { SettingsPage } from './pages/Settings';
 import { AuthCallbackPage } from './pages/AuthCallback';
 import { Toaster } from './components/ui/toaster';
@@ -39,6 +42,9 @@ export default function App() {
           <Route path="/inspections" element={<InspectionsPage />} />
           <Route path="/inspections/new" element={<InspectionNewPage />} />
           <Route path="/inspections/:id" element={<InspectionDetailPage />} />
+          <Route path="/purchases" element={<PurchasesPage />} />
+          <Route path="/purchases/new" element={<PurchaseNewPage />} />
+          <Route path="/purchases/:id" element={<PurchaseDetailPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

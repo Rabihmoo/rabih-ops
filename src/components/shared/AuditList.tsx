@@ -22,6 +22,12 @@ const ACTION_VERB: Record<string, string> = {
   attach: 'Attached a file',
   detach: 'Removed an attachment',
   resolve: 'Resolved',
+  // Purchasing-specific
+  submit: 'Submitted for approval',
+  approve: 'Approved and ordered',
+  delivery: 'Recorded a delivery',
+  payment: 'Recorded a payment',
+  cancel: 'Cancelled',
 };
 
 // Tone applied to the leading dot for each action — gives the timeline
@@ -37,6 +43,11 @@ const ACTION_TONE: Record<string, string> = {
   attach: 'bg-muted-foreground',
   detach: 'bg-muted-foreground',
   resolve: 'bg-success',
+  submit: 'bg-primary',
+  approve: 'bg-success',
+  delivery: 'bg-primary',
+  payment: 'bg-success',
+  cancel: 'bg-destructive',
 };
 
 const TRACKED_FIELDS = [
@@ -52,6 +63,19 @@ const TRACKED_FIELDS = [
   'task_id',
   'person',
   'outcome',
+  // Purchasing
+  'supplier_name',
+  'payment_status',
+  'payment_method',
+  'total_amount',
+  'amount_paid',
+  'qty_ordered',
+  'qty_received',
+  'expected_delivery_date',
+  'actual_delivery_date',
+  'reminder_date',
+  'order_date',
+  'currency',
 ] as const;
 
 function diffSummary(before: unknown, after: unknown): string[] {
