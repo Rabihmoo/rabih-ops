@@ -366,6 +366,115 @@ export type Database = {
           },
         ]
       }
+      purchase_requests: {
+        Row: {
+          actual_delivery_date: string | null
+          amount_paid: number | null
+          branch: string
+          cancelled_at: string | null
+          created_at: string
+          created_by: string
+          currency: string
+          deleted_at: string | null
+          expected_delivery_date: string | null
+          id: string
+          notes: string | null
+          order_date: string | null
+          payment_method: string | null
+          payment_status: string
+          priority: string
+          qty_ordered: number | null
+          qty_received: number | null
+          reminder_date: string | null
+          requested_by: string
+          status: string
+          submitted_at: string | null
+          supplier_name: string
+          supplier_website: string | null
+          title: string
+          total_amount: number | null
+          updated_at: string
+        }
+        Insert: {
+          actual_delivery_date?: string | null
+          amount_paid?: number | null
+          branch: string
+          cancelled_at?: string | null
+          created_at?: string
+          created_by: string
+          currency?: string
+          deleted_at?: string | null
+          expected_delivery_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          priority?: string
+          qty_ordered?: number | null
+          qty_received?: number | null
+          reminder_date?: string | null
+          requested_by: string
+          status?: string
+          submitted_at?: string | null
+          supplier_name: string
+          supplier_website?: string | null
+          title: string
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Update: {
+          actual_delivery_date?: string | null
+          amount_paid?: number | null
+          branch?: string
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string
+          currency?: string
+          deleted_at?: string | null
+          expected_delivery_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          priority?: string
+          qty_ordered?: number | null
+          qty_received?: number | null
+          reminder_date?: string | null
+          requested_by?: string
+          status?: string
+          submitted_at?: string | null
+          supplier_name?: string
+          supplier_website?: string | null
+          title?: string
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_requests_branch_fkey"
+            columns: ["branch"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "purchase_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -547,6 +656,7 @@ export type Database = {
         Returns: boolean
       }
       _can_admin_inspect: { Args: never; Returns: boolean }
+      _can_admin_purchases: { Args: never; Returns: boolean }
       _can_mutate: { Args: never; Returns: boolean }
       _delete_comment: { Args: { p_comment_id: string }; Returns: Json }
       _remove_attachment: { Args: { p_attachment_id: string }; Returns: Json }
@@ -576,8 +686,21 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_add_purchase_comment: {
+        Args: { p_body: string; p_id: string }
+        Returns: Json
+      }
       rpc_add_task_comment: {
         Args: { p_body: string; p_task_id: string }
+        Returns: Json
+      }
+      rpc_approve_purchase_request: {
+        Args: {
+          p_id: string
+          p_order_date?: string
+          p_payment_method?: string
+          p_total_amount?: number
+        }
         Returns: Json
       }
       rpc_attach_file_to_follow_up: {
@@ -600,6 +723,16 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_attach_file_to_purchase: {
+        Args: {
+          p_file_name: string
+          p_file_size: number
+          p_id: string
+          p_mime_type: string
+          p_storage_path: string
+        }
+        Returns: Json
+      }
       rpc_attach_file_to_task: {
         Args: {
           p_file_name: string
@@ -611,6 +744,10 @@ export type Database = {
         Returns: Json
       }
       rpc_bootstrap_user: { Args: { p_full_name?: string }; Returns: Json }
+      rpc_cancel_purchase_request: {
+        Args: { p_id: string; p_reason?: string }
+        Returns: Json
+      }
       rpc_complete_inspection: {
         Args: { p_inspection_id: string; p_result: string }
         Returns: Json
@@ -642,6 +779,24 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_create_purchase_request: {
+        Args: {
+          p_branch: string
+          p_currency?: string
+          p_expected_delivery_date?: string
+          p_notes?: string
+          p_payment_method?: string
+          p_priority?: string
+          p_qty_ordered?: number
+          p_reminder_date?: string
+          p_requested_by?: string
+          p_supplier_name: string
+          p_supplier_website?: string
+          p_title: string
+          p_total_amount?: number
+        }
+        Returns: Json
+      }
       rpc_create_task: {
         Args: {
           p_assigned_to?: string
@@ -662,10 +817,15 @@ export type Database = {
         Args: { p_comment_id: string }
         Returns: Json
       }
+      rpc_delete_purchase_comment: {
+        Args: { p_comment_id: string }
+        Returns: Json
+      }
       rpc_delete_task: { Args: { p_task_id: string }; Returns: Json }
       rpc_delete_task_comment: { Args: { p_comment_id: string }; Returns: Json }
       rpc_get_follow_up: { Args: { p_follow_up_id: string }; Returns: Json }
       rpc_get_inspection: { Args: { p_inspection_id: string }; Returns: Json }
+      rpc_get_purchase_request: { Args: { p_id: string }; Returns: Json }
       rpc_get_task: { Args: { p_task_id: string }; Returns: Json }
       rpc_get_user_dashboard: { Args: { p_user_id?: string }; Returns: Json }
       rpc_list_critical_findings: { Args: { p_limit?: number }; Returns: Json }
@@ -697,6 +857,22 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_list_purchase_dashboard: { Args: { p_limit?: number }; Returns: Json }
+      rpc_list_purchase_requests: {
+        Args: {
+          p_branch?: string
+          p_date_after?: string
+          p_date_before?: string
+          p_include_done?: boolean
+          p_limit?: number
+          p_payment_status?: string
+          p_priority?: string
+          p_requested_by?: string
+          p_search?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
       rpc_list_tasks: {
         Args: {
           p_assigned_to?: string
@@ -718,11 +894,33 @@ export type Database = {
         Args: { p_command: string; p_params?: Json; p_phone: string }
         Returns: string
       }
+      rpc_record_delivery: {
+        Args: {
+          p_delivery_date?: string
+          p_id: string
+          p_qty_received: number
+          p_status?: string
+        }
+        Returns: Json
+      }
+      rpc_record_payment: {
+        Args: {
+          p_amount_paid: number
+          p_id: string
+          p_payment_method?: string
+          p_payment_status?: string
+        }
+        Returns: Json
+      }
       rpc_remove_follow_up_attachment: {
         Args: { p_attachment_id: string }
         Returns: Json
       }
       rpc_remove_inspection_attachment: {
+        Args: { p_attachment_id: string }
+        Returns: Json
+      }
+      rpc_remove_purchase_attachment: {
         Args: { p_attachment_id: string }
         Returns: Json
       }
@@ -734,6 +932,10 @@ export type Database = {
         Args: { p_finding_id: string; p_resolution_note?: string }
         Returns: Json
       }
+      rpc_set_purchase_reminder: {
+        Args: { p_id: string; p_reminder_date: string }
+        Returns: Json
+      }
       rpc_snooze_follow_up: {
         Args: {
           p_follow_up_id: string
@@ -742,6 +944,11 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_soft_delete_purchase_request: {
+        Args: { p_id: string }
+        Returns: Json
+      }
+      rpc_submit_purchase_request: { Args: { p_id: string }; Returns: Json }
       rpc_update_finding: {
         Args: { p_finding_id: string; p_updates: Json }
         Returns: Json
@@ -752,6 +959,10 @@ export type Database = {
       }
       rpc_update_inspection: {
         Args: { p_inspection_id: string; p_updates: Json }
+        Returns: Json
+      }
+      rpc_update_purchase_request: {
+        Args: { p_id: string; p_updates: Json }
         Returns: Json
       }
       rpc_update_task: {
@@ -926,8 +1137,25 @@ export type InspectionResult = 'pending' | 'pass' | 'issues_found' | 'failed';
 export type FindingSeverity = 'minor' | 'major' | 'critical';
 export type FindingStatus = 'open' | 'in_progress' | 'resolved' | 'escalated';
 
+export type PurchaseStatus =
+  | 'draft'
+  | 'submitted'
+  | 'ordered'
+  | 'partially_received'
+  | 'fully_received'
+  | 'cancelled';
+export type PaymentStatus = 'unpaid' | 'partial' | 'paid';
+export type PaymentMethod =
+  | 'cash'
+  | 'bank_transfer'
+  | 'mpesa'
+  | 'card'
+  | 'invoice'
+  | 'other';
+export type Currency = 'MZN' | 'USD' | 'LBP';
+
 // Polymorphic entity_type literal — extend as new modules ship.
-export type EntityType = 'task' | 'follow_up' | 'inspection';
+export type EntityType = 'task' | 'follow_up' | 'inspection' | 'purchase_request';
 
 // Named row aliases — keep existing imports stable.
 export type UserRow = Database['public']['Tables']['users']['Row'];
@@ -936,6 +1164,7 @@ export type TaskRow = Database['public']['Tables']['tasks']['Row'];
 export type FollowUpRow = Database['public']['Tables']['follow_ups']['Row'];
 export type InspectionRow = Database['public']['Tables']['inspections']['Row'];
 export type InspectionFindingRow = Database['public']['Tables']['inspection_findings']['Row'];
+export type PurchaseRequestRow = Database['public']['Tables']['purchase_requests']['Row'];
 export type CommentRow = Database['public']['Tables']['comments']['Row'];
 export type AttachmentRow = Database['public']['Tables']['attachments']['Row'];
 export type AuditLogRow = Database['public']['Tables']['audit_log']['Row'];
