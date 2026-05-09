@@ -7,6 +7,7 @@ import {
   ListChecks,
   Loader2,
   PhoneCall,
+  ShieldAlert,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ import { useTaskFiltersStore, type TaskBucket } from '@/stores/taskFiltersStore'
 import { useFollowUpFiltersStore } from '@/stores/followUpFiltersStore';
 import { listTasks, type TaskListFilters } from '@/lib/tasks';
 import { listFollowUps, effectiveDueDate } from '@/lib/follow-ups';
+import { listCriticalFindings, type CriticalFinding } from '@/lib/inspections';
 import { BRANCHES, type BranchCode } from '@/lib/branches';
 import type { FollowUpRow, TaskPriority, TaskRow } from '@/types/database';
 
@@ -86,6 +88,13 @@ function useFollowUpsDueToday() {
       });
       return rows.filter((r) => r.status !== 'done' && r.status !== 'cancelled');
     },
+  });
+}
+
+function useDashboardCriticalFindings() {
+  return useQuery({
+    queryKey: ['inspections', 'dashboard', 'critical-findings'],
+    queryFn: () => listCriticalFindings(20),
   });
 }
 
@@ -418,6 +427,7 @@ export function DashboardPage() {
   const mine = useBucketTasks('mine', userId);
   const waiting = useBucketTasks('waiting', userId);
   const followUpsToday = useFollowUpsDueToday();
+  const criticalFindings = useDashboardCriticalFindings();
 
   const displayName = profile?.full_name ?? session?.user.email?.split('@')[0] ?? 'there';
   const greeting = timeOfDayGreeting();
@@ -435,12 +445,17 @@ export function DashboardPage() {
   const now = new Date();
 
   // "All clear" — every actionable list is empty AND not loading.
-  const ready = !overdue.isLoading && !today.isLoading && !followUpsToday.isLoading;
+  const ready =
+    !overdue.isLoading &&
+    !today.isLoading &&
+    !followUpsToday.isLoading &&
+    !criticalFindings.isLoading;
   const allClear =
     ready &&
     (overdue.data?.length ?? 0) === 0 &&
     (today.data?.length ?? 0) === 0 &&
-    (followUpsToday.data?.length ?? 0) === 0;
+    (followUpsToday.data?.length ?? 0) === 0 &&
+    (criticalFindings.data?.length ?? 0) === 0;
 
   return (
     <div className="space-y-6">
@@ -451,7 +466,18 @@ export function DashboardPage() {
         <p className="text-muted-foreground text-sm">{dateLabel}</p>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+        <StatTile
+          label="Critical findings"
+          tone="destructive"
+          icon={ShieldAlert}
+          count={criticalFindings.data?.length ?? null}
+          isLoading={criticalFindings.isLoading}
+          to="/inspections"
+          onView={() => {
+            /* no bucket — list shows recent inspections, findings opened via detail */
+          }}
+        />
         <StatTile
           label="Overdue"
           tone="destructive"
@@ -506,47 +532,118 @@ export function DashboardPage() {
               All clear.
             </div>
             <div className="text-muted-foreground max-w-md text-sm">
-              Nothing overdue, nothing due today, no follow-ups to chase.
+              Nothing overdue, nothing due today, no follow-ups to chase, no critical
+              findings open.
             </div>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <CompactList
-            label="Overdue"
-            tone="destructive"
-            count={overdue.data?.length ?? 0}
-            items={overdue.data ?? []}
-            isLoading={overdue.isLoading}
-            emptyText="Nothing overdue. Stay on top of it."
-            viewAllTo="/tasks"
-            onViewAll={goToTasksBucket('overdue')}
-            renderItem={(t) => <DashboardTaskRow key={t.id} task={t} now={now} />}
-          />
-          <CompactList
-            label="Due today"
-            tone="warning"
-            count={today.data?.length ?? 0}
-            items={today.data ?? []}
-            isLoading={today.isLoading}
-            emptyText="Nothing scheduled for today."
-            viewAllTo="/tasks"
-            onViewAll={goToTasksBucket('today')}
-            renderItem={(t) => <DashboardTaskRow key={t.id} task={t} now={now} />}
-          />
-          <CompactList
-            label="Follow-ups today"
-            tone="primary"
-            count={followUpsToday.data?.length ?? 0}
-            items={followUpsToday.data ?? []}
-            isLoading={followUpsToday.isLoading}
-            emptyText="No follow-ups due today."
-            viewAllTo="/follow-ups"
-            onViewAll={goToFollowUpsToday}
-            renderItem={(f) => <DashboardFollowUpRow key={f.id} followUp={f} now={now} />}
-          />
+        <div className="space-y-4">
+          {(criticalFindings.data?.length ?? 0) > 0 && (
+            <CompactList
+              label="Critical findings"
+              tone="destructive"
+              count={criticalFindings.data?.length ?? 0}
+              items={criticalFindings.data ?? []}
+              isLoading={criticalFindings.isLoading}
+              emptyText="No open critical findings."
+              viewAllTo="/inspections"
+              onViewAll={() => {}}
+              renderItem={(f) => <DashboardCriticalFindingRow key={f.id} finding={f} />}
+            />
+          )}
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <CompactList
+              label="Overdue"
+              tone="destructive"
+              count={overdue.data?.length ?? 0}
+              items={overdue.data ?? []}
+              isLoading={overdue.isLoading}
+              emptyText="Nothing overdue. Stay on top of it."
+              viewAllTo="/tasks"
+              onViewAll={goToTasksBucket('overdue')}
+              renderItem={(t) => <DashboardTaskRow key={t.id} task={t} now={now} />}
+            />
+            <CompactList
+              label="Due today"
+              tone="warning"
+              count={today.data?.length ?? 0}
+              items={today.data ?? []}
+              isLoading={today.isLoading}
+              emptyText="Nothing scheduled for today."
+              viewAllTo="/tasks"
+              onViewAll={goToTasksBucket('today')}
+              renderItem={(t) => <DashboardTaskRow key={t.id} task={t} now={now} />}
+            />
+            <CompactList
+              label="Follow-ups today"
+              tone="primary"
+              count={followUpsToday.data?.length ?? 0}
+              items={followUpsToday.data ?? []}
+              isLoading={followUpsToday.isLoading}
+              emptyText="No follow-ups due today."
+              viewAllTo="/follow-ups"
+              onViewAll={goToFollowUpsToday}
+              renderItem={(f) => (
+                <DashboardFollowUpRow key={f.id} followUp={f} now={now} />
+              )}
+            />
+          </div>
         </div>
       )}
     </div>
+  );
+}
+
+const AREA_LABEL_DASH: Record<string, string> = {
+  kitchen: 'Kitchen',
+  storage: 'Storage',
+  service_area: 'Service area',
+  cold_room: 'Cold room',
+  dry_store: 'Dry store',
+  staff_area: 'Staff area',
+  full_branch: 'Full branch',
+};
+
+function DashboardCriticalFindingRow({ finding }: { finding: CriticalFinding }) {
+  const branchMeta = (
+    BRANCHES as Record<string, { name: string; color: string } | undefined>
+  )[finding.inspection_branch as BranchCode];
+  return (
+    <Link
+      to={`/inspections/${finding.inspection_id}`}
+      className="hover:bg-surface-1 -mx-2 flex items-start gap-3 rounded-md px-2 py-2.5 transition-colors"
+    >
+      <div className="bg-destructive mt-1.5 h-2 w-2 shrink-0 rounded-full" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <div className="text-foreground line-clamp-1 text-sm font-medium">
+          {finding.description}
+        </div>
+        <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
+          {branchMeta && (
+            <span className="text-foreground/85 inline-flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: branchMeta.color }}
+              />
+              {branchMeta.name}
+            </span>
+          )}
+          <span className="text-subtle-foreground">·</span>
+          <span>{AREA_LABEL_DASH[finding.inspection_area] ?? finding.inspection_area}</span>
+          {finding.responsible && (
+            <>
+              <span className="text-subtle-foreground">·</span>
+              <span>→ {finding.responsible}</span>
+            </>
+          )}
+        </div>
+      </div>
+      <span className="text-destructive-ink shrink-0 text-xs font-semibold uppercase tracking-wider">
+        critical
+      </span>
+    </Link>
   );
 }
