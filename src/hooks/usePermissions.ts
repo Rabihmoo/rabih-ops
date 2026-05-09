@@ -15,3 +15,12 @@ export function useCanAdminInspect(): boolean {
   const role = useAuthStore((s) => s.profile?.role);
   return role === 'admin' || role === 'ceo';
 }
+
+// Mirrors public._can_admin_purchases() in 20260512_purchasing_module.sql.
+// Approve / record-payment / cancel / soft-delete on purchase requests are
+// fiscal commitments and need admin/ceo. Managers handle create / edit-while-
+// draft / submit / record-delivery / comment / attach (gated by useCanMutate).
+export function useCanAdminPurchases(): boolean {
+  const role = useAuthStore((s) => s.profile?.role);
+  return role === 'admin' || role === 'ceo';
+}
