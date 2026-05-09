@@ -1,9 +1,23 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ListChecks, PhoneCall, ClipboardCheck, Settings } from 'lucide-react';
+import {
+  LayoutDashboard,
+  ListChecks,
+  PhoneCall,
+  ClipboardCheck,
+  Settings,
+  type LucideIcon,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BRANCH_LIST } from '@/lib/branches';
 
-const nav = [
+interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  end?: boolean;
+}
+
+const NAV: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/tasks', label: 'Tasks', icon: ListChecks },
   { to: '/follow-ups', label: 'Follow-ups', icon: PhoneCall },
@@ -11,57 +25,64 @@ const nav = [
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
+// Shared active/idle classes used by both desktop sidebar and mobile bottom
+// nav. The desktop layout adds the left-edge bar; mobile uses a top bar.
+const desktopLink = (isActive: boolean) =>
+  cn(
+    'group relative flex h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors',
+    'before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:transition-colors',
+    isActive
+      ? 'bg-primary-soft text-primary-ink font-medium before:bg-primary'
+      : 'text-muted-foreground hover:bg-surface-1 hover:text-foreground before:bg-transparent',
+  );
+
 export function Sidebar() {
   return (
-    <aside className="bg-card text-card-foreground md:border-border hidden border-r md:flex md:w-64 md:flex-col">
-      <div className="px-5 py-5">
-        <div className="text-lg font-semibold tracking-tight">Rabih Ops</div>
-        <div className="text-muted-foreground text-xs">Operations management</div>
+    <aside className="bg-surface-1 border-border hidden border-r md:flex md:w-60 md:flex-col">
+      <div className="border-border flex h-14 items-center border-b px-5">
+        <div>
+          <div className="text-foreground text-lg font-semibold tracking-tight leading-none">
+            RabihOS
+          </div>
+          <div className="text-subtle-foreground mt-1 text-[11px] tracking-wide">
+            Operations console
+          </div>
+        </div>
       </div>
 
-      <nav className="flex-1 px-2">
-        <ul className="space-y-1">
-          {nav.map(({ to, label, icon: Icon, end }) => (
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <ul className="space-y-0.5">
+          {NAV.map(({ to, label, icon: Icon, end }) => (
             <li key={to}>
-              <NavLink
-                to={to}
-                end={end}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive
-                      ? 'bg-accent text-accent-foreground font-medium'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                  )
-                }
-              >
-                <Icon className="h-4 w-4" />
+              <NavLink to={to} end={end} className={({ isActive }) => desktopLink(isActive)}>
+                <Icon className="h-4 w-4 shrink-0" />
                 <span>{label}</span>
               </NavLink>
             </li>
           ))}
         </ul>
 
-        <div className="mt-6 px-2">
-          <div className="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase">
-            Branches
-          </div>
+        <div className="mt-6 px-3">
+          <div className="text-section-label mb-2">Branches</div>
           <ul className="space-y-1">
             {BRANCH_LIST.map((b) => (
-              <li key={b.code} className="flex items-center gap-3 px-3 py-1.5 text-sm">
+              <li
+                key={b.code}
+                className="text-foreground/85 flex items-center gap-2.5 py-1 text-sm"
+              >
                 <span
                   aria-hidden
-                  className="h-2.5 w-2.5 rounded-full"
+                  className="h-2 w-2 shrink-0 rounded-full"
                   style={{ backgroundColor: b.color }}
                 />
-                <span>{b.name}</span>
+                <span className="truncate">{b.name}</span>
               </li>
             ))}
           </ul>
         </div>
       </nav>
 
-      <div className="text-muted-foreground border-border border-t px-5 py-3 text-xs">
+      <div className="border-border text-subtle-foreground border-t px-5 py-3 text-[11px] tracking-wide">
         v0.1 · staging
       </div>
     </aside>
@@ -70,21 +91,27 @@ export function Sidebar() {
 
 export function MobileNav() {
   return (
-    <nav className="bg-card border-border fixed inset-x-0 bottom-0 z-40 flex border-t md:hidden">
-      {nav.map(({ to, label, icon: Icon, end }) => (
+    <nav
+      className="bg-surface-1 border-border fixed inset-x-0 bottom-0 z-40 flex h-16 border-t md:hidden"
+      aria-label="Primary"
+    >
+      {NAV.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}
           end={end}
           className={({ isActive }) =>
             cn(
-              'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px]',
-              isActive ? 'text-foreground' : 'text-muted-foreground',
+              'relative flex flex-1 flex-col items-center justify-center gap-1 px-1 text-[11px] transition-colors',
+              'before:absolute before:top-0 before:h-0.5 before:w-10 before:rounded-full before:transition-colors',
+              isActive
+                ? 'text-primary-ink before:bg-primary'
+                : 'text-muted-foreground hover:text-foreground before:bg-transparent',
             )
           }
         >
           <Icon className="h-5 w-5" />
-          <span>{label}</span>
+          <span className="font-medium tracking-wide">{label}</span>
         </NavLink>
       ))}
     </nav>
