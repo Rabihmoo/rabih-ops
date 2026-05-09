@@ -1,8 +1,11 @@
-// One-off: screenshots the dev server at :5173 for a token-baseline review.
-// Not part of the test suite. Run via:
-//   npx tsx scripts/screenshot.mts
+// One-off: screenshots the local dev server with the seeded admin session.
+// Used for visual QA. Reads the URL base from PREVIEW_URL or defaults to
+// http://localhost:5173. Run via:
+//   PREVIEW_URL=http://localhost:5174 npx tsx scripts/screenshot.mts
 import { chromium } from '@playwright/test';
 import fs from 'node:fs';
+
+const BASE = process.env.PREVIEW_URL ?? 'http://localhost:5173';
 
 const adminState = JSON.parse(
   fs.readFileSync('tests/fixtures/.auth/admin.json', 'utf8'),
@@ -23,22 +26,38 @@ await ctx.addInitScript(
 
 const page = await ctx.newPage();
 
-// Login page — unauth route, exercises bg/primary/card/input tokens.
-await page.goto('http://localhost:5173/login');
-await page.waitForLoadState('networkidle');
-await page.screenshot({ path: 'baseline-login.png' });
+const shots: { path: string; url: string; pre?: () => Promise<void> }[] = [
+  { path: 'baseline-login.png', url: '/login' },
+  { path: 'baseline-dashboard.png', url: '/' },
+  { path: 'baseline-tasks.png', url: '/tasks' },
+  { path: 'baseline-follow-ups.png', url: '/follow-ups' },
+  { path: 'baseline-inspections.png', url: '/inspections' },
+];
 
-// Dashboard — authed, shows tiles, badges, sidebar, top bar.
-await page.goto('http://localhost:5173/');
-await page.waitForLoadState('networkidle');
-await page.waitForTimeout(1500);
-await page.screenshot({ path: 'baseline-dashboard.png', fullPage: true });
+for (const s of shots) {
+  await page.goto(BASE + s.url);
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: s.path, fullPage: true });
+}
 
-// Tasks list — shows list rows, badges, filter bar.
-await page.goto('http://localhost:5173/tasks');
-await page.waitForLoadState('networkidle');
-await page.waitForTimeout(800);
-await page.screenshot({ path: 'baseline-tasks.png', fullPage: true });
+// Detail screenshots: pick the first task / follow-up / inspection shown.
+async function shotFirst(listUrl: string, itemSelector: string, outPath: string) {
+  await page.goto(BASE + listUrl);
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(800);
+  const first = page.locator(itemSelector).first();
+  if (await first.count()) {
+    await first.click();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1200);
+    await page.screenshot({ path: outPath, fullPage: true });
+  }
+}
+
+await shotFirst('/tasks', 'ul li > button', 'baseline-task-detail.png');
+await shotFirst('/follow-ups', 'ul li > button', 'baseline-followup-detail.png');
+await shotFirst('/inspections', 'ul li > button', 'baseline-inspection-detail.png');
 
 await browser.close();
-console.log('Wrote baseline-login.png, baseline-dashboard.png, baseline-tasks.png');
+console.log('Captured baseline-*.png');
