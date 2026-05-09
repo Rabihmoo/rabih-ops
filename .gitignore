@@ -15,3 +15,4 @@ test-results/
 *.tsbuildinfo
 supabase/.temp/
 tests/fixtures/.auth/
+baseline-*.png
