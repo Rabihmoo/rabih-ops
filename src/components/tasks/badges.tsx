@@ -11,22 +11,25 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
 };
 
 const STATUS_CLASSES: Record<TaskStatus, string> = {
-  todo: 'bg-slate-700/40 text-slate-100',
-  in_progress: 'bg-blue-700/40 text-blue-100',
-  blocked: 'bg-amber-700/40 text-amber-100',
-  done: 'bg-emerald-700/40 text-emerald-100',
-  cancelled: 'bg-zinc-700/40 text-zinc-300 line-through',
+  todo: 'bg-muted text-muted-foreground',
+  in_progress: 'bg-primary-soft text-primary-ink',
+  blocked: 'bg-warning-soft text-warning-ink',
+  done: 'bg-success-soft text-success-ink',
+  cancelled: 'bg-muted text-subtle-foreground line-through',
 };
 
-export function StatusBadge({ status, className }: { status: TaskStatus; className?: string }) {
+const PILL_BASE =
+  'inline-flex items-center rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider';
+
+export function StatusBadge({
+  status,
+  className,
+}: {
+  status: TaskStatus;
+  className?: string;
+}) {
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide',
-        STATUS_CLASSES[status],
-        className,
-      )}
-    >
+    <span className={cn(PILL_BASE, STATUS_CLASSES[status], className)}>
       {STATUS_LABEL[status]}
     </span>
   );
@@ -39,9 +42,9 @@ const PRIORITY_LABEL: Record<TaskPriority, string> = {
 };
 
 const PRIORITY_CLASSES: Record<TaskPriority, string> = {
-  urgent: 'bg-red-700/40 text-red-100',
-  normal: 'bg-slate-700/40 text-slate-200',
-  low: 'bg-zinc-800/60 text-zinc-400',
+  urgent: 'bg-destructive-soft text-destructive-ink',
+  normal: 'bg-muted text-muted-foreground',
+  low: 'bg-transparent text-subtle-foreground',
 };
 
 export function PriorityBadge({
@@ -52,13 +55,7 @@ export function PriorityBadge({
   className?: string;
 }) {
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide',
-        PRIORITY_CLASSES[priority],
-        className,
-      )}
-    >
+    <span className={cn(PILL_BASE, PRIORITY_CLASSES[priority], className)}>
       {PRIORITY_LABEL[priority]}
     </span>
   );
@@ -70,9 +67,7 @@ export function BranchBadge({ branch, className }: { branch: string; className?:
   ];
   if (!meta) {
     return (
-      <span className={cn('text-muted-foreground text-xs', className)}>
-        {branch}
-      </span>
+      <span className={cn('text-subtle-foreground text-xs', className)}>{branch}</span>
     );
   }
   return (
@@ -92,41 +87,74 @@ export function BranchBadge({ branch, className }: { branch: string; className?:
   );
 }
 
+// Returns the urgency tone of a task row based on status + due date + priority.
+// Drives both the left-edge bar on list rows and the colour of the due-date label.
+export type RowTone = 'destructive' | 'warning' | 'primary' | 'muted';
+
+export function computeDueTone(
+  dueDate: string | null,
+  status: TaskStatus | 'pending' | 'snoozed',
+  priority?: TaskPriority,
+): RowTone {
+  const closed = status === 'done' || status === 'cancelled';
+  if (closed) return 'muted';
+  if (!dueDate) return priority === 'urgent' ? 'destructive' : 'muted';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate + 'T00:00:00');
+  const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
+  if (diff < 0) return 'destructive';
+  if (diff === 0) return 'warning';
+  if (priority === 'urgent') return 'destructive';
+  if (status === 'in_progress') return 'primary';
+  return 'muted';
+}
+
+const TONE_TEXT: Record<RowTone, string> = {
+  destructive: 'text-destructive-ink',
+  warning: 'text-warning-ink',
+  primary: 'text-primary-ink',
+  muted: 'text-muted-foreground',
+};
+
+export const TONE_BAR: Record<RowTone, string> = {
+  destructive: 'bg-destructive',
+  warning: 'bg-warning',
+  primary: 'bg-primary',
+  muted: 'bg-transparent',
+};
+
 export function DueDateBadge({
   dueDate,
   status,
   className,
 }: {
   dueDate: string | null;
-  status: TaskStatus;
+  status: TaskStatus | 'pending' | 'snoozed';
   className?: string;
 }) {
   if (!dueDate) {
-    return <span className={cn('text-muted-foreground text-xs', className)}>No due date</span>;
+    return (
+      <span className={cn('text-subtle-foreground text-xs', className)}>No due date</span>
+    );
   }
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const due = new Date(dueDate + 'T00:00:00');
-  const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
-  const isOpen = status !== 'done' && status !== 'cancelled';
-  const isOverdue = isOpen && diffDays < 0;
-  const isToday = isOpen && diffDays === 0;
+  const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
+  const tone = computeDueTone(dueDate, status);
 
   let label: string;
-  if (isToday) label = 'Today';
-  else if (diffDays === 1) label = 'Tomorrow';
-  else if (diffDays === -1) label = 'Yesterday';
-  else if (isOverdue) label = `Overdue ${Math.abs(diffDays)}d`;
-  else if (diffDays > 0 && diffDays < 7) label = `In ${diffDays}d`;
-  else label = due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  if (diff === 0) label = 'Today';
+  else if (diff === 1) label = 'Tomorrow';
+  else if (diff === -1) label = 'Yesterday';
+  else if (diff < 0) label = `${Math.abs(diff)}d overdue`;
+  else if (diff < 7) label = `In ${diff}d`;
+  else label = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return (
     <span
-      className={cn(
-        'text-xs font-medium',
-        isOverdue ? 'text-red-400' : isToday ? 'text-amber-300' : 'text-muted-foreground',
-        className,
-      )}
+      className={cn('text-xs font-medium tabular-nums', TONE_TEXT[tone], className)}
     >
       {label}
     </span>

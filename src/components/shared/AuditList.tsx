@@ -1,4 +1,6 @@
 // Generic audit timeline used by every module's detail view.
+import { cn } from '@/lib/utils';
+
 export interface AuditEntry {
   id: number;
   action: string;
@@ -20,6 +22,21 @@ const ACTION_VERB: Record<string, string> = {
   attach: 'Attached a file',
   detach: 'Removed an attachment',
   resolve: 'Resolved',
+};
+
+// Tone applied to the leading dot for each action — gives the timeline
+// a peripheral-vision colour signal (green completes, red deletes, etc.).
+const ACTION_TONE: Record<string, string> = {
+  create: 'bg-primary',
+  update: 'bg-muted-foreground',
+  complete: 'bg-success',
+  snooze: 'bg-warning',
+  delete: 'bg-destructive',
+  comment: 'bg-muted-foreground',
+  comment_delete: 'bg-muted-foreground',
+  attach: 'bg-muted-foreground',
+  detach: 'bg-muted-foreground',
+  resolve: 'bg-success',
 };
 
 const TRACKED_FIELDS = [
@@ -72,30 +89,39 @@ function relativeTime(iso: string): string {
 
 export function AuditList({ entries }: { entries: AuditEntry[] }) {
   if (entries.length === 0) {
-    return <div className="text-muted-foreground text-sm">No audit entries yet.</div>;
+    return <div className="text-muted-foreground text-sm">No activity yet.</div>;
   }
   return (
     <ol className="space-y-3">
       {entries.map((e) => {
         const verb = ACTION_VERB[e.action] ?? e.action;
+        const tone = ACTION_TONE[e.action] ?? 'bg-muted-foreground';
         const diff =
           e.action === 'update' || e.action === 'snooze'
             ? diffSummary(e.before_state, e.after_state)
             : [];
         return (
-          <li key={e.id} className="border-border border-l-2 pl-3">
-            <div className="text-sm">
-              <span className="font-medium">{e.user_name}</span>{' '}
-              <span className="text-muted-foreground">{verb}</span>
+          <li key={e.id} className="flex gap-3">
+            <div className="relative flex flex-col items-center pt-1.5">
+              <span aria-hidden className={cn('h-2 w-2 shrink-0 rounded-full', tone)} />
+              <span className="bg-border w-px flex-1 mt-1" aria-hidden />
             </div>
-            <div className="text-muted-foreground text-xs">{relativeTime(e.created_at)}</div>
-            {diff.length > 0 && (
-              <ul className="text-muted-foreground mt-1 space-y-0.5 text-xs">
-                {diff.map((d) => (
-                  <li key={d}>{d}</li>
-                ))}
-              </ul>
-            )}
+            <div className="flex-1 pb-2">
+              <div className="text-sm">
+                <span className="text-foreground font-semibold">{e.user_name}</span>
+                <span className="text-muted-foreground"> {verb}</span>
+              </div>
+              <div className="text-subtle-foreground text-xs">
+                {relativeTime(e.created_at)}
+              </div>
+              {diff.length > 0 && (
+                <ul className="text-muted-foreground mt-1.5 space-y-0.5 text-xs">
+                  {diff.map((d) => (
+                    <li key={d}>{d}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </li>
         );
       })}

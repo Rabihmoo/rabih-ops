@@ -1,11 +1,21 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Loader2, Clock } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/components/ui/toaster';
 import { FollowUpForm } from '@/components/follow-ups/FollowUpForm';
+import {
+  FollowUpStatusBadge,
+  FollowUpCategoryBadge,
+} from '@/components/follow-ups/badges';
+import {
+  BranchBadge,
+  DueDateBadge,
+  PriorityBadge,
+} from '@/components/tasks/badges';
 import { AuditList } from '@/components/shared/AuditList';
 import { CommentList } from '@/components/shared/CommentList';
 import { AttachmentList } from '@/components/shared/AttachmentList';
@@ -19,9 +29,15 @@ import {
   useAttachFileToFollowUp,
   useRemoveFollowUpAttachment,
 } from '@/hooks/useFollowUps';
+import { effectiveDueDate } from '@/lib/follow-ups';
 import { useCanMutate } from '@/hooks/usePermissions';
+import { useAuthStore } from '@/stores/authStore';
 import type { UpdateFollowUpInput } from '@/lib/follow-ups';
-import type { FollowUpStatus } from '@/types/database';
+import type {
+  FollowUpCategory,
+  FollowUpStatus,
+  TaskPriority,
+} from '@/types/database';
 
 export function FollowUpDetailPage() {
   const params = useParams<{ id: string }>();
@@ -35,6 +51,7 @@ export function FollowUpDetailPage() {
   const deleteComment = useDeleteFollowUpComment();
   const attach = useAttachFileToFollowUp();
   const removeAttachment = useRemoveFollowUpAttachment();
+  const profile = useAuthStore((s) => s.profile);
   const canMutate = useCanMutate();
 
   const [editing, setEditing] = useState(false);
@@ -55,7 +72,7 @@ export function FollowUpDetailPage() {
         <Link to="/follow-ups" className="text-muted-foreground text-sm hover:underline">
           <ArrowLeft className="mr-1 inline h-4 w-4" /> Back to follow-ups
         </Link>
-        <div className="text-destructive text-sm">
+        <div className="text-destructive-ink text-sm">
           Could not load follow-up: {(error as Error).message}
         </div>
       </div>
@@ -63,6 +80,17 @@ export function FollowUpDetailPage() {
   }
   if (!data) return null;
   const { follow_up: row, audit, comments, attachments } = data;
+  const status = row.status as FollowUpStatus;
+  const priority = row.priority as TaskPriority;
+  const closed = status === 'done' || status === 'cancelled';
+  const due = effectiveDueDate(row);
+
+  const assigneeLabel =
+    row.assigned_to == null
+      ? 'Unassigned'
+      : row.assigned_to === profile?.id
+        ? `${profile?.full_name ?? 'me'}`
+        : 'Other user';
 
   const handleUpdate = async (payload: UpdateFollowUpInput) => {
     await update.mutateAsync({ id, updates: payload });
@@ -90,7 +118,7 @@ export function FollowUpDetailPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-5xl space-y-6">
       <Link
         to="/follow-ups"
         className="text-muted-foreground hover:text-foreground inline-flex items-center text-sm"
@@ -98,32 +126,57 @@ export function FollowUpDetailPage() {
         <ArrowLeft className="mr-1 h-4 w-4" /> Back to follow-ups
       </Link>
 
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{row.title}</h1>
-          {row.task_id && (
-            <Link
-              to={`/tasks/${row.task_id}`}
-              className="text-primary mt-1 inline-block text-xs hover:underline"
-            >
-              ↳ Linked to task
-            </Link>
-          )}
+      {/* Header strip */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1 space-y-3">
+          <h1
+            className={cn(
+              'text-foreground text-3xl font-semibold tracking-tight leading-tight',
+              closed && 'text-muted-foreground line-through',
+            )}
+          >
+            {row.title}
+          </h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <FollowUpStatusBadge status={status} />
+            <FollowUpCategoryBadge category={row.category as FollowUpCategory} />
+            {row.branch && <BranchBadge branch={row.branch} />}
+            {priority !== 'normal' && <PriorityBadge priority={priority} />}
+            <DueDateBadge dueDate={due} status={status} />
+            {row.snoozed_until && (
+              <span className="text-subtle-foreground text-xs">
+                originally due {row.due_date}
+              </span>
+            )}
+            <span className="text-subtle-foreground text-xs">·</span>
+            <span className="text-muted-foreground text-xs">{assigneeLabel}</span>
+            {row.task_id && (
+              <>
+                <span className="text-subtle-foreground text-xs">·</span>
+                <Link
+                  to={`/tasks/${row.task_id}`}
+                  className="text-primary-ink text-xs hover:underline"
+                >
+                  ↳ Linked to task
+                </Link>
+              </>
+            )}
+          </div>
         </div>
-        {canMutate && (
+        {canMutate && !editing && (
           <div className="flex shrink-0 flex-wrap gap-2">
-            {!editing && row.status !== 'done' && (
+            {!closed && (
               <Button
                 size="sm"
                 onClick={handleMarkDone}
                 disabled={markDone.isPending}
                 data-testid="follow-up-complete-button"
               >
-                {markDone.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {markDone.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Mark done
               </Button>
             )}
-            {!editing && row.status !== 'done' && (
+            {!closed && (
               <Button
                 size="sm"
                 variant="outline"
@@ -133,21 +186,20 @@ export function FollowUpDetailPage() {
                 <Clock className="mr-1 h-4 w-4" /> Snooze
               </Button>
             )}
-            {!editing && (
-              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-                Edit
-              </Button>
-            )}
+            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+              Edit
+            </Button>
           </div>
         )}
       </div>
 
-      {snoozeOpen && canMutate && (
+      {snoozeOpen && canMutate && !editing && (
         <Card>
-          <CardContent className="space-y-3 pt-6">
+          <CardContent className="space-y-3 p-5">
+            <div className="text-section-label">Snooze</div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-xs font-medium" htmlFor="snooze-date">
+                <label className="text-foreground/90 text-xs font-medium" htmlFor="snooze-date">
                   Snooze until
                 </label>
                 <Input
@@ -158,7 +210,10 @@ export function FollowUpDetailPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium" htmlFor="snooze-reason">
+                <label
+                  className="text-foreground/90 text-xs font-medium"
+                  htmlFor="snooze-reason"
+                >
                   Reason (optional)
                 </label>
                 <Input
@@ -186,12 +241,11 @@ export function FollowUpDetailPage() {
         </Card>
       )}
 
+      {/* Edit form OR overview */}
       {editing ? (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Edit follow-up</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3 p-5">
+            <div className="text-section-label">Edit follow-up</div>
             <FollowUpForm
               initial={row}
               submitting={update.isPending}
@@ -201,7 +255,7 @@ export function FollowUpDetailPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="mt-3 px-0"
+              className="px-0"
               onClick={() => setEditing(false)}
             >
               Cancel
@@ -209,37 +263,41 @@ export function FollowUpDetailPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardContent className="space-y-3 pt-6">
-            <DetailRow
-              label="Status"
-              value={(row.status as FollowUpStatus).replace('_', ' ')}
-            />
-            <DetailRow label="Category" value={row.category.replace('_', ' ')} />
-            <DetailRow label="Priority" value={row.priority} />
-            <DetailRow label="Branch" value={row.branch ?? 'cross-branch'} />
-            <DetailRow label="Due" value={row.due_date} />
-            {row.snoozed_until && (
-              <DetailRow label="Snoozed until" value={row.snoozed_until} />
-            )}
-            <DetailRow label="Person" value={row.person ?? '—'} />
-            <DetailRow
-              label="Assigned to"
-              value={row.assigned_to ? row.assigned_to : 'Unassigned'}
-            />
-            {row.description && (
-              <DetailRow label="Description" value={row.description} multiline />
-            )}
-            {row.outcome && <DetailRow label="Outcome" value={row.outcome} multiline />}
-          </CardContent>
-        </Card>
+        (row.description || row.outcome) && (
+          <Card>
+            <CardContent className="space-y-4 p-5">
+              {row.description && (
+                <div className="space-y-2">
+                  <div className="text-section-label">Description</div>
+                  <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
+                    {row.description}
+                  </p>
+                </div>
+              )}
+              {row.outcome && (
+                <div className="space-y-2">
+                  <div className="text-section-label">Outcome</div>
+                  <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
+                    {row.outcome}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )
       )}
 
+      {/* Comments */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Comments</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4 p-5">
+          <div className="text-section-label flex items-center gap-2">
+            Comments
+            {comments.length > 0 && (
+              <span className="text-foreground/85 normal-case tracking-normal">
+                ({comments.length})
+              </span>
+            )}
+          </div>
           <CommentList
             comments={comments}
             onAdd={(body) => addComment.mutateAsync({ id, body })}
@@ -252,11 +310,17 @@ export function FollowUpDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Attachments */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Attachments</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4 p-5">
+          <div className="text-section-label flex items-center gap-2">
+            Attachments
+            {attachments.length > 0 && (
+              <span className="text-foreground/85 normal-case tracking-normal">
+                ({attachments.length})
+              </span>
+            )}
+          </div>
           <AttachmentList
             entityType="follow_up"
             entityId={id}
@@ -279,31 +343,13 @@ export function FollowUpDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Activity */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4 p-5">
+          <div className="text-section-label">Activity</div>
           <AuditList entries={audit} />
         </CardContent>
       </Card>
-    </div>
-  );
-}
-
-function DetailRow({
-  label,
-  value,
-  multiline,
-}: {
-  label: string;
-  value: string;
-  multiline?: boolean;
-}) {
-  return (
-    <div className={multiline ? 'space-y-1' : 'flex items-baseline justify-between gap-3'}>
-      <div className="text-muted-foreground text-xs uppercase tracking-wide">{label}</div>
-      <div className={multiline ? 'text-sm whitespace-pre-wrap' : 'text-sm'}>{value}</div>
     </div>
   );
 }

@@ -75,20 +75,29 @@ export function CommentList({
       {comments.length === 0 ? (
         <div className="text-muted-foreground text-sm">No comments yet.</div>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-4">
           {comments.map((c) => {
             const canDelete =
               profile &&
               (c.author_id === profile.id ||
                 profile.role === 'admin' ||
                 profile.role === 'ceo');
+            const isMine = profile && c.author_id === profile.id;
             return (
-              <li key={c.id} className="border-border border-l-2 pl-3">
+              <li
+                key={c.id}
+                className="bg-surface-1 border-border rounded-md border px-4 py-3"
+              >
                 <div className="flex items-baseline justify-between gap-3">
                   <div className="text-sm">
-                    <span className="font-medium">{c.author_name}</span>{' '}
-                    <span className="text-muted-foreground text-xs">
-                      · {relativeTime(c.created_at)}
+                    <span className="text-foreground font-semibold">{c.author_name}</span>
+                    {isMine && (
+                      <span className="bg-primary-soft text-primary-ink ml-2 inline-flex items-center rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                        you
+                      </span>
+                    )}
+                    <span className="text-subtle-foreground ml-2 text-xs">
+                      {relativeTime(c.created_at)}
                     </span>
                   </div>
                   {canDelete && (
@@ -96,14 +105,16 @@ export function CommentList({
                       type="button"
                       onClick={() => handleDelete(c.id)}
                       disabled={isDeleting}
-                      className="text-muted-foreground hover:text-destructive disabled:opacity-50"
+                      className="text-muted-foreground hover:text-destructive-ink disabled:opacity-50"
                       aria-label="Delete comment"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </div>
-                <div className="mt-1 text-sm whitespace-pre-wrap">{c.body}</div>
+                <div className="text-foreground/95 mt-2 text-sm leading-relaxed whitespace-pre-wrap">
+                  {c.body}
+                </div>
               </li>
             );
           })}
@@ -115,15 +126,20 @@ export function CommentList({
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            rows={2}
+            rows={3}
             placeholder="Add a comment…"
-            className="bg-card border-border focus:ring-ring w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+            className="bg-card border-border focus-visible:ring-ring/70 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             maxLength={5000}
           />
-          <Button size="sm" disabled={!body.trim() || isAdding} onClick={handleAdd}>
-            {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Post comment
-          </Button>
+          <div className="flex items-center justify-between">
+            <span className="text-subtle-foreground text-xs">
+              {body.length}/5000
+            </span>
+            <Button size="sm" disabled={!body.trim() || isAdding} onClick={handleAdd}>
+              {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Post comment
+            </Button>
+          </div>
         </div>
       )}
     </div>

@@ -103,7 +103,10 @@ function timeOfDayGreeting(): string {
 }
 
 function todayHumanLabel(): string {
-  return new Date().toLocaleDateString(undefined, {
+  // Pinned to en-US so the dashboard chrome reads the same on every machine,
+  // regardless of browser locale. Switch to a user-preference setting later
+  // if multi-language UX is added.
+  return new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',

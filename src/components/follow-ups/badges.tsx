@@ -16,11 +16,14 @@ const STATUS_LABEL: Record<FollowUpStatus, string> = {
 };
 
 const STATUS_CLASSES: Record<FollowUpStatus, string> = {
-  pending: 'bg-slate-700/40 text-slate-100',
-  done: 'bg-emerald-700/40 text-emerald-100',
-  snoozed: 'bg-violet-700/40 text-violet-100',
-  cancelled: 'bg-zinc-700/40 text-zinc-300 line-through',
+  pending: 'bg-muted text-muted-foreground',
+  done: 'bg-success-soft text-success-ink',
+  snoozed: 'bg-warning-soft text-warning-ink',
+  cancelled: 'bg-muted text-subtle-foreground line-through',
 };
+
+const PILL_BASE =
+  'inline-flex items-center rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider';
 
 export function FollowUpStatusBadge({
   status,
@@ -30,13 +33,7 @@ export function FollowUpStatusBadge({
   className?: string;
 }) {
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide',
-        STATUS_CLASSES[status],
-        className,
-      )}
-    >
+    <span className={cn(PILL_BASE, STATUS_CLASSES[status], className)}>
       {STATUS_LABEL[status]}
     </span>
   );
@@ -69,7 +66,7 @@ export function FollowUpCategoryBadge({
   return (
     <span
       className={cn(
-        'text-muted-foreground inline-flex items-center gap-1 text-xs',
+        'text-foreground/85 inline-flex items-center gap-1.5 text-xs font-medium',
         className,
       )}
     >

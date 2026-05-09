@@ -109,7 +109,7 @@ export function AttachmentList({
       {attachments.length === 0 ? (
         <div className="text-muted-foreground text-sm">No attachments yet.</div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-1.5">
           {attachments.map((a) => {
             const canDelete =
               profile &&
@@ -119,17 +119,17 @@ export function AttachmentList({
             return (
               <li
                 key={a.id}
-                className="border-border flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
+                className="bg-surface-1 border-border hover:border-border-strong flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 transition-colors"
               >
                 <button
                   type="button"
                   onClick={() => handleOpen(a.storage_path)}
-                  className="flex min-w-0 flex-1 items-center gap-2 text-left hover:underline"
+                  className="text-foreground hover:text-primary-ink flex min-w-0 flex-1 items-center gap-2.5 text-left text-sm transition-colors"
                 >
                   <Paperclip className="text-muted-foreground h-4 w-4 shrink-0" />
-                  <span className="truncate">{a.file_name}</span>
+                  <span className="truncate font-medium">{a.file_name}</span>
                 </button>
-                <span className="text-muted-foreground shrink-0 text-xs">
+                <span className="text-subtle-foreground shrink-0 text-xs tabular-nums">
                   {formatBytes(a.file_size)} · {a.uploader_name}
                 </span>
                 {canDelete && (
@@ -137,7 +137,7 @@ export function AttachmentList({
                     type="button"
                     onClick={() => handleRemove(a.id)}
                     disabled={isRemoving}
-                    className="text-muted-foreground hover:text-destructive shrink-0 disabled:opacity-50"
+                    className="text-muted-foreground hover:text-destructive-ink shrink-0 disabled:opacity-50"
                     aria-label="Remove attachment"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -150,7 +150,7 @@ export function AttachmentList({
       )}
 
       {canMutate && (
-        <div className="space-y-1" data-testid="attachment-uploader">
+        <div className="space-y-1.5" data-testid="attachment-uploader">
           <input
             ref={fileRef}
             type="file"
@@ -166,8 +166,8 @@ export function AttachmentList({
             )}
             Attach file
           </Button>
-          <div className="text-muted-foreground text-xs">
-            Max {MAX_FILE_BYTES / 1024 / 1024} MB. Images, PDF, Office docs, text/csv.
+          <div className="text-subtle-foreground text-xs">
+            Max {MAX_FILE_BYTES / 1024 / 1024} MB. Images, PDF, Office docs, text and CSV.
           </div>
         </div>
       )}
