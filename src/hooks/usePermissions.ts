@@ -7,3 +7,11 @@ export function useCanMutate(): boolean {
   const role = useAuthStore((s) => s.profile?.role);
   return role === 'admin' || role === 'ceo' || role === 'manager';
 }
+
+// Mirrors public._can_admin_inspect() in 20260511_inspections_module.sql.
+// Inspections are an audit function — only admin/ceo can create/update them
+// or add/edit findings. Managers can resolve findings (they implement fixes).
+export function useCanAdminInspect(): boolean {
+  const role = useAuthStore((s) => s.profile?.role);
+  return role === 'admin' || role === 'ceo';
+}
