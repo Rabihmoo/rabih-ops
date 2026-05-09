@@ -8,17 +8,22 @@ import {
   Loader2,
   PhoneCall,
   Users,
+  type LucideIcon,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
 import { useCurrentUserProfile, useSession } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
 import { useTaskFiltersStore, type TaskBucket } from '@/stores/taskFiltersStore';
 import { useFollowUpFiltersStore } from '@/stores/followUpFiltersStore';
 import { listTasks, type TaskListFilters } from '@/lib/tasks';
 import { listFollowUps, effectiveDueDate } from '@/lib/follow-ups';
-import type { FollowUpRow, TaskRow } from '@/types/database';
-import { DueDateBadge, BranchBadge, PriorityBadge } from '@/components/tasks/badges';
-import { FollowUpCategoryBadge } from '@/components/follow-ups/badges';
+import { BRANCHES, type BranchCode } from '@/lib/branches';
+import type { FollowUpRow, TaskPriority, TaskRow } from '@/types/database';
+
+// =========================================================
+// Data hooks (unchanged from prior dashboard)
+// =========================================================
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -37,7 +42,7 @@ function useBucketTasks(bucket: TaskBucket, userId: string | undefined) {
       filters = { ...filters, assignedTo: userId ?? null };
       break;
     case 'waiting':
-      // No created_by filter at the RPC; client filter below.
+      // No created_by filter at the RPC; client-filtered below.
       break;
   }
 
@@ -57,7 +62,10 @@ function useBucketTasks(bucket: TaskBucket, userId: string | undefined) {
       if (bucket === 'waiting') {
         if (!userId) return [];
         return rows.filter(
-          (t) => t.created_by === userId && t.assigned_to !== null && t.assigned_to !== userId,
+          (t) =>
+            t.created_by === userId &&
+            t.assigned_to !== null &&
+            t.assigned_to !== userId,
         );
       }
       return rows;
@@ -81,190 +89,461 @@ function useFollowUpsDueToday() {
   });
 }
 
+// =========================================================
+// Greeting + date helpers
+// =========================================================
+
+function timeOfDayGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 5) return 'Good night';
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  if (h < 22) return 'Good evening';
+  return 'Good night';
+}
+
+function todayHumanLabel(): string {
+  return new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+// =========================================================
+// Tone (urgency color) mapping
+// =========================================================
+
+type Tone = 'destructive' | 'warning' | 'primary' | 'muted';
+
+const TONE_CLASS: Record<
+  Tone,
+  { number: string; label: string; icon: string; bar: string }
+> = {
+  destructive: {
+    number: 'text-destructive-ink',
+    label: 'text-destructive-ink',
+    icon: 'text-destructive',
+    bar: 'bg-destructive',
+  },
+  warning: {
+    number: 'text-warning-ink',
+    label: 'text-warning-ink',
+    icon: 'text-warning',
+    bar: 'bg-warning',
+  },
+  primary: {
+    number: 'text-primary-ink',
+    label: 'text-primary-ink',
+    icon: 'text-primary',
+    bar: 'bg-primary',
+  },
+  muted: {
+    number: 'text-foreground/85',
+    label: 'text-muted-foreground',
+    icon: 'text-muted-foreground',
+    bar: 'bg-border',
+  },
+};
+
+// =========================================================
+// Stat tile
+// =========================================================
+
+function StatTile({
+  label,
+  tone,
+  icon: Icon,
+  count,
+  isLoading,
+  to,
+  onView,
+}: {
+  label: string;
+  tone: Tone;
+  icon: LucideIcon;
+  count: number | null;
+  isLoading: boolean;
+  to: string;
+  onView: () => void;
+}) {
+  const isEmpty = (count ?? 0) === 0;
+  const t = isEmpty ? TONE_CLASS.muted : TONE_CLASS[tone];
+
+  return (
+    <Card className="relative overflow-hidden">
+      <div className={cn('absolute left-0 top-0 bottom-0 w-1', t.bar)} aria-hidden />
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between">
+          <span className={cn('text-xs font-semibold uppercase tracking-wider', t.label)}>
+            {label}
+          </span>
+          <Icon className={cn('h-4 w-4', t.icon)} />
+        </div>
+        <div
+          className={cn(
+            'mt-3 text-4xl font-bold tabular-nums tracking-tight leading-none',
+            t.number,
+          )}
+        >
+          {isLoading ? (
+            <Loader2 className="text-muted-foreground h-7 w-7 animate-spin" />
+          ) : (
+            (count ?? '—')
+          )}
+        </div>
+        <Link
+          to={to}
+          onClick={onView}
+          className="text-muted-foreground hover:text-foreground mt-4 inline-flex items-center text-xs font-medium transition-colors"
+        >
+          View all <ArrowRight className="ml-1 h-3 w-3" />
+        </Link>
+      </CardContent>
+    </Card>
+  );
+}
+
+// =========================================================
+// Compact rows for the lists below the tiles
+// =========================================================
+
+function relativeDue(due: string | null, now: Date): { text: string; tone: Tone } {
+  if (!due) return { text: 'No date', tone: 'muted' };
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(due + 'T00:00:00');
+  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
+  if (diffDays < 0) return { text: `${Math.abs(diffDays)}d overdue`, tone: 'destructive' };
+  if (diffDays === 0) return { text: 'Today', tone: 'warning' };
+  if (diffDays === 1) return { text: 'Tomorrow', tone: 'muted' };
+  return { text: `In ${diffDays}d`, tone: 'muted' };
+}
+
+const DUE_TONE_CLASS: Record<Tone, string> = {
+  destructive: 'text-destructive-ink',
+  warning: 'text-warning-ink',
+  primary: 'text-primary-ink',
+  muted: 'text-muted-foreground',
+};
+
+function BranchTag({ branch }: { branch: string | null }) {
+  if (!branch) {
+    return <span className="text-subtle-foreground">cross-branch</span>;
+  }
+  const meta = (BRANCHES as Record<string, { name: string; color: string } | undefined>)[
+    branch as BranchCode
+  ];
+  if (!meta) {
+    return <span className="text-subtle-foreground">{branch}</span>;
+  }
+  return (
+    <span className="text-foreground/85 inline-flex items-center gap-1.5">
+      <span
+        aria-hidden
+        className="h-1.5 w-1.5 rounded-full"
+        style={{ backgroundColor: meta.color }}
+      />
+      {meta.name}
+    </span>
+  );
+}
+
+function PriorityChip({ priority }: { priority: TaskPriority }) {
+  if (priority === 'urgent') {
+    return (
+      <span className="bg-destructive-soft text-destructive-ink rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+        urgent
+      </span>
+    );
+  }
+  if (priority === 'low') {
+    return (
+      <span className="text-subtle-foreground text-[10px] uppercase tracking-wider">low</span>
+    );
+  }
+  return null;
+}
+
+function DashboardTaskRow({ task, now }: { task: TaskRow; now: Date }) {
+  const due = relativeDue(task.due_date, now);
+  return (
+    <Link
+      to={`/tasks/${task.id}`}
+      className="hover:bg-surface-1 -mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="text-foreground line-clamp-1 text-sm font-medium">{task.title}</div>
+        <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
+          <BranchTag branch={task.branch} />
+          <PriorityChip priority={task.priority as TaskPriority} />
+        </div>
+      </div>
+      <span className={cn('shrink-0 text-xs font-medium tabular-nums', DUE_TONE_CLASS[due.tone])}>
+        {due.text}
+      </span>
+    </Link>
+  );
+}
+
+function DashboardFollowUpRow({
+  followUp,
+  now,
+}: {
+  followUp: FollowUpRow;
+  now: Date;
+}) {
+  const due = relativeDue(effectiveDueDate(followUp), now);
+  return (
+    <Link
+      to={`/follow-ups/${followUp.id}`}
+      className="hover:bg-surface-1 -mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="text-foreground line-clamp-1 text-sm font-medium">
+          {followUp.title}
+        </div>
+        <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
+          <span className="capitalize">{followUp.category.replace('_', ' ')}</span>
+          {followUp.person && (
+            <>
+              <span className="text-subtle-foreground">·</span>
+              <span>{followUp.person}</span>
+            </>
+          )}
+          {followUp.branch && (
+            <>
+              <span className="text-subtle-foreground">·</span>
+              <BranchTag branch={followUp.branch} />
+            </>
+          )}
+        </div>
+      </div>
+      <span className={cn('shrink-0 text-xs font-medium tabular-nums', DUE_TONE_CLASS[due.tone])}>
+        {due.text}
+      </span>
+    </Link>
+  );
+}
+
+// =========================================================
+// Compact list section
+// =========================================================
+
+function CompactList<T>({
+  label,
+  count,
+  tone,
+  items,
+  isLoading,
+  emptyText,
+  viewAllTo,
+  onViewAll,
+  renderItem,
+}: {
+  label: string;
+  count: number;
+  tone: Tone;
+  items: T[];
+  isLoading: boolean;
+  emptyText: string;
+  viewAllTo: string;
+  onViewAll: () => void;
+  renderItem: (item: T) => React.ReactNode;
+}) {
+  const t = TONE_CLASS[count > 0 ? tone : 'muted'];
+  const previewCount = 5;
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="border-border mb-2 flex items-baseline justify-between border-b pb-3">
+          <div className="flex items-baseline gap-2">
+            <span className={cn('text-xs font-semibold uppercase tracking-wider', t.label)}>
+              {label}
+            </span>
+            <span className={cn('text-xs tabular-nums', t.label)}>{count}</span>
+          </div>
+          {count > 0 && (
+            <Link
+              to={viewAllTo}
+              onClick={onViewAll}
+              className="text-muted-foreground hover:text-foreground inline-flex items-center text-xs"
+            >
+              View all <ArrowRight className="ml-1 h-3 w-3" />
+            </Link>
+          )}
+        </div>
+        {isLoading ? (
+          <div className="text-muted-foreground py-3 text-sm">
+            <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+            Loading…
+          </div>
+        ) : items.length === 0 ? (
+          <div className="text-muted-foreground py-3 text-sm">{emptyText}</div>
+        ) : (
+          <>
+            <div className="divide-border divide-y">
+              {items.slice(0, previewCount).map(renderItem)}
+            </div>
+            {items.length > previewCount && (
+              <div className="text-subtle-foreground pt-3 text-xs">
+                + {items.length - previewCount} more
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// =========================================================
+// Page
+// =========================================================
+
 export function DashboardPage() {
   const { data: session } = useSession();
   const { data: profile } = useCurrentUserProfile();
   const userId = useAuthStore((s) => s.profile?.id);
-  const displayName =
-    profile?.full_name ?? session?.user.email?.split('@')[0] ?? 'there';
 
-  const today = useBucketTasks('today', userId);
+  const setTaskBucket = useTaskFiltersStore((s) => s.setBucket);
+  const resetTaskGranular = useTaskFiltersStore((s) => s.resetGranular);
+  const setFollowUpBucket = useFollowUpFiltersStore((s) => s.setBucket);
+  const resetFollowUpGranular = useFollowUpFiltersStore((s) => s.resetGranular);
+
   const overdue = useBucketTasks('overdue', userId);
+  const today = useBucketTasks('today', userId);
   const mine = useBucketTasks('mine', userId);
   const waiting = useBucketTasks('waiting', userId);
   const followUpsToday = useFollowUpsDueToday();
 
+  const displayName = profile?.full_name ?? session?.user.email?.split('@')[0] ?? 'there';
+  const greeting = timeOfDayGreeting();
+  const dateLabel = todayHumanLabel();
+
+  const goToTasksBucket = (bucket: TaskBucket) => () => {
+    resetTaskGranular();
+    setTaskBucket(bucket);
+  };
+  const goToFollowUpsToday = () => {
+    resetFollowUpGranular();
+    setFollowUpBucket('today');
+  };
+
+  const now = new Date();
+
+  // "All clear" — every actionable list is empty AND not loading.
+  const ready = !overdue.isLoading && !today.isLoading && !followUpsToday.isLoading;
+  const allClear =
+    ready &&
+    (overdue.data?.length ?? 0) === 0 &&
+    (today.data?.length ?? 0) === 0 &&
+    (followUpsToday.data?.length ?? 0) === 0;
+
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Welcome back, {displayName}
+      <header className="space-y-1.5">
+        <h1 className="text-foreground text-3xl font-semibold tracking-tight">
+          {greeting}, {displayName}.
         </h1>
-        <p className="text-muted-foreground text-sm">
-          Here's what needs your attention today.
-        </p>
+        <p className="text-muted-foreground text-sm">{dateLabel}</p>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <DashboardTile
-          bucket="today"
-          title="Today"
-          icon={<ListChecks className="text-primary h-5 w-5" />}
-          query={today}
-        />
-        <DashboardTile
-          bucket="overdue"
-          title="Overdue"
-          icon={<AlertTriangle className="text-destructive h-5 w-5" />}
-          query={overdue}
-        />
-        <DashboardTile
-          bucket="mine"
-          title="My tasks"
-          icon={<Clock className="text-primary h-5 w-5" />}
-          query={mine}
-        />
-        <DashboardTile
-          bucket="waiting"
-          title="Waiting on others"
-          icon={<Users className="text-primary h-5 w-5" />}
-          query={waiting}
-        />
-        <FollowUpsTodayTile query={followUpsToday} />
-      </div>
-    </div>
-  );
-}
-
-function DashboardTile({
-  bucket,
-  title,
-  icon,
-  query,
-}: {
-  bucket: TaskBucket;
-  title: string;
-  icon: React.ReactNode;
-  query: { data?: TaskRow[]; isLoading: boolean; error: unknown };
-}) {
-  const setBucket = useTaskFiltersStore((s) => s.setBucket);
-  const resetGranular = useTaskFiltersStore((s) => s.resetGranular);
-  const list = query.data ?? [];
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon}
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="text-2xl font-semibold">
-          {query.isLoading ? (
-            <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
-          ) : query.error ? (
-            <span className="text-destructive text-sm">error</span>
-          ) : (
-            list.length
-          )}
-        </div>
-        <ul className="space-y-1.5">
-          {list.slice(0, 3).map((t) => (
-            <li key={t.id} className="text-sm">
-              <Link
-                to={`/tasks/${t.id}`}
-                className="hover:text-foreground text-muted-foreground line-clamp-1 hover:underline"
-              >
-                {t.title}
-              </Link>
-              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs">
-                <BranchBadge branch={t.branch} />
-                <PriorityBadge priority={t.priority as 'urgent' | 'normal' | 'low'} />
-                <DueDateBadge
-                  dueDate={t.due_date}
-                  status={
-                    t.status as 'todo' | 'in_progress' | 'done' | 'blocked' | 'cancelled'
-                  }
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
-        <Link
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <StatTile
+          label="Overdue"
+          tone="destructive"
+          icon={AlertTriangle}
+          count={overdue.data?.length ?? null}
+          isLoading={overdue.isLoading}
           to="/tasks"
-          onClick={() => {
-            resetGranular();
-            setBucket(bucket);
-          }}
-          className="text-primary inline-flex items-center text-xs hover:underline"
-        >
-          View all <ArrowRight className="ml-1 h-3 w-3" />
-        </Link>
-      </CardContent>
-    </Card>
-  );
-}
-
-function FollowUpsTodayTile({
-  query,
-}: {
-  query: { data?: FollowUpRow[]; isLoading: boolean; error: unknown };
-}) {
-  const setBucket = useFollowUpFiltersStore((s) => s.setBucket);
-  const resetGranular = useFollowUpFiltersStore((s) => s.resetGranular);
-  const list = query.data ?? [];
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Follow-ups today</CardTitle>
-        <PhoneCall className="text-primary h-5 w-5" />
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="text-2xl font-semibold">
-          {query.isLoading ? (
-            <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
-          ) : query.error ? (
-            <span className="text-destructive text-sm">error</span>
-          ) : (
-            list.length
-          )}
-        </div>
-        <ul className="space-y-1.5">
-          {list.slice(0, 3).map((f) => (
-            <li key={f.id} className="text-sm">
-              <Link
-                to={`/follow-ups/${f.id}`}
-                className="hover:text-foreground text-muted-foreground line-clamp-1 hover:underline"
-              >
-                {f.title}
-              </Link>
-              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs">
-                <FollowUpCategoryBadge category={f.category as 'call' | 'whatsapp' | 'email' | 'meeting' | 'check_in_person'} />
-                {f.branch && <BranchBadge branch={f.branch} />}
-                <PriorityBadge priority={f.priority as 'urgent' | 'normal' | 'low'} />
-                <DueDateBadge
-                  dueDate={effectiveDueDate(f)}
-                  status={
-                    (f.status === 'done' || f.status === 'cancelled'
-                      ? f.status
-                      : 'todo') as 'todo' | 'done' | 'cancelled'
-                  }
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
-        <Link
+          onView={goToTasksBucket('overdue')}
+        />
+        <StatTile
+          label="Today"
+          tone="warning"
+          icon={ListChecks}
+          count={today.data?.length ?? null}
+          isLoading={today.isLoading}
+          to="/tasks"
+          onView={goToTasksBucket('today')}
+        />
+        <StatTile
+          label="My tasks"
+          tone="primary"
+          icon={Clock}
+          count={mine.data?.length ?? null}
+          isLoading={mine.isLoading}
+          to="/tasks"
+          onView={goToTasksBucket('mine')}
+        />
+        <StatTile
+          label="Waiting on others"
+          tone="muted"
+          icon={Users}
+          count={waiting.data?.length ?? null}
+          isLoading={waiting.isLoading}
+          to="/tasks"
+          onView={goToTasksBucket('waiting')}
+        />
+        <StatTile
+          label="Follow-ups today"
+          tone="primary"
+          icon={PhoneCall}
+          count={followUpsToday.data?.length ?? null}
+          isLoading={followUpsToday.isLoading}
           to="/follow-ups"
-          onClick={() => {
-            resetGranular();
-            setBucket('today');
-          }}
-          className="text-primary inline-flex items-center text-xs hover:underline"
-        >
-          View all <ArrowRight className="ml-1 h-3 w-3" />
-        </Link>
-      </CardContent>
-    </Card>
+          onView={goToFollowUpsToday}
+        />
+      </div>
+
+      {allClear ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-2 px-6 py-12 text-center">
+            <div className="text-foreground text-lg font-semibold tracking-tight">
+              All clear.
+            </div>
+            <div className="text-muted-foreground max-w-md text-sm">
+              Nothing overdue, nothing due today, no follow-ups to chase.
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <CompactList
+            label="Overdue"
+            tone="destructive"
+            count={overdue.data?.length ?? 0}
+            items={overdue.data ?? []}
+            isLoading={overdue.isLoading}
+            emptyText="Nothing overdue. Stay on top of it."
+            viewAllTo="/tasks"
+            onViewAll={goToTasksBucket('overdue')}
+            renderItem={(t) => <DashboardTaskRow key={t.id} task={t} now={now} />}
+          />
+          <CompactList
+            label="Due today"
+            tone="warning"
+            count={today.data?.length ?? 0}
+            items={today.data ?? []}
+            isLoading={today.isLoading}
+            emptyText="Nothing scheduled for today."
+            viewAllTo="/tasks"
+            onViewAll={goToTasksBucket('today')}
+            renderItem={(t) => <DashboardTaskRow key={t.id} task={t} now={now} />}
+          />
+          <CompactList
+            label="Follow-ups today"
+            tone="primary"
+            count={followUpsToday.data?.length ?? 0}
+            items={followUpsToday.data ?? []}
+            isLoading={followUpsToday.isLoading}
+            emptyText="No follow-ups due today."
+            viewAllTo="/follow-ups"
+            onViewAll={goToFollowUpsToday}
+            renderItem={(f) => <DashboardFollowUpRow key={f.id} followUp={f} now={now} />}
+          />
+        </div>
+      )}
+    </div>
   );
 }

@@ -31,7 +31,10 @@ test.describe('Tasks — admin happy path', () => {
 
   test('admin sees authed dashboard and mutate controls', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+    // Greeting depends on time of day (morning / afternoon / evening / night).
+    await expect(
+      page.getByRole('heading', { name: /good (morning|afternoon|evening|night)/i }),
+    ).toBeVisible();
 
     await page.goto('/tasks');
     await expect(page.getByTestId('new-task-button')).toBeVisible();
