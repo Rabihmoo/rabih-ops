@@ -40,10 +40,22 @@ alter table public.follow_ups alter column person drop not null;
 
 -- Preserve any existing notes content into description before dropping the
 -- column. Defensive: zero rows on staging today, but makes this migration
--- safe to re-run on any environment that did accumulate data.
-update public.follow_ups
-   set description = coalesce(description, notes)
- where description is null and notes is not null;
+-- safe to re-run on any environment that did accumulate data. Guarded so
+-- the migration is also idempotent on a database where `notes` was already
+-- dropped by a previous run.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name   = 'follow_ups'
+      and column_name  = 'notes'
+  ) then
+    update public.follow_ups
+       set description = coalesce(description, notes)
+     where description is null and notes is not null;
+  end if;
+end $$;
 
 alter table public.follow_ups drop column if exists notes;
 

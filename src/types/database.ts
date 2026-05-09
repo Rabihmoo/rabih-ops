@@ -546,6 +546,7 @@ export type Database = {
         Args: { p_entity_id: string; p_entity_type: string }
         Returns: boolean
       }
+      _can_admin_inspect: { Args: never; Returns: boolean }
       _can_mutate: { Args: never; Returns: boolean }
       _delete_comment: { Args: { p_comment_id: string }; Returns: Json }
       _remove_attachment: { Args: { p_attachment_id: string }; Returns: Json }
@@ -558,6 +559,10 @@ export type Database = {
       current_user_role: { Args: never; Returns: string }
       rpc_add_follow_up_comment: {
         Args: { p_body: string; p_follow_up_id: string }
+        Returns: Json
+      }
+      rpc_add_inspection_comment: {
+        Args: { p_body: string; p_inspection_id: string }
         Returns: Json
       }
       rpc_add_inspection_finding: {
@@ -580,6 +585,16 @@ export type Database = {
           p_file_name: string
           p_file_size: number
           p_follow_up_id: string
+          p_mime_type: string
+          p_storage_path: string
+        }
+        Returns: Json
+      }
+      rpc_attach_file_to_inspection: {
+        Args: {
+          p_file_name: string
+          p_file_size: number
+          p_inspection_id: string
           p_mime_type: string
           p_storage_path: string
         }
@@ -643,11 +658,17 @@ export type Database = {
         Args: { p_comment_id: string }
         Returns: Json
       }
+      rpc_delete_inspection_comment: {
+        Args: { p_comment_id: string }
+        Returns: Json
+      }
       rpc_delete_task: { Args: { p_task_id: string }; Returns: Json }
       rpc_delete_task_comment: { Args: { p_comment_id: string }; Returns: Json }
       rpc_get_follow_up: { Args: { p_follow_up_id: string }; Returns: Json }
+      rpc_get_inspection: { Args: { p_inspection_id: string }; Returns: Json }
       rpc_get_task: { Args: { p_task_id: string }; Returns: Json }
       rpc_get_user_dashboard: { Args: { p_user_id?: string }; Returns: Json }
+      rpc_list_critical_findings: { Args: { p_limit?: number }; Returns: Json }
       rpc_list_follow_ups: {
         Args: {
           p_assigned_to?: string
@@ -660,6 +681,19 @@ export type Database = {
           p_search?: string
           p_status?: string
           p_task_id?: string
+        }
+        Returns: Json
+      }
+      rpc_list_inspections: {
+        Args: {
+          p_area?: string
+          p_branch?: string
+          p_date_after?: string
+          p_date_before?: string
+          p_inspected_by?: string
+          p_limit?: number
+          p_result?: string
+          p_search?: string
         }
         Returns: Json
       }
@@ -688,6 +722,10 @@ export type Database = {
         Args: { p_attachment_id: string }
         Returns: Json
       }
+      rpc_remove_inspection_attachment: {
+        Args: { p_attachment_id: string }
+        Returns: Json
+      }
       rpc_remove_task_attachment: {
         Args: { p_attachment_id: string }
         Returns: Json
@@ -704,8 +742,16 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_update_finding: {
+        Args: { p_finding_id: string; p_updates: Json }
+        Returns: Json
+      }
       rpc_update_follow_up: {
         Args: { p_follow_up_id: string; p_updates: Json }
+        Returns: Json
+      }
+      rpc_update_inspection: {
+        Args: { p_inspection_id: string; p_updates: Json }
         Returns: Json
       }
       rpc_update_task: {
