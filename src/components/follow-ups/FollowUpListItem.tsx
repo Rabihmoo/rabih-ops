@@ -1,4 +1,4 @@
-import { Link2 } from 'lucide-react';
+import { ChevronRight, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { effectiveDueDate } from '@/lib/follow-ups';
@@ -45,7 +45,7 @@ export function FollowUpListItem({
       type="button"
       onClick={() => onSelect?.(followUp.id)}
       className={cn(
-        'border-border bg-card hover:bg-surface-1 focus-visible:bg-surface-1 relative flex w-full items-stretch border-b text-left transition-colors focus-visible:outline-none',
+        'group border-border bg-card hover:bg-surface-1 focus-visible:bg-surface-1 relative flex w-full items-stretch border-b text-left transition-colors focus-visible:outline-none',
       )}
     >
       <span aria-hidden className={cn('w-1 shrink-0 self-stretch', TONE_BAR[tone])} />
@@ -90,6 +90,10 @@ export function FollowUpListItem({
           <span className="text-subtle-foreground text-xs">{assigneeLabel}</span>
         </div>
       </div>
+      <ChevronRight
+        aria-hidden
+        className="text-muted-foreground/0 group-hover:text-muted-foreground mr-3 h-4 w-4 self-center shrink-0 transition-colors"
+      />
     </button>
   );
 }

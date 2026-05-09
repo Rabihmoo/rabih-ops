@@ -1,10 +1,14 @@
-import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
 import {
   useFollowUpFiltersStore,
   type FollowUpBucket,
 } from '@/stores/followUpFiltersStore';
 import { BRANCH_LIST } from '@/lib/branches';
+import {
+  BucketGroup,
+  FILTER_SELECT_CLASS,
+  FilterPanel,
+  SearchField,
+} from '@/components/shared/FilterPanel';
 import type {
   FollowUpCategory,
   FollowUpStatus,
@@ -29,9 +33,6 @@ const CATEGORIES: FollowUpCategory[] = [
 ];
 const PRIORITIES: TaskPriority[] = ['urgent', 'normal', 'low'];
 
-const selectClass =
-  'bg-card border-border text-foreground h-9 rounded-md border px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring';
-
 export function FollowUpFilterBar() {
   const { bucket, branch, status, category, priority, search } =
     useFollowUpFiltersStore();
@@ -51,94 +52,79 @@ export function FollowUpFilterBar() {
     search.trim() !== '';
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-1.5">
-        {BUCKETS.map((b) => (
-          <button
-            key={b.id}
-            type="button"
-            onClick={() => setBucket(b.id)}
-            className={cn(
-              'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-              bucket === b.id
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'border-border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-            )}
+    <FilterPanel
+      active={granularActive}
+      buckets={<BucketGroup buckets={BUCKETS} active={bucket} onSelect={setBucket} />}
+      controls={
+        <>
+          <SearchField
+            value={search}
+            onChange={setSearch}
+            placeholder="Search title, description, person…"
+          />
+          <select
+            aria-label="Branch"
+            className={FILTER_SELECT_CLASS}
+            value={branch ?? ''}
+            onChange={(e) => setBranch(e.target.value || null)}
           >
-            {b.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search title, description, person…"
-          className="h-9 w-full sm:max-w-xs"
-        />
-        <select
-          aria-label="Branch"
-          className={selectClass}
-          value={branch ?? ''}
-          onChange={(e) => setBranch(e.target.value || null)}
-        >
-          <option value="">All branches</option>
-          {BRANCH_LIST.map((b) => (
-            <option key={b.code} value={b.code}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Status"
-          className={selectClass}
-          value={status ?? ''}
-          onChange={(e) => setStatus((e.target.value as FollowUpStatus) || null)}
-        >
-          <option value="">Any status</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Category"
-          className={selectClass}
-          value={category ?? ''}
-          onChange={(e) => setCategory((e.target.value as FollowUpCategory) || null)}
-        >
-          <option value="">Any category</option>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c.replace('_', ' ')}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Priority"
-          className={selectClass}
-          value={priority ?? ''}
-          onChange={(e) => setPriority((e.target.value as TaskPriority) || null)}
-        >
-          <option value="">Any priority</option>
-          {PRIORITIES.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-        {granularActive && (
-          <button
-            type="button"
-            onClick={resetGranular}
-            className="text-muted-foreground hover:text-foreground text-xs underline-offset-2 hover:underline"
+            <option value="">All branches</option>
+            {BRANCH_LIST.map((b) => (
+              <option key={b.code} value={b.code}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Status"
+            className={FILTER_SELECT_CLASS}
+            value={status ?? ''}
+            onChange={(e) => setStatus((e.target.value as FollowUpStatus) || null)}
           >
-            Clear filters
-          </button>
-        )}
-      </div>
-    </div>
+            <option value="">Any status</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Category"
+            className={FILTER_SELECT_CLASS}
+            value={category ?? ''}
+            onChange={(e) => setCategory((e.target.value as FollowUpCategory) || null)}
+          >
+            <option value="">Any category</option>
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c.replace('_', ' ')}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Priority"
+            className={FILTER_SELECT_CLASS}
+            value={priority ?? ''}
+            onChange={(e) => setPriority((e.target.value as TaskPriority) || null)}
+          >
+            <option value="">Any priority</option>
+            {PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+          {granularActive && (
+            <button
+              type="button"
+              onClick={resetGranular}
+              className="text-muted-foreground hover:text-foreground text-xs underline-offset-2 hover:underline"
+            >
+              Clear
+            </button>
+          )}
+        </>
+      }
+    />
   );
 }

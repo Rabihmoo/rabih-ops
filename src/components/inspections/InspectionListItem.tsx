@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BranchBadge, TONE_BAR } from '@/components/tasks/badges';
 import type { InspectionResult } from '@/types/database';
@@ -45,7 +45,7 @@ export function InspectionListItem({
     <button
       type="button"
       onClick={() => onSelect?.(inspection.id)}
-      className="border-border bg-card hover:bg-surface-1 focus-visible:bg-surface-1 relative flex w-full items-stretch border-b text-left transition-colors focus-visible:outline-none"
+      className="group border-border bg-card hover:bg-surface-1 focus-visible:bg-surface-1 relative flex w-full items-stretch border-b text-left transition-colors focus-visible:outline-none"
     >
       <span aria-hidden className={cn('w-1 shrink-0 self-stretch', TONE_BAR[tone])} />
       <div className="min-w-0 flex-1 px-4 py-3.5">
@@ -90,6 +90,10 @@ export function InspectionListItem({
           </span>
         </div>
       </div>
+      <ChevronRight
+        aria-hidden
+        className="text-muted-foreground/0 group-hover:text-muted-foreground mr-3 h-4 w-4 self-center shrink-0 transition-colors"
+      />
     </button>
   );
 }

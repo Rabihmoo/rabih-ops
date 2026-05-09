@@ -8,6 +8,7 @@ import {
   Loader2,
   PhoneCall,
   ShieldAlert,
+  ShieldCheck,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ import { listTasks, type TaskListFilters } from '@/lib/tasks';
 import { listFollowUps, effectiveDueDate } from '@/lib/follow-ups';
 import { listCriticalFindings, type CriticalFinding } from '@/lib/inspections';
 import { BRANCHES, type BranchCode } from '@/lib/branches';
+import { EmptyState } from '@/components/shared/EmptyState';
 import type { FollowUpRow, TaskPriority, TaskRow } from '@/types/database';
 
 // =========================================================
@@ -527,14 +529,14 @@ export function DashboardPage() {
 
       {allClear ? (
         <Card>
-          <CardContent className="flex flex-col items-center gap-2 px-6 py-12 text-center">
-            <div className="text-foreground text-lg font-semibold tracking-tight">
-              All clear.
-            </div>
-            <div className="text-muted-foreground max-w-md text-sm">
-              Nothing overdue, nothing due today, no follow-ups to chase, no critical
-              findings open.
-            </div>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={ShieldCheck}
+              tone="success"
+              size="tall"
+              title="All clear."
+              description="Nothing overdue, nothing due today, no follow-ups to chase, no critical findings open."
+            />
           </CardContent>
         </Card>
       ) : (

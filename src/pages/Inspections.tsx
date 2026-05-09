@@ -1,11 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { ClipboardCheck, Plus, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useInspectionList } from '@/hooks/useInspections';
 import { useInspectionFiltersStore } from '@/stores/inspectionFiltersStore';
 import { useCanAdminInspect } from '@/hooks/usePermissions';
 import { InspectionFilterBar } from '@/components/inspections/InspectionFilterBar';
 import { InspectionListItem } from '@/components/inspections/InspectionListItem';
+import { PageHeader, HeaderStat } from '@/components/shared/PageHeader';
+import { EmptyState } from '@/components/shared/EmptyState';
 
 export function InspectionsPage() {
   const { data, isLoading, error } = useInspectionList();
@@ -13,29 +15,61 @@ export function InspectionsPage() {
   const canAdmin = useCanAdminInspect();
   const count = data?.length ?? 0;
 
+  const criticalCount =
+    data?.reduce((sum, i) => sum + (i.open_critical_count ?? 0), 0) ?? 0;
+  const openFindingCount =
+    data?.reduce((sum, i) => sum + (i.open_finding_count ?? 0), 0) ?? 0;
+  const failedCount =
+    data?.filter((i) => i.result === 'failed' || i.result === 'issues_found').length ?? 0;
+
   return (
     <div className="space-y-5">
-      <header className="flex items-end justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-foreground text-3xl font-semibold tracking-tight">
-            Inspections
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {data
-              ? count === 0
-                ? 'No matching inspections'
-                : `${count} ${count === 1 ? 'inspection' : 'inspections'}`
-              : 'Loading inspections…'}
-          </p>
-        </div>
-        {canAdmin && (
-          <Button size="sm" asChild>
-            <Link to="/inspections/new" data-testid="new-inspection-button">
-              <Plus className="mr-1 h-4 w-4" /> New inspection
-            </Link>
-          </Button>
-        )}
-      </header>
+      <PageHeader
+        eyebrow="Audit"
+        title="Inspections"
+        actions={
+          canAdmin && (
+            <Button size="sm" asChild>
+              <Link to="/inspections/new" data-testid="new-inspection-button">
+                <Plus className="mr-1 h-4 w-4" /> New inspection
+              </Link>
+            </Button>
+          )
+        }
+        stats={
+          data ? (
+            <>
+              <HeaderStat
+                count={count}
+                label={count === 1 ? 'inspection' : 'inspections'}
+              />
+              {criticalCount > 0 && (
+                <HeaderStat
+                  count={criticalCount}
+                  label="open critical"
+                  tone="destructive"
+                />
+              )}
+              {openFindingCount - criticalCount > 0 && (
+                <HeaderStat
+                  count={openFindingCount - criticalCount}
+                  label="open findings"
+                  tone="warning"
+                />
+              )}
+              {failedCount > 0 && (
+                <HeaderStat
+                  count={failedCount}
+                  label="with issues"
+                  tone="warning"
+                />
+              )}
+            </>
+          ) : (
+            <span>Loading…</span>
+          )
+        }
+      />
 
       <InspectionFilterBar />
 
@@ -48,7 +82,7 @@ export function InspectionsPage() {
             Could not load inspections: {(error as Error).message}
           </div>
         )}
-        {!isLoading && !error && data && data.length === 0 && <EmptyState />}
+        {!isLoading && !error && data && data.length === 0 && <InspectionsEmpty />}
         {!isLoading && !error && data && data.length > 0 && (
           <ul>
             {data.map((inspection) => (
@@ -66,21 +100,51 @@ export function InspectionsPage() {
   );
 }
 
-function EmptyState() {
+function InspectionsEmpty() {
   const bucket = useInspectionFiltersStore((s) => s.bucket);
-  const messages: Record<typeof bucket, string> = {
-    recent: 'No inspections yet. Schedule the first one to start the audit trail.',
-    pending: 'No pending inspections.',
-    failed: 'No inspections with open issues.',
-    mine: 'No inspections you have run.',
-    all: 'No inspections match the current filters.',
+  const canAdmin = useCanAdminInspect();
+
+  const COPY: Record<typeof bucket, { title: string; description: string }> = {
+    recent: {
+      title: 'No inspections yet',
+      description:
+        'Schedule your first audit to start a paper trail for your branches.',
+    },
+    pending: {
+      title: 'No pending inspections',
+      description: 'Everything that has been opened has a result on it.',
+    },
+    failed: {
+      title: 'No inspections with open issues',
+      description: 'A clean shop. Worth keeping it that way.',
+    },
+    mine: {
+      title: 'No inspections you have run',
+      description: 'Audits you conduct will appear here.',
+    },
+    all: {
+      title: 'No inspections match the current filters',
+      description: 'Try clearing the filters or switching the bucket.',
+    },
   };
+
+  const c = COPY[bucket];
+  const isCleanState = bucket === 'failed' || bucket === 'pending';
   return (
-    <div className="flex flex-col items-center gap-1.5 px-6 py-12 text-center">
-      <div className="text-foreground text-base font-semibold tracking-tight">
-        Nothing to show.
-      </div>
-      <div className="text-muted-foreground max-w-md text-sm">{messages[bucket]}</div>
-    </div>
+    <EmptyState
+      icon={isCleanState ? ShieldCheck : ClipboardCheck}
+      title={c.title}
+      description={c.description}
+      tone={isCleanState ? 'success' : 'muted'}
+      action={
+        canAdmin && bucket === 'recent' ? (
+          <Button size="sm" asChild>
+            <Link to="/inspections/new">
+              <Plus className="mr-1 h-4 w-4" /> Schedule first inspection
+            </Link>
+          </Button>
+        ) : null
+      }
+    />
   );
 }

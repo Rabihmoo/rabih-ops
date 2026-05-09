@@ -1,10 +1,14 @@
-import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
 import {
   useInspectionFiltersStore,
   type InspectionBucket,
 } from '@/stores/inspectionFiltersStore';
 import { BRANCH_LIST } from '@/lib/branches';
+import {
+  BucketGroup,
+  FILTER_SELECT_CLASS,
+  FilterPanel,
+  SearchField,
+} from '@/components/shared/FilterPanel';
 import type { InspectionArea, InspectionResult } from '@/types/database';
 
 const BUCKETS: { id: InspectionBucket; label: string }[] = [
@@ -27,9 +31,6 @@ const AREAS: InspectionArea[] = [
 
 const RESULTS: InspectionResult[] = ['pending', 'pass', 'issues_found', 'failed'];
 
-const selectClass =
-  'bg-card border-border text-foreground h-9 rounded-md border px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring';
-
 export function InspectionFilterBar() {
   const { bucket, branch, area, result, search } = useInspectionFiltersStore();
   const setBucket = useInspectionFiltersStore((s) => s.setBucket);
@@ -43,81 +44,66 @@ export function InspectionFilterBar() {
     branch !== null || area !== null || result !== null || search.trim() !== '';
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-1.5">
-        {BUCKETS.map((b) => (
-          <button
-            key={b.id}
-            type="button"
-            onClick={() => setBucket(b.id)}
-            className={cn(
-              'rounded-pill border px-3 py-1 text-xs font-medium transition-colors',
-              bucket === b.id
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'border-border bg-card text-muted-foreground hover:bg-surface-1 hover:text-foreground',
-            )}
+    <FilterPanel
+      active={granularActive}
+      buckets={<BucketGroup buckets={BUCKETS} active={bucket} onSelect={setBucket} />}
+      controls={
+        <>
+          <SearchField
+            value={search}
+            onChange={setSearch}
+            placeholder="Search general notes…"
+          />
+          <select
+            aria-label="Branch"
+            className={FILTER_SELECT_CLASS}
+            value={branch ?? ''}
+            onChange={(e) => setBranch(e.target.value || null)}
           >
-            {b.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search general notes…"
-          className="h-9 w-full sm:max-w-xs"
-        />
-        <select
-          aria-label="Branch"
-          className={selectClass}
-          value={branch ?? ''}
-          onChange={(e) => setBranch(e.target.value || null)}
-        >
-          <option value="">All branches</option>
-          {BRANCH_LIST.map((b) => (
-            <option key={b.code} value={b.code}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Area"
-          className={selectClass}
-          value={area ?? ''}
-          onChange={(e) => setArea((e.target.value as InspectionArea) || null)}
-        >
-          <option value="">Any area</option>
-          {AREAS.map((a) => (
-            <option key={a} value={a}>
-              {a.replace('_', ' ')}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Result"
-          className={selectClass}
-          value={result ?? ''}
-          onChange={(e) => setResult((e.target.value as InspectionResult) || null)}
-        >
-          <option value="">Any result</option>
-          {RESULTS.map((r) => (
-            <option key={r} value={r}>
-              {r.replace('_', ' ')}
-            </option>
-          ))}
-        </select>
-        {granularActive && (
-          <button
-            type="button"
-            onClick={resetGranular}
-            className="text-muted-foreground hover:text-foreground text-xs underline-offset-2 hover:underline"
+            <option value="">All branches</option>
+            {BRANCH_LIST.map((b) => (
+              <option key={b.code} value={b.code}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Area"
+            className={FILTER_SELECT_CLASS}
+            value={area ?? ''}
+            onChange={(e) => setArea((e.target.value as InspectionArea) || null)}
           >
-            Clear filters
-          </button>
-        )}
-      </div>
-    </div>
+            <option value="">Any area</option>
+            {AREAS.map((a) => (
+              <option key={a} value={a}>
+                {a.replace('_', ' ')}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Result"
+            className={FILTER_SELECT_CLASS}
+            value={result ?? ''}
+            onChange={(e) => setResult((e.target.value as InspectionResult) || null)}
+          >
+            <option value="">Any result</option>
+            {RESULTS.map((r) => (
+              <option key={r} value={r}>
+                {r.replace('_', ' ')}
+              </option>
+            ))}
+          </select>
+          {granularActive && (
+            <button
+              type="button"
+              onClick={resetGranular}
+              className="text-muted-foreground hover:text-foreground text-xs underline-offset-2 hover:underline"
+            >
+              Clear
+            </button>
+          )}
+        </>
+      }
+    />
   );
 }

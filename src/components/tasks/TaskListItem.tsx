@@ -1,3 +1,4 @@
+import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import type { TaskRow, TaskStatus, TaskPriority } from '@/types/database';
@@ -38,14 +39,11 @@ export function TaskListItem({
       type="button"
       onClick={() => onSelect?.(task.id)}
       className={cn(
-        'border-border bg-card hover:bg-surface-1 focus-visible:bg-surface-1 relative flex w-full items-stretch border-b text-left transition-colors focus-visible:outline-none',
+        'group border-border bg-card hover:bg-surface-1 focus-visible:bg-surface-1 relative flex w-full items-stretch border-b text-left transition-colors focus-visible:outline-none',
         selected && 'bg-primary-soft/30',
       )}
     >
-      <span
-        aria-hidden
-        className={cn('w-1 shrink-0 self-stretch', TONE_BAR[tone])}
-      />
+      <span aria-hidden className={cn('w-1 shrink-0 self-stretch', TONE_BAR[tone])} />
       <div className="min-w-0 flex-1 px-4 py-3.5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
@@ -76,6 +74,10 @@ export function TaskListItem({
           <span className="text-subtle-foreground text-xs">{assigneeLabel}</span>
         </div>
       </div>
+      <ChevronRight
+        aria-hidden
+        className="text-muted-foreground/0 group-hover:text-muted-foreground mr-3 h-4 w-4 self-center shrink-0 transition-colors"
+      />
     </button>
   );
 }

@@ -1,11 +1,15 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { CheckCircle2, PhoneCall, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFollowUpList } from '@/hooks/useFollowUps';
 import { useFollowUpFiltersStore } from '@/stores/followUpFiltersStore';
 import { useCanMutate } from '@/hooks/usePermissions';
 import { FollowUpFilterBar } from '@/components/follow-ups/FollowUpFilterBar';
 import { FollowUpListItem } from '@/components/follow-ups/FollowUpListItem';
+import { PageHeader, HeaderStat } from '@/components/shared/PageHeader';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { effectiveDueDate } from '@/lib/follow-ups';
+import type { FollowUpStatus } from '@/types/database';
 
 export function FollowUpsPage() {
   const { data, isLoading, error } = useFollowUpList();
@@ -13,29 +17,50 @@ export function FollowUpsPage() {
   const canMutate = useCanMutate();
   const count = data?.length ?? 0;
 
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const overdueCount =
+    data?.filter((r) => {
+      const status = r.status as FollowUpStatus;
+      if (status === 'done' || status === 'cancelled') return false;
+      const due = effectiveDueDate(r);
+      return due < todayIso;
+    }).length ?? 0;
+  const snoozedCount =
+    data?.filter((r) => (r.status as FollowUpStatus) === 'snoozed').length ?? 0;
+
   return (
     <div className="space-y-5">
-      <header className="flex items-end justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-foreground text-3xl font-semibold tracking-tight">
-            Follow-ups
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {data
-              ? count === 0
-                ? 'No matching follow-ups'
-                : `${count} ${count === 1 ? 'follow-up' : 'follow-ups'}`
-              : 'Loading follow-ups…'}
-          </p>
-        </div>
-        {canMutate && (
-          <Button size="sm" asChild>
-            <Link to="/follow-ups/new" data-testid="new-follow-up-button">
-              <Plus className="mr-1 h-4 w-4" /> New follow-up
-            </Link>
-          </Button>
-        )}
-      </header>
+      <PageHeader
+        eyebrow="Communication"
+        title="Follow-ups"
+        actions={
+          canMutate && (
+            <Button size="sm" asChild>
+              <Link to="/follow-ups/new" data-testid="new-follow-up-button">
+                <Plus className="mr-1 h-4 w-4" /> New follow-up
+              </Link>
+            </Button>
+          )
+        }
+        stats={
+          data ? (
+            <>
+              <HeaderStat
+                count={count}
+                label={count === 1 ? 'follow-up' : 'follow-ups'}
+              />
+              {overdueCount > 0 && (
+                <HeaderStat count={overdueCount} label="overdue" tone="destructive" />
+              )}
+              {snoozedCount > 0 && (
+                <HeaderStat count={snoozedCount} label="snoozed" tone="warning" />
+              )}
+            </>
+          ) : (
+            <span>Loading…</span>
+          )
+        }
+      />
 
       <FollowUpFilterBar />
 
@@ -48,7 +73,7 @@ export function FollowUpsPage() {
             Could not load follow-ups: {(error as Error).message}
           </div>
         )}
-        {!isLoading && !error && data && data.length === 0 && <EmptyState />}
+        {!isLoading && !error && data && data.length === 0 && <FollowUpsEmpty />}
         {!isLoading && !error && data && data.length > 0 && (
           <ul>
             {data.map((followUp) => (
@@ -66,21 +91,50 @@ export function FollowUpsPage() {
   );
 }
 
-function EmptyState() {
+function FollowUpsEmpty() {
   const bucket = useFollowUpFiltersStore((s) => s.bucket);
-  const messages: Record<typeof bucket, string> = {
-    today: 'Nothing to chase today.',
-    overdue: 'No overdue follow-ups. Inbox zero.',
-    mine: 'No follow-ups assigned to you.',
-    upcoming: 'No follow-ups scheduled in the next 7 days.',
-    all: 'No follow-ups match the current filters.',
+  const canMutate = useCanMutate();
+
+  const COPY: Record<typeof bucket, { title: string; description: string }> = {
+    today: {
+      title: 'Nothing to chase today',
+      description: 'No calls, messages, or check-ins scheduled. Inbox zero.',
+    },
+    overdue: {
+      title: 'No overdue follow-ups',
+      description: 'You\'re on top of it. Anything past due would land here.',
+    },
+    mine: {
+      title: 'No follow-ups assigned to you',
+      description:
+        'Items you take ownership of (or someone hands you) will appear here.',
+    },
+    upcoming: {
+      title: 'Nothing scheduled in the next 7 days',
+      description: 'Your week is clear of planned follow-ups.',
+    },
+    all: {
+      title: 'No follow-ups match the current filters',
+      description: 'Try clearing the filters or switching the bucket.',
+    },
   };
+
+  const c = COPY[bucket];
   return (
-    <div className="flex flex-col items-center gap-1.5 px-6 py-12 text-center">
-      <div className="text-foreground text-base font-semibold tracking-tight">
-        All clear.
-      </div>
-      <div className="text-muted-foreground max-w-md text-sm">{messages[bucket]}</div>
-    </div>
+    <EmptyState
+      icon={bucket === 'overdue' || bucket === 'today' ? CheckCircle2 : PhoneCall}
+      title={c.title}
+      description={c.description}
+      tone={bucket === 'overdue' || bucket === 'today' ? 'success' : 'muted'}
+      action={
+        canMutate && bucket !== 'overdue' && bucket !== 'today' ? (
+          <Button size="sm" asChild>
+            <Link to="/follow-ups/new">
+              <Plus className="mr-1 h-4 w-4" /> New follow-up
+            </Link>
+          </Button>
+        ) : null
+      }
+    />
   );
 }
