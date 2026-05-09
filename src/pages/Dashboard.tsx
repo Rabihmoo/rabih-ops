@@ -36,6 +36,13 @@ import {
 } from '@/lib/purchase-requests';
 import { BRANCHES, type BranchCode } from '@/lib/branches';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { useDismissReminder, useMyReminders } from '@/hooks/useReminders';
+import {
+  REMINDER_KIND_LABEL,
+  reminderTargetPath,
+  type MyReminder,
+} from '@/lib/reminders';
+import { toast } from '@/components/ui/toaster';
 import type {
   Currency,
   FollowUpRow,
@@ -461,6 +468,8 @@ export function DashboardPage() {
   const followUpsToday = useFollowUpsDueToday();
   const criticalFindings = useDashboardCriticalFindings();
   const purchases = useDashboardPurchases();
+  const reminders = useMyReminders({ unreadOnly: true, limit: 50 });
+  const dismissReminder = useDismissReminder();
   const pendingDeliveries = purchases.data?.pending_deliveries ?? [];
   const unpaidPurchases = purchases.data?.unpaid ?? [];
   const purchaseReminders = purchases.data?.reminders_today ?? [];
@@ -499,6 +508,7 @@ export function DashboardPage() {
     (repeat.data?.length ?? 0) === 0 &&
     (followUpsToday.data?.length ?? 0) === 0 &&
     (criticalFindings.data?.length ?? 0) === 0 &&
+    (reminders.data?.length ?? 0) === 0 &&
     pendingDeliveries.length === 0 &&
     unpaidPurchases.length === 0 &&
     purchaseReminders.length === 0;
@@ -603,6 +613,37 @@ export function DashboardPage() {
         </Card>
       ) : (
         <div className="space-y-4">
+          {(reminders.data?.length ?? 0) > 0 && (
+            <CompactList
+              label="Reminders"
+              tone="primary"
+              count={reminders.data?.length ?? 0}
+              items={reminders.data ?? []}
+              isLoading={reminders.isLoading}
+              emptyText="No new reminders."
+              viewAllTo="/"
+              onViewAll={() => {}}
+              renderItem={(r: MyReminder) => (
+                <DashboardReminderRow
+                  key={r.id}
+                  reminder={r}
+                  isDismissing={dismissReminder.isPending}
+                  onDismiss={async () => {
+                    try {
+                      await dismissReminder.mutateAsync(r.id);
+                    } catch (err) {
+                      toast({
+                        title: 'Could not dismiss',
+                        description: err instanceof Error ? err.message : 'Unknown error',
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                />
+              )}
+            />
+          )}
+
           {(criticalFindings.data?.length ?? 0) > 0 && (
             <CompactList
               label="Critical findings"
@@ -664,7 +705,7 @@ export function DashboardPage() {
                   viewAllTo="/purchases"
                   onViewAll={() => {}}
                   renderItem={(p) => (
-                    <DashboardReminderRow key={p.id} reminder={p} />
+                    <DashboardPurchaseReminderRow key={p.id} reminder={p} />
                   )}
                 />
               )}
@@ -867,7 +908,7 @@ function DashboardUnpaidRow({ purchase }: { purchase: UnpaidPurchase }) {
   );
 }
 
-function DashboardReminderRow({ reminder }: { reminder: PurchaseReminder }) {
+function DashboardPurchaseReminderRow({ reminder }: { reminder: PurchaseReminder }) {
   return (
     <Link
       to={`/purchases/${reminder.id}`}
@@ -894,6 +935,65 @@ function DashboardReminderRow({ reminder }: { reminder: PurchaseReminder }) {
         today
       </span>
     </Link>
+  );
+}
+
+function DashboardReminderRow({
+  reminder,
+  onDismiss,
+  isDismissing,
+}: {
+  reminder: MyReminder;
+  onDismiss: () => void;
+  isDismissing: boolean;
+}) {
+  const title = reminder.entity?.title ?? '(deleted)';
+  const branch = reminder.entity?.branch ?? null;
+  const branchMeta =
+    branch != null
+      ? (BRANCHES as Record<string, { name: string; color: string } | undefined>)[
+          branch as BranchCode
+        ]
+      : undefined;
+  const fired = reminder.fired_at ? new Date(reminder.fired_at) : new Date(reminder.fire_at);
+  const minutes = Math.max(0, Math.round((Date.now() - fired.getTime()) / 60000));
+  const ago =
+    minutes < 1 ? 'just now' : minutes < 60 ? `${minutes}m ago` : `${Math.round(minutes / 60)}h ago`;
+
+  return (
+    <div className="hover:bg-surface-1 -mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors">
+      <Link to={reminderTargetPath(reminder)} className="min-w-0 flex-1">
+        <div className="text-foreground line-clamp-1 text-sm font-medium">{title}</div>
+        <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
+          <span className="text-primary-ink">{REMINDER_KIND_LABEL[reminder.kind]}</span>
+          {branchMeta && (
+            <>
+              <span className="text-subtle-foreground">·</span>
+              <span className="text-foreground/85 inline-flex items-center gap-1.5">
+                <span
+                  aria-hidden
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: branchMeta.color }}
+                />
+                {branchMeta.name}
+              </span>
+            </>
+          )}
+          <span className="text-subtle-foreground">·</span>
+          <span className="tabular-nums">{ago}</span>
+        </div>
+      </Link>
+      <button
+        type="button"
+        onClick={onDismiss}
+        disabled={isDismissing}
+        aria-label="Dismiss reminder"
+        data-testid={`dismiss-reminder-${reminder.id}`}
+        className="text-muted-foreground hover:bg-surface-2 hover:text-foreground shrink-0 rounded-md px-2 py-1 text-xs transition-colors disabled:opacity-50"
+      >
+        Dismiss
+      </button>
+    </div>
   );
 }
 

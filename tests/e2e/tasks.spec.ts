@@ -43,6 +43,73 @@ test.describe('Tasks — admin happy path', () => {
     await expect(page.getByTestId('new-follow-up-button')).toBeVisible();
   });
 
+  // Phase B — reminder engine. Sets a deadline reminder for the past so the
+  // trigger enqueues it as already-due, then nudges _drain_reminders directly
+  // through the Management API and asserts the dashboard shows + dismisses it.
+  test('admin can see and dismiss a reminder fired by the engine', async ({
+    page,
+    request,
+  }) => {
+    // Helper to issue a privileged SQL call against the staging DB.
+    const sb = process.env.SUPABASE_PROJECT_REF;
+    const sbToken = process.env.SUPABASE_ACCESS_TOKEN;
+    if (!sb || !sbToken) test.skip(true, 'staging env vars missing');
+    async function sql(query: string) {
+      const res = await request.post(
+        `https://api.supabase.com/v1/projects/${sb}/database/query`,
+        {
+          headers: {
+            Authorization: `Bearer ${sbToken}`,
+            'Content-Type': 'application/json',
+          },
+          data: { query },
+        },
+      );
+      const body = await res.json();
+      if (!res.ok()) throw new Error(`SQL failed: ${JSON.stringify(body)}`);
+      return body;
+    }
+
+    // 1. Create a task and set a deadline reminder for 2 minutes ago — trigger
+    //    enqueues it as immediately-due. The drain (manual call below) flips
+    //    it to sent.
+    const title = `Phase-B reminder ${Date.now()}`;
+    await page.goto('/tasks/new');
+    await page.getByLabel('Title').fill(title);
+    await page.getByLabel('Branch').selectOption('salt');
+    await page.getByLabel('Category').selectOption('operations');
+    await page.getByRole('button', { name: /create task/i }).click();
+    await page.waitForURL(/\/tasks\/[0-9a-f-]+$/, { timeout: 10_000 });
+
+    const m = page.url().match(/\/tasks\/([0-9a-f-]+)$/);
+    const taskId = m?.[1];
+    expect(taskId).toBeTruthy();
+
+    await sql(
+      `update tasks set deadline_reminder_at = now() - interval '2 minutes' where id = '${taskId}'`,
+    );
+
+    // 2. Drain immediately (don't wait for the minute-cron).
+    await sql(`select public._drain_reminders()`);
+
+    // 3. Dashboard should now show the Reminders list with our task title.
+    await page.goto('/');
+    const reminderRow = page
+      .getByText(title, { exact: false })
+      .first()
+      .locator('..');
+    await expect(reminderRow).toBeVisible({ timeout: 10_000 });
+
+    // 4. Dismiss → it disappears from the list (unread_only=true default).
+    const dismissBtn = page
+      .locator('[data-testid^="dismiss-reminder-"]')
+      .first();
+    await dismissBtn.click();
+    await expect(page.getByText(title, { exact: false }).first()).toBeHidden({
+      timeout: 5_000,
+    });
+  });
+
   // Phase A — task lifecycle. Walks through create → mark waiting → resume →
   // finish with an outcome. Asserts the new status badges appear and the
   // lifecycle controls reach the right RPCs.

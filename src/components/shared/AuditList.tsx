@@ -32,6 +32,11 @@ const ACTION_VERB: Record<string, string> = {
   reminders_set: 'Updated reminders',
   recurring_create: 'Created recurring template',
   recurring_spawn: 'Spawned a recurring instance',
+  // Reminder engine (Phase B)
+  reminder_enqueued: 'Reminder scheduled',
+  reminder_sent: 'Reminder fired',
+  reminder_dismissed: 'Dismissed a reminder',
+  reminder_cancelled: 'Cancelled a reminder',
   // Purchasing-specific
   submit: 'Submitted for approval',
   approve: 'Approved and ordered',
@@ -67,6 +72,10 @@ const ACTION_TONE: Record<string, string> = {
   reminders_set: 'bg-muted-foreground',
   recurring_create: 'bg-primary',
   recurring_spawn: 'bg-primary',
+  reminder_enqueued: 'bg-muted-foreground',
+  reminder_sent: 'bg-primary',
+  reminder_dismissed: 'bg-muted-foreground',
+  reminder_cancelled: 'bg-muted-foreground',
 };
 
 const TRACKED_FIELDS = [

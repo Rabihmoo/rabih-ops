@@ -366,6 +366,119 @@ export type Database = {
           },
         ]
       }
+      notification_log: {
+        Row: {
+          channel: string
+          error: string | null
+          fired_at: string
+          id: number
+          provider_msg_id: string | null
+          queue_id: number | null
+          recipient_id: string
+          status: string
+        }
+        Insert: {
+          channel: string
+          error?: string | null
+          fired_at?: string
+          id?: number
+          provider_msg_id?: string | null
+          queue_id?: number | null
+          recipient_id: string
+          status: string
+        }
+        Update: {
+          channel?: string
+          error?: string | null
+          fired_at?: string
+          id?: number
+          provider_msg_id?: string | null
+          queue_id?: number | null
+          recipient_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_log_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "notifications_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_log_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications_queue: {
+        Row: {
+          attempts: number
+          cancel_reason: string | null
+          cancelled_at: string | null
+          channel: string
+          created_at: string
+          dismissed_at: string | null
+          entity_id: string
+          entity_type: string
+          fire_at: string
+          fired_at: string | null
+          id: number
+          kind: string
+          last_error: string | null
+          payload: Json | null
+          recipient_id: string
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          channel?: string
+          created_at?: string
+          dismissed_at?: string | null
+          entity_id: string
+          entity_type: string
+          fire_at: string
+          fired_at?: string | null
+          id?: number
+          kind: string
+          last_error?: string | null
+          payload?: Json | null
+          recipient_id: string
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          channel?: string
+          created_at?: string
+          dismissed_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          fire_at?: string
+          fired_at?: string | null
+          id?: number
+          kind?: string
+          last_error?: string | null
+          payload?: Json | null
+          recipient_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_queue_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchase_requests: {
         Row: {
           actual_delivery_date: string | null
@@ -721,6 +834,8 @@ export type Database = {
       _can_admin_purchases: { Args: never; Returns: boolean }
       _can_mutate: { Args: never; Returns: boolean }
       _delete_comment: { Args: { p_comment_id: string }; Returns: Json }
+      _drain_reminders: { Args: never; Returns: number }
+      _enqueue_followup_due_today: { Args: never; Returns: number }
       _next_spawn_at: {
         Args: {
           p_from?: string
@@ -735,6 +850,17 @@ export type Database = {
       _remove_attachment: { Args: { p_attachment_id: string }; Returns: Json }
       _require_auth: { Args: never; Returns: string }
       _require_branch_access: { Args: { p_branch: string }; Returns: undefined }
+      _spawn_due_recurring: { Args: never; Returns: number }
+      _sync_task_reminder_kind: {
+        Args: {
+          p_fire_at: string
+          p_kind: string
+          p_payload: Json
+          p_recipient: string
+          p_task_id: string
+        }
+        Returns: undefined
+      }
       current_user_can_access_branch: {
         Args: { p_branch: string }
         Returns: boolean
@@ -823,6 +949,10 @@ export type Database = {
       rpc_bootstrap_user: { Args: { p_full_name?: string }; Returns: Json }
       rpc_cancel_purchase_request: {
         Args: { p_id: string; p_reason?: string }
+        Returns: Json
+      }
+      rpc_cancel_reminder: {
+        Args: { p_queue_id: number; p_reason?: string }
         Returns: Json
       }
       rpc_complete_inspection: {
@@ -924,6 +1054,7 @@ export type Database = {
       }
       rpc_delete_task: { Args: { p_task_id: string }; Returns: Json }
       rpc_delete_task_comment: { Args: { p_comment_id: string }; Returns: Json }
+      rpc_dismiss_reminder: { Args: { p_queue_id: number }; Returns: Json }
       rpc_get_follow_up: { Args: { p_follow_up_id: string }; Returns: Json }
       rpc_get_inspection: { Args: { p_inspection_id: string }; Returns: Json }
       rpc_get_purchase_request: { Args: { p_id: string }; Returns: Json }
@@ -956,6 +1087,10 @@ export type Database = {
           p_result?: string
           p_search?: string
         }
+        Returns: Json
+      }
+      rpc_list_my_reminders: {
+        Args: { p_limit?: number; p_unread_only?: boolean }
         Returns: Json
       }
       rpc_list_purchase_dashboard: { Args: { p_limit?: number }; Returns: Json }
@@ -1326,3 +1461,22 @@ export type CommentRow = Database['public']['Tables']['comments']['Row'];
 export type AttachmentRow = Database['public']['Tables']['attachments']['Row'];
 export type AuditLogRow = Database['public']['Tables']['audit_log']['Row'];
 export type WhatsappMessageRow = Database['public']['Tables']['whatsapp_messages']['Row'];
+
+// Reminder engine (Phase B).
+export type ReminderKind =
+  | 'start_reminder'
+  | 'follow_up_reminder'
+  | 'deadline_reminder'
+  | 'recurring_spawn'
+  | 'followup_due';
+export type ReminderChannel = 'in_app' | 'telegram' | 'email' | 'calendar';
+export type ReminderStatus =
+  | 'pending'
+  | 'sent'
+  | 'dismissed'
+  | 'cancelled'
+  | 'failed';
+export type NotificationsQueueRow =
+  Database['public']['Tables']['notifications_queue']['Row'];
+export type NotificationLogRow =
+  Database['public']['Tables']['notification_log']['Row'];
