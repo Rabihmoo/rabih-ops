@@ -220,6 +220,181 @@ export type Database = {
           },
         ]
       }
+      document_links: {
+        Row: {
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          document_id: string
+          entity_id: string
+          entity_type: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          deleted_at?: string | null
+          document_id: string
+          entity_id: string
+          entity_type: string
+          id?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          document_id?: string
+          entity_id?: string
+          entity_type?: string
+          id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_links_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_versions: {
+        Row: {
+          body_md: string | null
+          branch: string | null
+          category: string
+          change_note: string | null
+          changed_by: string
+          created_at: string
+          document_id: string
+          id: number
+          status: string
+          title: string
+          version_no: number
+          visibility: string
+        }
+        Insert: {
+          body_md?: string | null
+          branch?: string | null
+          category: string
+          change_note?: string | null
+          changed_by: string
+          created_at?: string
+          document_id: string
+          id?: number
+          status: string
+          title: string
+          version_no: number
+          visibility: string
+        }
+        Update: {
+          body_md?: string | null
+          branch?: string | null
+          category?: string
+          change_note?: string | null
+          changed_by?: string
+          created_at?: string
+          document_id?: string
+          id?: number
+          status?: string
+          title?: string
+          version_no?: number
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_versions_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          body_md: string | null
+          branch: string | null
+          category: string
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          id: string
+          status: string
+          title: string
+          tsv: unknown
+          updated_at: string
+          updated_by: string
+          visibility: string
+        }
+        Insert: {
+          body_md?: string | null
+          branch?: string | null
+          category: string
+          created_at?: string
+          created_by: string
+          deleted_at?: string | null
+          id?: string
+          status?: string
+          title: string
+          tsv?: unknown
+          updated_at?: string
+          updated_by: string
+          visibility?: string
+        }
+        Update: {
+          body_md?: string | null
+          branch?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          id?: string
+          status?: string
+          title?: string
+          tsv?: unknown
+          updated_at?: string
+          updated_by?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_branch_fkey"
+            columns: ["branch"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       follow_ups: {
         Row: {
           assigned_to: string | null
@@ -1132,6 +1307,10 @@ export type Database = {
         Returns: boolean
       }
       current_user_role: { Args: never; Returns: string }
+      rpc_add_document_comment: {
+        Args: { p_body: string; p_doc_id: string }
+        Returns: Json
+      }
       rpc_add_follow_up_comment: {
         Args: { p_body: string; p_follow_up_id: string }
         Returns: Json
@@ -1168,12 +1347,23 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_archive_document: { Args: { p_doc_id: string }; Returns: Json }
       rpc_archive_recurring_template: {
         Args: { p_reason?: string; p_template_id: string }
         Returns: Json
       }
       rpc_archive_task: {
         Args: { p_reason?: string; p_task_id: string }
+        Returns: Json
+      }
+      rpc_attach_file_to_document: {
+        Args: {
+          p_doc_id: string
+          p_file_name: string
+          p_file_size: number
+          p_mime_type: string
+          p_storage_path: string
+        }
         Returns: Json
       }
       rpc_attach_file_to_follow_up: {
@@ -1292,6 +1482,17 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_create_document: {
+        Args: {
+          p_body_md?: string
+          p_branch?: string
+          p_category: string
+          p_status?: string
+          p_title: string
+          p_visibility?: string
+        }
+        Returns: Json
+      }
       rpc_create_follow_up: {
         Args: {
           p_assigned_to?: string
@@ -1365,6 +1566,10 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_delete_document_comment: {
+        Args: { p_comment_id: string }
+        Returns: Json
+      }
       rpc_delete_follow_up_comment: {
         Args: { p_comment_id: string }
         Returns: Json
@@ -1380,13 +1585,33 @@ export type Database = {
       rpc_delete_task: { Args: { p_task_id: string }; Returns: Json }
       rpc_delete_task_comment: { Args: { p_comment_id: string }; Returns: Json }
       rpc_dismiss_reminder: { Args: { p_queue_id: number }; Returns: Json }
+      rpc_documents_for_entity: {
+        Args: { p_entity_id: string; p_entity_type: string }
+        Returns: Json
+      }
+      rpc_get_document: { Args: { p_doc_id: string }; Returns: Json }
       rpc_get_follow_up: { Args: { p_follow_up_id: string }; Returns: Json }
       rpc_get_inspection: { Args: { p_inspection_id: string }; Returns: Json }
       rpc_get_purchase_request: { Args: { p_id: string }; Returns: Json }
       rpc_get_task: { Args: { p_task_id: string }; Returns: Json }
       rpc_get_user_dashboard: { Args: { p_user_id?: string }; Returns: Json }
+      rpc_link_document: {
+        Args: { p_doc_id: string; p_entity_id: string; p_entity_type: string }
+        Returns: Json
+      }
       rpc_list_active_telegram_chats: { Args: never; Returns: Json }
       rpc_list_critical_findings: { Args: { p_limit?: number }; Returns: Json }
+      rpc_list_documents: {
+        Args: {
+          p_branch?: string
+          p_category?: string
+          p_limit?: number
+          p_search?: string
+          p_status?: string
+          p_visibility?: string
+        }
+        Returns: Json
+      }
       rpc_list_follow_ups: {
         Args: {
           p_assigned_to?: string
@@ -1497,6 +1722,10 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_remove_document_attachment: {
+        Args: { p_attachment_id: string }
+        Returns: Json
+      }
       rpc_remove_follow_up_attachment: {
         Args: { p_attachment_id: string }
         Returns: Json
@@ -1525,6 +1754,10 @@ export type Database = {
         Args: { p_note?: string; p_task_id: string }
         Returns: Json
       }
+      rpc_revert_document: {
+        Args: { p_doc_id: string; p_version_no: number }
+        Returns: Json
+      }
       rpc_set_purchase_reminder: {
         Args: { p_id: string; p_reminder_date: string }
         Returns: Json
@@ -1551,6 +1784,7 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_soft_delete_document: { Args: { p_doc_id: string }; Returns: Json }
       rpc_soft_delete_purchase_request: {
         Args: { p_id: string }
         Returns: Json
@@ -1612,8 +1846,14 @@ export type Database = {
       rpc_telegram_unlink: { Args: { p_chat_id: number }; Returns: Json }
       rpc_telegram_unlink_self: { Args: never; Returns: Json }
       rpc_telegram_waiting: { Args: { p_chat_id: number }; Returns: string }
+      rpc_unarchive_document: { Args: { p_doc_id: string }; Returns: Json }
       rpc_unarchive_recurring_template: {
         Args: { p_template_id: string }
+        Returns: Json
+      }
+      rpc_unlink_document: { Args: { p_link_id: number }; Returns: Json }
+      rpc_update_document: {
+        Args: { p_change_note?: string; p_doc_id: string; p_updates: Json }
         Returns: Json
       }
       rpc_update_finding: {
@@ -1841,7 +2081,27 @@ export type PaymentMethod =
 export type Currency = 'MZN' | 'USD' | 'LBP';
 
 // Polymorphic entity_type literal — extend as new modules ship.
-export type EntityType = 'task' | 'follow_up' | 'inspection' | 'purchase_request';
+export type EntityType = 'task' | 'follow_up' | 'inspection' | 'purchase_request' | 'document';
+
+// Documents (Phase E).
+export type DocumentCategory =
+  | 'sop'
+  | 'policy'
+  | 'checklist'
+  | 'note'
+  | 'reference'
+  | 'personal';
+export type DocumentVisibility = 'work' | 'personal';
+export type DocumentStatus = 'draft' | 'active' | 'archived';
+export type DocumentLinkEntityType =
+  | 'task'
+  | 'follow_up'
+  | 'inspection'
+  | 'purchase_request';
+
+export type DocumentRow = Database['public']['Tables']['documents']['Row'];
+export type DocumentVersionRow = Database['public']['Tables']['document_versions']['Row'];
+export type DocumentLinkRow = Database['public']['Tables']['document_links']['Row'];
 
 // Named row aliases — keep existing imports stable.
 export type UserRow = Database['public']['Tables']['users']['Row'];

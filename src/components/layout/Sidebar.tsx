@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   Receipt,
   Repeat,
+  FileText,
   Settings,
   type LucideIcon,
 } from 'lucide-react';
@@ -26,6 +27,7 @@ const NAV: NavItem[] = [
   { to: '/follow-ups', label: 'Follow-ups', icon: PhoneCall },
   { to: '/inspections', label: 'Inspections', icon: ClipboardCheck },
   { to: '/purchases', label: 'Purchasing', icon: Receipt },
+  { to: '/documents', label: 'Documents', icon: FileText },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 

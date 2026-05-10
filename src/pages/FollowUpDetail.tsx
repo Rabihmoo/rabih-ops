@@ -19,6 +19,7 @@ import {
 import { AuditList } from '@/components/shared/AuditList';
 import { CommentList } from '@/components/shared/CommentList';
 import { AttachmentList } from '@/components/shared/AttachmentList';
+import { LinkedDocumentsCard } from '@/components/shared/LinkedDocumentsCard';
 import {
   useFollowUpDetail,
   useUpdateFollowUp,
@@ -342,6 +343,9 @@ export function FollowUpDetailPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Linked SOPs / policies / notes */}
+      <LinkedDocumentsCard entityType="follow_up" entityId={id!} />
 
       {/* Activity */}
       <Card>

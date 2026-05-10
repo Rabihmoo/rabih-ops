@@ -8,6 +8,7 @@ import { toast } from '@/components/ui/toaster';
 import { TaskForm } from '@/components/tasks/TaskForm';
 import { TaskActions } from '@/components/tasks/TaskActions';
 import { TaskCalendarCard } from '@/components/tasks/TaskCalendarCard';
+import { LinkedDocumentsCard } from '@/components/shared/LinkedDocumentsCard';
 import {
   BranchBadge,
   DueDateBadge,
@@ -227,6 +228,9 @@ export function TaskDetailPage() {
 
       {/* Calendar — only renders when connected or when historical event links exist */}
       {!editing && <TaskCalendarCard task={task} />}
+
+      {/* Linked SOPs / policies / notes */}
+      {!editing && <LinkedDocumentsCard entityType="task" entityId={taskId} />}
 
       {/* Reminders summary (Phase B will fire them; Phase A just stores) */}
       {!editing && hasAnyReminder && (
