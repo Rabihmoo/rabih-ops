@@ -726,6 +726,103 @@ export type Database = {
           },
         ]
       }
+      telegram_chats: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          last_seen_at: string | null
+          link_token: string | null
+          link_token_expires_at: string | null
+          linked_at: string | null
+          tg_chat_id: number | null
+          tg_first_name: string | null
+          tg_username: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          last_seen_at?: string | null
+          link_token?: string | null
+          link_token_expires_at?: string | null
+          linked_at?: string | null
+          tg_chat_id?: number | null
+          tg_first_name?: string | null
+          tg_username?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          last_seen_at?: string | null
+          link_token?: string | null
+          link_token_expires_at?: string | null
+          linked_at?: string | null
+          tg_chat_id?: number | null
+          tg_first_name?: string | null
+          tg_username?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_chats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_messages: {
+        Row: {
+          created_at: string
+          direction: string
+          error: string | null
+          id: number
+          message_text: string
+          parsed_command: string | null
+          parsed_params: Json | null
+          response_text: string | null
+          tg_chat_id: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          error?: string | null
+          id?: number
+          message_text: string
+          parsed_command?: string | null
+          parsed_params?: Json | null
+          response_text?: string | null
+          tg_chat_id: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          error?: string | null
+          id?: number
+          message_text?: string
+          parsed_command?: string | null
+          parsed_params?: Json | null
+          response_text?: string | null
+          tg_chat_id?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           branches: string[]
@@ -850,6 +947,10 @@ export type Database = {
       _remove_attachment: { Args: { p_attachment_id: string }; Returns: Json }
       _require_auth: { Args: never; Returns: string }
       _require_branch_access: { Args: { p_branch: string }; Returns: undefined }
+      _resolve_task_short_id: {
+        Args: { p_prefix: string; p_user_id: string }
+        Returns: string
+      }
       _spawn_due_recurring: { Args: never; Returns: number }
       _sync_task_reminder_kind: {
         Args: {
@@ -861,6 +962,8 @@ export type Database = {
         }
         Returns: undefined
       }
+      _task_short_id: { Args: { p_id: string }; Returns: string }
+      _telegram_user: { Args: { p_chat_id: number }; Returns: string }
       current_user_can_access_branch: {
         Args: { p_branch: string }
         Returns: boolean
@@ -957,6 +1060,10 @@ export type Database = {
       }
       rpc_cancel_reminder: {
         Args: { p_queue_id: number; p_reason?: string }
+        Returns: Json
+      }
+      rpc_claim_telegram_reminders: {
+        Args: { p_limit?: number }
         Returns: Json
       }
       rpc_complete_inspection: {
@@ -1064,6 +1171,7 @@ export type Database = {
       rpc_get_purchase_request: { Args: { p_id: string }; Returns: Json }
       rpc_get_task: { Args: { p_task_id: string }; Returns: Json }
       rpc_get_user_dashboard: { Args: { p_user_id?: string }; Returns: Json }
+      rpc_list_active_telegram_chats: { Args: never; Returns: Json }
       rpc_list_critical_findings: { Args: { p_limit?: number }; Returns: Json }
       rpc_list_follow_ups: {
         Args: {
@@ -1135,6 +1243,14 @@ export type Database = {
       rpc_mark_follow_up_done: {
         Args: { p_follow_up_id: string; p_outcome?: string }
         Returns: Json
+      }
+      rpc_mark_telegram_reminder_failed: {
+        Args: { p_error: string; p_queue_id: number }
+        Returns: undefined
+      }
+      rpc_mark_telegram_reminder_sent: {
+        Args: { p_provider_msg_id?: string; p_queue_id: number }
+        Returns: undefined
       }
       rpc_mark_waiting: {
         Args: {
@@ -1230,6 +1346,58 @@ export type Database = {
         Returns: Json
       }
       rpc_submit_purchase_request: { Args: { p_id: string }; Returns: Json }
+      rpc_telegram_add_note: {
+        Args: { p_body: string; p_chat_id: number; p_id_or_prefix: string }
+        Returns: string
+      }
+      rpc_telegram_complete_link: {
+        Args: {
+          p_chat_id: number
+          p_first_name?: string
+          p_token: string
+          p_username?: string
+        }
+        Returns: Json
+      }
+      rpc_telegram_complete_task: {
+        Args: { p_chat_id: number; p_id_or_prefix: string; p_outcome?: string }
+        Returns: string
+      }
+      rpc_telegram_create_task: {
+        Args: {
+          p_branch: string
+          p_chat_id: number
+          p_due_date?: string
+          p_priority?: string
+          p_title: string
+        }
+        Returns: string
+      }
+      rpc_telegram_daily_summary: {
+        Args: { p_chat_id: number }
+        Returns: string
+      }
+      rpc_telegram_link_status: { Args: never; Returns: Json }
+      rpc_telegram_log: {
+        Args: {
+          p_chat_id: number
+          p_direction?: string
+          p_error?: string
+          p_message_text?: string
+          p_parsed_command?: string
+          p_parsed_params?: Json
+          p_response_text?: string
+          p_user_id?: string
+        }
+        Returns: undefined
+      }
+      rpc_telegram_overdue: { Args: { p_chat_id: number }; Returns: string }
+      rpc_telegram_purchases: { Args: { p_chat_id: number }; Returns: string }
+      rpc_telegram_request_link: { Args: never; Returns: Json }
+      rpc_telegram_today: { Args: { p_chat_id: number }; Returns: string }
+      rpc_telegram_unlink: { Args: { p_chat_id: number }; Returns: Json }
+      rpc_telegram_unlink_self: { Args: never; Returns: Json }
+      rpc_telegram_waiting: { Args: { p_chat_id: number }; Returns: string }
       rpc_unarchive_recurring_template: {
         Args: { p_template_id: string }
         Returns: Json
