@@ -10,6 +10,7 @@ import {
   getUserIdFromJwt,
   maputoTodayRange,
 } from '../_shared/google.ts';
+import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -29,9 +30,12 @@ interface GoogleEvent {
 }
 
 Deno.serve(async (req) => {
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+
   const auth = req.headers.get('authorization') ?? '';
   if (!auth.toLowerCase().startsWith('bearer ')) {
-    return new Response('unauthorized', { status: 401 });
+    return jsonResponse({ error: 'unauthorized' }, 401);
   }
   const jwt = auth.slice(7);
 
@@ -39,7 +43,7 @@ Deno.serve(async (req) => {
   try {
     userId = await getUserIdFromJwt(jwt, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   } catch {
-    return new Response('unauthorized', { status: 401 });
+    return jsonResponse({ error: 'unauthorized' }, 401);
   }
 
   let token;
@@ -51,20 +55,17 @@ Deno.serve(async (req) => {
       GOOGLE_OAUTH_CLIENT_SECRET,
     );
   } catch (err) {
-    return new Response(
-      JSON.stringify({
+    return jsonResponse(
+      {
         connected: false,
         error: err instanceof Error ? err.message : 'token error',
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
+      },
+      200,
     );
   }
 
   if (!token.connected) {
-    return new Response(JSON.stringify({ connected: false, events: [] }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ connected: false, events: [] });
   }
 
   const { timeMin, timeMax } = maputoTodayRange();
@@ -83,10 +84,7 @@ Deno.serve(async (req) => {
   });
   const text = await res.text();
   if (!res.ok) {
-    return new Response(
-      JSON.stringify({ connected: true, error: text, events: [] }),
-      { status: 502, headers: { 'Content-Type': 'application/json' } },
-    );
+    return jsonResponse({ connected: true, error: text, events: [] }, 502);
   }
   const j = JSON.parse(text);
   const events = (j.items as GoogleEvent[] ?? [])
@@ -101,8 +99,5 @@ Deno.serve(async (req) => {
       html_link: e.htmlLink ?? null,
     }));
 
-  return new Response(
-    JSON.stringify({ connected: true, email: token.email, events }),
-    { status: 200, headers: { 'Content-Type': 'application/json' } },
-  );
+  return jsonResponse({ connected: true, email: token.email, events });
 });

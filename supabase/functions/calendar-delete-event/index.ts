@@ -10,6 +10,7 @@ import {
   getFreshGoogleAccessToken,
   getUserIdFromJwt,
 } from '../_shared/google.ts';
+import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -27,29 +28,28 @@ interface LinkRow {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') return new Response('method not allowed', { status: 405 });
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+  if (req.method !== 'POST') return jsonResponse({ error: 'method not allowed' }, 405);
   const auth = req.headers.get('authorization') ?? '';
-  if (!auth.toLowerCase().startsWith('bearer ')) return new Response('unauthorized', { status: 401 });
+  if (!auth.toLowerCase().startsWith('bearer ')) return jsonResponse({ error: 'unauthorized' }, 401);
   const jwt = auth.slice(7);
 
   let userId: string;
   try {
     userId = await getUserIdFromJwt(jwt, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   } catch {
-    return new Response('unauthorized', { status: 401 });
+    return jsonResponse({ error: 'unauthorized' }, 401);
   }
 
   let body: { link_id: number };
   try {
     body = await req.json();
   } catch {
-    return new Response('bad json', { status: 400 });
+    return jsonResponse({ error: 'bad json' }, 400);
   }
   if (!body.link_id) {
-    return new Response(
-      JSON.stringify({ error: 'link_id required' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
-    );
+    return jsonResponse({ error: 'link_id required' }, 400);
   }
 
   // Look up the link via PostgREST with the user's JWT — RLS gates this so
@@ -63,19 +63,9 @@ Deno.serve(async (req) => {
       },
     },
   );
-  if (!r.ok) {
-    return new Response(
-      JSON.stringify({ error: `link lookup ${r.status}` }),
-      { status: r.status, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
+  if (!r.ok) return jsonResponse({ error: `link lookup ${r.status}` }, r.status);
   const rows = (await r.json()) as LinkRow[];
-  if (rows.length === 0) {
-    return new Response(
-      JSON.stringify({ error: 'link not found or not yours' }),
-      { status: 404, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
+  if (rows.length === 0) return jsonResponse({ error: 'link not found or not yours' }, 404);
   const link = rows[0];
 
   // Refresh access token + delete the Google event (best effort).
@@ -114,8 +104,10 @@ Deno.serve(async (req) => {
   // Soft-delete the link locally regardless of Google's response.
   const removed = await rpc<any>('rpc_calendar_remove_event', { p_link_id: body.link_id });
 
-  return new Response(
-    JSON.stringify({ success: true, link: removed, google_status: googleStatus, google_error: googleError }),
-    { status: 200, headers: { 'Content-Type': 'application/json' } },
-  );
+  return jsonResponse({
+    success: true,
+    link: removed,
+    google_status: googleStatus,
+    google_error: googleError,
+  });
 });

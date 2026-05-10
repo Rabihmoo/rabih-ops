@@ -8,6 +8,7 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { makeRpc } from '../_shared/rpc.ts';
+import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -29,12 +30,14 @@ async function getUserIdFromJwt(jwt: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
   if (req.method !== 'POST') {
-    return new Response('method not allowed', { status: 405 });
+    return jsonResponse({ error: 'method not allowed' }, 405);
   }
   const auth = req.headers.get('authorization') ?? '';
   if (!auth.toLowerCase().startsWith('bearer ')) {
-    return new Response('unauthorized', { status: 401 });
+    return jsonResponse({ error: 'unauthorized' }, 401);
   }
   const jwt = auth.slice(7);
 
@@ -42,7 +45,7 @@ Deno.serve(async (req) => {
   try {
     userId = await getUserIdFromJwt(jwt);
   } catch (_e) {
-    return new Response('unauthorized', { status: 401 });
+    return jsonResponse({ error: 'unauthorized' }, 401);
   }
 
   // Fetch the refresh token from Vault. If the user isn't connected, we
@@ -77,14 +80,11 @@ Deno.serve(async (req) => {
   try {
     await rpc('rpc_calendar_mark_disconnected', { p_user_id: userId });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ success: false, error: err instanceof Error ? err.message : 'unknown' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    return jsonResponse(
+      { success: false, error: err instanceof Error ? err.message : 'unknown' },
+      500,
     );
   }
 
-  return new Response(JSON.stringify({ success: true }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return jsonResponse({ success: true });
 });

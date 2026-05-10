@@ -13,6 +13,7 @@ import {
   getFreshGoogleAccessToken,
   getUserIdFromJwt,
 } from '../_shared/google.ts';
+import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -45,12 +46,15 @@ interface FollowUpRow {
 }
 
 Deno.serve(async (req) => {
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
+
   if (req.method !== 'POST') {
-    return new Response('method not allowed', { status: 405 });
+    return jsonResponse({ error: 'method not allowed' }, 405);
   }
   const auth = req.headers.get('authorization') ?? '';
   if (!auth.toLowerCase().startsWith('bearer ')) {
-    return new Response('unauthorized', { status: 401 });
+    return jsonResponse({ error: 'unauthorized' }, 401);
   }
   const jwt = auth.slice(7);
 
@@ -58,25 +62,25 @@ Deno.serve(async (req) => {
   try {
     userId = await getUserIdFromJwt(jwt, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   } catch {
-    return new Response('unauthorized', { status: 401 });
+    return jsonResponse({ error: 'unauthorized' }, 401);
   }
 
   let body: Body;
   try {
     body = await req.json();
   } catch {
-    return new Response('bad json', { status: 400 });
+    return jsonResponse({ error: 'bad json' }, 400);
   }
   if (!body.entity_type || !body.entity_id || !body.start || !body.end) {
-    return new Response(
-      JSON.stringify({ error: 'entity_type, entity_id, start, end required' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    return jsonResponse(
+      { error: 'entity_type, entity_id, start, end required' },
+      400,
     );
   }
   if (body.entity_type !== 'task' && body.entity_type !== 'follow_up') {
-    return new Response(
-      JSON.stringify({ error: 'entity_type must be task or follow_up' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    return jsonResponse(
+      { error: 'entity_type must be task or follow_up' },
+      400,
     );
   }
 
@@ -98,19 +102,9 @@ Deno.serve(async (req) => {
       `${SUPABASE_URL}/rest/v1/tasks?id=eq.${body.entity_id}&deleted_at=is.null&select=id,title,description,branch,deleted_at`,
       { headers: restHeaders },
     );
-    if (!r.ok) {
-      return new Response(
-        JSON.stringify({ error: `entity lookup ${r.status}` }),
-        { status: r.status, headers: { 'Content-Type': 'application/json' } },
-      );
-    }
+    if (!r.ok) return jsonResponse({ error: `entity lookup ${r.status}` }, r.status);
     const rows = (await r.json()) as TaskRow[];
-    if (rows.length === 0) {
-      return new Response(JSON.stringify({ error: 'task not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    if (rows.length === 0) return jsonResponse({ error: 'task not found' }, 404);
     title = rows[0].title;
     description = rows[0].description;
     appLink = `${RABIHOS_APP_URL}/tasks/${body.entity_id}`;
@@ -119,19 +113,9 @@ Deno.serve(async (req) => {
       `${SUPABASE_URL}/rest/v1/follow_ups?id=eq.${body.entity_id}&deleted_at=is.null&select=id,title,description,deleted_at`,
       { headers: restHeaders },
     );
-    if (!r.ok) {
-      return new Response(
-        JSON.stringify({ error: `entity lookup ${r.status}` }),
-        { status: r.status, headers: { 'Content-Type': 'application/json' } },
-      );
-    }
+    if (!r.ok) return jsonResponse({ error: `entity lookup ${r.status}` }, r.status);
     const rows = (await r.json()) as FollowUpRow[];
-    if (rows.length === 0) {
-      return new Response(JSON.stringify({ error: 'follow-up not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    if (rows.length === 0) return jsonResponse({ error: 'follow-up not found' }, 404);
     title = rows[0].title;
     description = rows[0].description;
     appLink = `${RABIHOS_APP_URL}/follow-ups/${body.entity_id}`;
@@ -147,16 +131,13 @@ Deno.serve(async (req) => {
       GOOGLE_OAUTH_CLIENT_SECRET,
     );
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : 'token error' }),
-      { status: 502, headers: { 'Content-Type': 'application/json' } },
+    return jsonResponse(
+      { error: err instanceof Error ? err.message : 'token error' },
+      502,
     );
   }
   if (!token.connected) {
-    return new Response(
-      JSON.stringify({ error: 'Google Calendar not connected' }),
-      { status: 412, headers: { 'Content-Type': 'application/json' } },
-    );
+    return jsonResponse({ error: 'Google Calendar not connected' }, 412);
   }
 
   const calendarId = body.calendar_id || 'primary';
@@ -182,10 +163,7 @@ Deno.serve(async (req) => {
   );
   const gText = await gRes.text();
   if (!gRes.ok) {
-    return new Response(
-      JSON.stringify({ error: `google ${gRes.status}: ${gText}` }),
-      { status: 502, headers: { 'Content-Type': 'application/json' } },
-    );
+    return jsonResponse({ error: `google ${gRes.status}: ${gText}` }, 502);
   }
   const gEvent = JSON.parse(gText);
 
@@ -202,8 +180,5 @@ Deno.serve(async (req) => {
     p_html_link: gEvent.htmlLink,
   });
 
-  return new Response(JSON.stringify({ success: true, link }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return jsonResponse({ success: true, link }, 200);
 });
