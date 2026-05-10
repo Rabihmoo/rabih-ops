@@ -20,20 +20,38 @@ const rpc = makeRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 const tg = makeTelegram(TELEGRAM_BOT_TOKEN);
 
 const HELP = [
-  'RabihOS commands',
+  '🤖 RabihOS bot — what I do',
   '',
-  '/today          — today + overdue snapshot',
-  '/overdue        — all overdue tasks',
-  '/waiting        — waiting / delayed / needs repeat',
-  '/purchases      — purchasing actionable',
-  '/done <id>      — mark a task finished',
-  '/note <id> <…>  — add a note to a task',
-  '/task <title> for <branch>  — create a task',
-  '/unlink         — disconnect this Telegram chat',
-  '/help           — this list',
+  'I keep you on top of operations across BBQ House, SALT,',
+  'Central Kitchen, and Executive Cleaning.',
   '',
-  'Use the 8-char id from /today, /overdue or /waiting.',
-  'Branches: bbqhouse, salt, centralkitchen, cleaning.',
+  '📋 Daily check-in',
+  '   /today      Your full open task list (numbered)',
+  '   /overdue    Only overdue tasks',
+  '   /waiting    Blocked / delayed / needs repeat',
+  '   /purchases  Pending deliveries, unpaid, reminders',
+  '',
+  '⚡ Acting on a task',
+  '   First run /today (or /overdue, /waiting). It shows',
+  '   tasks numbered 1, 2, 3 …  Then:',
+  '',
+  '   /done 1               mark task #1 finished',
+  '   /done 1 your outcome  finish + record an outcome',
+  '   /note 1 your text     add a note to task #1',
+  '',
+  '⚡ Creating a task',
+  '   /task <title> for <branch>',
+  '   Example: /task Buy oil for centralkitchen',
+  '   Branches: bbqhouse · salt · centralkitchen · cleaning',
+  '',
+  '⚙ Account',
+  '   /unlink     Disconnect this Telegram from RabihOS',
+  '   /help       This list',
+  '',
+  '🔔 Automatic',
+  '   • Daily summary every morning at 08:00 (Africa/Maputo)',
+  '   • Reminders on tasks where you set start /',
+  '     follow-up / deadline times in the app',
 ].join('\n');
 
 interface TelegramUpdate {
@@ -155,21 +173,38 @@ async function dispatch({ chatId, text, username, firstName }: DispatchArgs): Pr
     ].join('\n');
   }
 
-  if (text === '/help')      return HELP;
-  if (text === '/today')     return await rpcText('rpc_telegram_today',     { p_chat_id: chatId });
-  if (text === '/overdue')   return await rpcText('rpc_telegram_overdue',   { p_chat_id: chatId });
-  if (text === '/waiting')   return await rpcText('rpc_telegram_waiting',   { p_chat_id: chatId });
-  if (text === '/purchases') return await rpcText('rpc_telegram_purchases', { p_chat_id: chatId });
+  // Parse the head and tail (rest) once. /done, /note, /task all match
+  // the same pattern: bare command falls into a usage hint instead of /help.
+  const m = text.match(/^\/(\w+)(?:\s+([\s\S]*))?$/);
+  const cmd = m ? m[1].toLowerCase() : '';
+  const rest = (m && m[2] ? m[2] : '').trim();
 
-  if (text === '/unlink') {
+  if (cmd === 'help')      return HELP;
+  if (cmd === 'today')     return await rpcText('rpc_telegram_today',     { p_chat_id: chatId });
+  if (cmd === 'overdue')   return await rpcText('rpc_telegram_overdue',   { p_chat_id: chatId });
+  if (cmd === 'waiting')   return await rpcText('rpc_telegram_waiting',   { p_chat_id: chatId });
+  if (cmd === 'purchases') return await rpcText('rpc_telegram_purchases', { p_chat_id: chatId });
+
+  if (cmd === 'unlink') {
     const r = await rpc<{ success: boolean; message?: string }>('rpc_telegram_unlink', {
       p_chat_id: chatId,
     });
     return r.success ? '👋 Unlinked. /start a new link any time.' : (r.message ?? 'Nothing to unlink.');
   }
 
-  if (text.startsWith('/done ')) {
-    const rest = text.slice(6).trim();
+  if (cmd === 'done') {
+    if (!rest) {
+      return [
+        '⚠️ Missing task number.',
+        '',
+        'How it works:',
+        '   1. Run /today — your tasks are numbered 1, 2, 3 …',
+        '   2. Type /done 1 to finish task #1',
+        '',
+        'You can also record an outcome:',
+        '   /done 1 Cooler at 4°C, all green.',
+      ].join('\n');
+    }
     const [id, ...outcome] = rest.split(/\s+/);
     return await rpcText('rpc_telegram_complete_task', {
       p_chat_id: chatId,
@@ -178,40 +213,63 @@ async function dispatch({ chatId, text, username, firstName }: DispatchArgs): Pr
     });
   }
 
-  if (text.startsWith('/note ')) {
-    const rest = text.slice(6).trim();
-    const m = rest.match(/^(\S+)\s+(.+)$/s);
-    if (!m) return '⚠️ Usage: /note <id> <text>';
+  if (cmd === 'note') {
+    const noteMatch = rest.match(/^(\S+)\s+([\s\S]+)$/);
+    if (!noteMatch) {
+      return [
+        '⚠️ Usage: /note <task-number> <text>',
+        '',
+        'How it works:',
+        '   1. Run /today — your tasks are numbered 1, 2, 3 …',
+        '   2. Type /note 1 followed by your note',
+        '',
+        'Example: /note 1 Spoke to vendor, ETA Friday.',
+      ].join('\n');
+    }
     return await rpcText('rpc_telegram_add_note', {
       p_chat_id: chatId,
-      p_id_or_prefix: m[1],
-      p_body: m[2],
+      p_id_or_prefix: noteMatch[1],
+      p_body: noteMatch[2],
     });
   }
 
-  if (text.startsWith('/task ')) {
-    const rest = text.slice(6).trim();
+  if (cmd === 'task') {
     if (!rest) {
-      return '⚠️ Usage: /task <title> for <branch>\nBranches: bbqhouse, salt, centralkitchen, cleaning.';
+      return [
+        '⚠️ Usage: /task <title> for <branch>',
+        '',
+        'Example:',
+        '   /task Buy oil for centralkitchen',
+        '',
+        'Branches: bbqhouse, salt, centralkitchen, cleaning.',
+      ].join('\n');
     }
-    // Trailing "branch <code>" or "for <code>"
-    const m = rest.match(/^(.+?)\s+(?:branch|for)\s+([a-z]+)\s*$/i);
-    if (!m) {
+    // Trailing "for <code>" or "branch <code>"
+    const taskMatch = rest.match(/^(.+?)\s+(?:branch|for)\s+([a-z]+)\s*$/i);
+    if (!taskMatch) {
       return [
         '⚠️ Branch missing.',
-        'Try: /task <title> for <branch>',
+        '',
+        'Add "for <branch>" at the end:',
+        '   /task <title> for <branch>',
+        '',
+        'Example:',
+        '   /task Buy oil for centralkitchen',
+        '',
         'Branches: bbqhouse, salt, centralkitchen, cleaning.',
       ].join('\n');
     }
     return await rpcText('rpc_telegram_create_task', {
       p_chat_id: chatId,
-      p_title: m[1].trim(),
-      p_branch: m[2].toLowerCase(),
+      p_title: taskMatch[1].trim(),
+      p_branch: taskMatch[2].toLowerCase(),
       p_priority: 'normal',
       p_due_date: null,
     });
   }
 
+  // Unknown command — fall through to help. Anything that didn't start with
+  // a slash also lands here.
   return HELP;
 }
 
