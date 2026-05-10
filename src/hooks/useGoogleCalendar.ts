@@ -1,9 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  createCalendarEvent,
+  deleteCalendarEvent,
   disconnectCalendar,
   getCalendarLinkStatus,
   listCalendarLinksForEntity,
+  listGoogleCalendarToday,
   requestCalendarAuthorize,
+  type CreateCalendarEventInput,
 } from '@/lib/google-calendar';
 
 const KEY = ['google-calendar'] as const;
@@ -37,5 +41,37 @@ export function useCalendarLinksForTask(taskId: string | null) {
     queryKey: [...KEY, 'links', 'task', taskId],
     queryFn: () => listCalendarLinksForEntity('task', taskId!),
     enabled: !!taskId,
+  });
+}
+
+export function useGoogleCalendarToday(enabled: boolean) {
+  return useQuery({
+    queryKey: [...KEY, 'today'],
+    queryFn: () => listGoogleCalendarToday(),
+    enabled,
+    // Calendar events change less often than tasks. 5-min cache is plenty.
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCreateCalendarEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateCalendarEventInput) => createCalendarEvent(input),
+    onSuccess: (_, input) => {
+      qc.invalidateQueries({ queryKey: [...KEY, 'links', input.entity_type, input.entity_id] });
+      qc.invalidateQueries({ queryKey: [...KEY, 'today'] });
+    },
+  });
+}
+
+export function useDeleteCalendarEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (linkId: number) => deleteCalendarEvent(linkId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...KEY, 'links'] });
+      qc.invalidateQueries({ queryKey: [...KEY, 'today'] });
+    },
   });
 }

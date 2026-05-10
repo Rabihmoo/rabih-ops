@@ -75,6 +75,103 @@ export async function listCalendarLinksForEntity(
 }
 
 // =========================================================
+// Dashboard "Today's calendar" — calls calendar-list-today Edge Function
+// =========================================================
+
+export interface CalendarTodayEvent {
+  id: string;
+  title: string;
+  start: string | null;
+  end: string | null;
+  all_day: boolean;
+  location: string | null;
+  html_link: string | null;
+}
+export interface CalendarTodayResult {
+  connected: boolean;
+  email?: string;
+  events: CalendarTodayEvent[];
+  error?: string;
+}
+
+async function callEdgeFunction<T>(
+  path: string,
+  init: RequestInit,
+): Promise<T> {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (!supabaseUrl) throw new Error('VITE_SUPABASE_URL missing');
+  const { supabase } = await import('./supabase');
+  const session = (await supabase.auth.getSession()).data.session;
+  const jwt = session?.access_token;
+  if (!jwt) throw new Error('not authenticated');
+  const res = await fetch(`${supabaseUrl}${path}`, {
+    ...init,
+    headers: {
+      ...(init.headers ?? {}),
+      Authorization: `Bearer ${jwt}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    let detail = text;
+    try {
+      const j = JSON.parse(text);
+      detail = j.error ?? text;
+    } catch {
+      // not json
+    }
+    throw new Error(detail || `HTTP ${res.status}`);
+  }
+  return text ? (JSON.parse(text) as T) : (undefined as T);
+}
+
+export interface CreateCalendarEventInput {
+  entity_type: 'task' | 'follow_up';
+  entity_id: string;
+  start: string; // ISO 8601
+  end: string;
+  calendar_id?: string;
+}
+
+export async function createCalendarEvent(
+  input: CreateCalendarEventInput,
+): Promise<{ success: boolean; link: CalendarEventLink }> {
+  return callEdgeFunction<{ success: boolean; link: CalendarEventLink }>(
+    '/functions/v1/calendar-create-event',
+    { method: 'POST', body: JSON.stringify(input) },
+  );
+}
+
+export async function deleteCalendarEvent(
+  linkId: number,
+): Promise<{ success: boolean }> {
+  return callEdgeFunction<{ success: boolean }>(
+    '/functions/v1/calendar-delete-event',
+    { method: 'POST', body: JSON.stringify({ link_id: linkId }) },
+  );
+}
+
+export async function listGoogleCalendarToday(): Promise<CalendarTodayResult> {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (!supabaseUrl) return { connected: false, events: [], error: 'no supabase url' };
+
+  const { supabase } = await import('./supabase');
+  const session = (await supabase.auth.getSession()).data.session;
+  const jwt = session?.access_token;
+  if (!jwt) return { connected: false, events: [], error: 'not authenticated' };
+
+  const res = await fetch(`${supabaseUrl}/functions/v1/calendar-list-today`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${jwt}` },
+  });
+  if (!res.ok) {
+    return { connected: false, events: [], error: `HTTP ${res.status}` };
+  }
+  return res.json();
+}
+
+// =========================================================
 // Frontend OAuth URL builder. The client_id is public per Google's
 // guidance; the client_secret stays server-side only (Edge Functions).
 // The redirect_uri must exactly match what's whitelisted in Google

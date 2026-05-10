@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/components/ui/toaster';
 import { TaskForm } from '@/components/tasks/TaskForm';
 import { TaskActions } from '@/components/tasks/TaskActions';
+import { TaskCalendarCard } from '@/components/tasks/TaskCalendarCard';
 import {
   BranchBadge,
   DueDateBadge,
@@ -223,6 +224,9 @@ export function TaskDetailPage() {
 
       {/* Lifecycle actions — only shown to mutators when not editing */}
       {!editing && canMutate && <TaskActions task={task} />}
+
+      {/* Calendar — only renders when connected or when historical event links exist */}
+      {!editing && <TaskCalendarCard task={task} />}
 
       {/* Reminders summary (Phase B will fire them; Phase A just stores) */}
       {!editing && hasAnyReminder && (

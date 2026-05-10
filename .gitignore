@@ -16,3 +16,4 @@ test-results/
 supabase/.temp/
 tests/fixtures/.auth/
 baseline-*.png
+.claude/
