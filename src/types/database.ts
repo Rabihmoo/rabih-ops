@@ -902,6 +902,10 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_archive_recurring_template: {
+        Args: { p_reason?: string; p_template_id: string }
+        Returns: Json
+      }
       rpc_archive_task: {
         Args: { p_reason?: string; p_task_id: string }
         Returns: Json
@@ -1226,6 +1230,10 @@ export type Database = {
         Returns: Json
       }
       rpc_submit_purchase_request: { Args: { p_id: string }; Returns: Json }
+      rpc_unarchive_recurring_template: {
+        Args: { p_template_id: string }
+        Returns: Json
+      }
       rpc_update_finding: {
         Args: { p_finding_id: string; p_updates: Json }
         Returns: Json
@@ -1240,6 +1248,10 @@ export type Database = {
       }
       rpc_update_purchase_request: {
         Args: { p_id: string; p_updates: Json }
+        Returns: Json
+      }
+      rpc_update_recurring_template: {
+        Args: { p_template_id: string; p_updates: Json }
         Returns: Json
       }
       rpc_update_task: {

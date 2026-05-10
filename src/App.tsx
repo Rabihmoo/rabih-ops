@@ -6,6 +6,9 @@ import { DashboardPage } from './pages/Dashboard';
 import { TasksPage } from './pages/Tasks';
 import { TaskNewPage } from './pages/TaskNew';
 import { TaskDetailPage } from './pages/TaskDetail';
+import { FixedTasksPage } from './pages/FixedTasks';
+import { FixedTaskNewPage } from './pages/FixedTaskNew';
+import { FixedTaskDetailPage } from './pages/FixedTaskDetail';
 import { FollowUpsPage } from './pages/FollowUps';
 import { FollowUpNewPage } from './pages/FollowUpNew';
 import { FollowUpDetailPage } from './pages/FollowUpDetail';
@@ -36,6 +39,9 @@ export default function App() {
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/tasks/new" element={<TaskNewPage />} />
           <Route path="/tasks/:id" element={<TaskDetailPage />} />
+          <Route path="/fixed-tasks" element={<FixedTasksPage />} />
+          <Route path="/fixed-tasks/new" element={<FixedTaskNewPage />} />
+          <Route path="/fixed-tasks/:id" element={<FixedTaskDetailPage />} />
           <Route path="/follow-ups" element={<FollowUpsPage />} />
           <Route path="/follow-ups/new" element={<FollowUpNewPage />} />
           <Route path="/follow-ups/:id" element={<FollowUpDetailPage />} />

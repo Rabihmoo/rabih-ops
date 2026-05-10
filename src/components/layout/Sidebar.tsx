@@ -5,6 +5,7 @@ import {
   PhoneCall,
   ClipboardCheck,
   Receipt,
+  Repeat,
   Settings,
   type LucideIcon,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/tasks', label: 'Tasks', icon: ListChecks },
+  { to: '/fixed-tasks', label: 'Fixed tasks', icon: Repeat },
   { to: '/follow-ups', label: 'Follow-ups', icon: PhoneCall },
   { to: '/inspections', label: 'Inspections', icon: ClipboardCheck },
   { to: '/purchases', label: 'Purchasing', icon: Receipt },
