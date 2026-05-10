@@ -12,6 +12,7 @@ import type {
   CreateDocumentInput,
   UpdateDocumentInput,
 } from '@/lib/documents';
+import type { DocumentTemplateDraft } from '@/lib/document-templates';
 import type {
   DocumentCategory,
   DocumentRow,
@@ -47,6 +48,7 @@ type FormValues = z.infer<typeof baseSchema>;
 
 export function DocumentForm({
   initial,
+  initialDraft,
   submitting,
   onSubmit,
   submitLabel,
@@ -54,6 +56,7 @@ export function DocumentForm({
   showChangeNote = false,
 }: {
   initial?: DocumentRow;
+  initialDraft?: DocumentTemplateDraft;
   submitting?: boolean;
   submitLabel: string;
   showStatus?: boolean;
@@ -76,15 +79,25 @@ export function DocumentForm({
           body_md: initial.body_md ?? '',
           change_note: '',
         }
-      : {
-          title: '',
-          category: 'sop',
-          visibility: 'work',
-          branch: '',
-          status: 'draft',
-          body_md: '',
-          change_note: '',
-        },
+      : initialDraft
+        ? {
+            title: initialDraft.title,
+            category: initialDraft.category,
+            visibility: initialDraft.visibility,
+            branch: '',
+            status: initialDraft.status ?? 'draft',
+            body_md: initialDraft.body_md,
+            change_note: '',
+          }
+        : {
+            title: '',
+            category: 'sop',
+            visibility: 'work',
+            branch: '',
+            status: 'draft',
+            body_md: '',
+            change_note: '',
+          },
   });
 
   const handleSubmit = form.handleSubmit(async (values) => {

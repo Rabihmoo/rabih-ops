@@ -50,6 +50,20 @@ test.describe('Documents — admin happy path', () => {
     await expect(page.getByText(title).first()).toBeVisible();
   });
 
+  test('picking a template prefills the form', async ({ page }) => {
+    await page.goto('/documents/new');
+    await expect(page.getByText('Start from template')).toBeVisible();
+    await page.getByTestId('template-sop').click();
+    await expect(page.getByLabel('Title')).toHaveValue(/SOP — /);
+    await expect(page.getByTestId('markdown-textarea')).toContainText('# Purpose');
+    // Personal-note template flips visibility to "personal" via remount.
+    await page.getByTestId('template-personal-note').click();
+    await expect(page.getByLabel('Visibility')).toHaveValue('personal');
+    // Blank clears the title.
+    await page.getByTestId('template-blank').click();
+    await expect(page.getByLabel('Title')).toHaveValue('');
+  });
+
   test('admin sees Linked Documents card on a task detail', async ({ page }) => {
     // Create a task fast so we have one to open.
     await page.goto('/tasks/new');

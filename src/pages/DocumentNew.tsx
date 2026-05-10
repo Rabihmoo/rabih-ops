@@ -1,17 +1,21 @@
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/components/ui/toaster';
 import { DocumentForm } from '@/components/documents/DocumentForm';
+import { TemplatePicker } from '@/components/documents/TemplatePicker';
 import { useCreateDocument } from '@/hooks/useDocuments';
 import type {
   CreateDocumentInput,
   UpdateDocumentInput,
 } from '@/lib/documents';
+import type { DocumentTemplate } from '@/lib/document-templates';
 
 export function DocumentNewPage() {
   const navigate = useNavigate();
   const create = useCreateDocument();
+  const [template, setTemplate] = useState<DocumentTemplate | null>(null);
 
   const handleSubmit = async (
     payload: CreateDocumentInput | UpdateDocumentInput,
@@ -32,9 +36,26 @@ export function DocumentNewPage() {
       <h1 className="text-foreground text-3xl font-semibold tracking-tight leading-tight">
         New document
       </h1>
+
+      <Card>
+        <CardContent className="p-5">
+          <TemplatePicker
+            selectedId={template?.id ?? null}
+            onSelect={setTemplate}
+          />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardContent className="space-y-3 p-5">
+          {/*
+            The `key` forces React to remount DocumentForm whenever the
+            chosen template changes, so react-hook-form's defaultValues
+            are re-applied without us reaching into its imperative API.
+          */}
           <DocumentForm
+            key={template?.id ?? 'blank'}
+            initialDraft={template?.draft}
             submitting={create.isPending}
             onSubmit={handleSubmit}
             submitLabel="Create document"
