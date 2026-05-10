@@ -126,6 +126,59 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_event_links: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          entity_id: string
+          entity_type: string
+          event_end: string | null
+          event_html_link: string | null
+          event_start: string | null
+          event_title: string | null
+          google_calendar_id: string
+          google_event_id: string
+          id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          entity_id: string
+          entity_type: string
+          event_end?: string | null
+          event_html_link?: string | null
+          event_start?: string | null
+          event_title?: string | null
+          google_calendar_id?: string
+          google_event_id: string
+          id?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          event_end?: string | null
+          event_html_link?: string | null
+          event_start?: string | null
+          event_title?: string | null
+          google_calendar_id?: string
+          google_event_id?: string
+          id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_links_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           author_id: string
@@ -255,6 +308,62 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_oauth_tokens: {
+        Row: {
+          access_token: string
+          access_token_expires_at: string
+          connected_at: string
+          created_at: string
+          disconnected_at: string | null
+          google_account_id: string
+          google_email: string
+          is_active: boolean
+          last_used_at: string | null
+          refresh_token_secret_id: string
+          scope: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          access_token_expires_at: string
+          connected_at?: string
+          created_at?: string
+          disconnected_at?: string | null
+          google_account_id: string
+          google_email: string
+          is_active?: boolean
+          last_used_at?: string | null
+          refresh_token_secret_id: string
+          scope: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          access_token_expires_at?: string
+          connected_at?: string
+          created_at?: string
+          disconnected_at?: string | null
+          google_account_id?: string
+          google_email?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          refresh_token_secret_id?: string
+          scope?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_oauth_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -473,6 +582,41 @@ export type Database = {
           {
             foreignKeyName: "notifications_queue_recipient_id_fkey"
             columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oauth_state: {
+        Row: {
+          created_at: string
+          expires_at: string
+          provider: string
+          redirect_to: string | null
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          provider: string
+          redirect_to?: string | null
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          provider?: string
+          redirect_to?: string | null
+          state?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oauth_state_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -731,6 +875,8 @@ export type Database = {
           created_at: string
           id: number
           is_active: boolean
+          last_list_at: string | null
+          last_list_ids: string[] | null
           last_seen_at: string | null
           link_token: string | null
           link_token_expires_at: string | null
@@ -744,6 +890,8 @@ export type Database = {
           created_at?: string
           id?: number
           is_active?: boolean
+          last_list_at?: string | null
+          last_list_ids?: string[] | null
           last_seen_at?: string | null
           link_token?: string | null
           link_token_expires_at?: string | null
@@ -757,6 +905,8 @@ export type Database = {
           created_at?: string
           id?: number
           is_active?: boolean
+          last_list_at?: string | null
+          last_list_ids?: string[] | null
           last_seen_at?: string | null
           link_token?: string | null
           link_token_expires_at?: string | null
@@ -947,6 +1097,10 @@ export type Database = {
       _remove_attachment: { Args: { p_attachment_id: string }; Returns: Json }
       _require_auth: { Args: never; Returns: string }
       _require_branch_access: { Args: { p_branch: string }; Returns: undefined }
+      _resolve_task_id: {
+        Args: { p_chat_id: number; p_input: string; p_user_id: string }
+        Returns: string
+      }
       _resolve_task_short_id: {
         Args: { p_prefix: string; p_user_id: string }
         Returns: string
@@ -963,6 +1117,15 @@ export type Database = {
         Returns: undefined
       }
       _task_short_id: { Args: { p_id: string }; Returns: string }
+      _telegram_remember_list: {
+        Args: { p_chat_id: number; p_ids: string[] }
+        Returns: undefined
+      }
+      _telegram_task_block: { Args: { p_task_id: string }; Returns: string }
+      _telegram_task_line: {
+        Args: { p_n: number; p_task_id: string }
+        Returns: string
+      }
       _telegram_user: { Args: { p_chat_id: number }; Returns: string }
       current_user_can_access_branch: {
         Args: { p_branch: string }
@@ -1054,6 +1217,57 @@ export type Database = {
         Returns: Json
       }
       rpc_bootstrap_user: { Args: { p_full_name?: string }; Returns: Json }
+      rpc_calendar_consume_state: { Args: { p_state: string }; Returns: Json }
+      rpc_calendar_disconnect_self: { Args: never; Returns: Json }
+      rpc_calendar_get_token: { Args: { p_user_id: string }; Returns: Json }
+      rpc_calendar_link_status: { Args: never; Returns: Json }
+      rpc_calendar_links_for_entity: {
+        Args: { p_entity_id: string; p_entity_type: string }
+        Returns: Json
+      }
+      rpc_calendar_mark_disconnected: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      rpc_calendar_record_event: {
+        Args: {
+          p_calendar_id: string
+          p_end: string
+          p_entity_id: string
+          p_entity_type: string
+          p_event_id: string
+          p_html_link: string
+          p_start: string
+          p_title: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      rpc_calendar_remove_event: { Args: { p_link_id: number }; Returns: Json }
+      rpc_calendar_request_authorize: {
+        Args: { p_redirect_to?: string }
+        Returns: Json
+      }
+      rpc_calendar_store_tokens: {
+        Args: {
+          p_access_expires_at: string
+          p_access_token: string
+          p_account_id: string
+          p_email: string
+          p_refresh_token: string
+          p_scope: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      rpc_calendar_update_access_token: {
+        Args: {
+          p_access_expires_at: string
+          p_access_token: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       rpc_cancel_purchase_request: {
         Args: { p_id: string; p_reason?: string }
         Returns: Json

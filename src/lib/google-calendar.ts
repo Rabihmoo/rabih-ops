@@ -1,0 +1,99 @@
+import { callRpc } from './rpc';
+
+export interface CalendarLinkStatus {
+  connected: boolean;
+  email?: string;
+  connected_at?: string;
+  last_used_at?: string | null;
+  scope?: string;
+}
+
+export async function getCalendarLinkStatus(): Promise<CalendarLinkStatus> {
+  return callRpc<CalendarLinkStatus>('rpc_calendar_link_status', {});
+}
+
+export async function requestCalendarAuthorize(
+  redirectTo: string = '/settings',
+): Promise<{ state: string }> {
+  return callRpc<{ state: string }>('rpc_calendar_request_authorize', {
+    p_redirect_to: redirectTo,
+  });
+}
+
+export interface DisconnectResult {
+  success: boolean;
+  email?: string;
+  message?: string;
+}
+
+export async function disconnectCalendar(): Promise<DisconnectResult> {
+  return callRpc<DisconnectResult>('rpc_calendar_disconnect_self', {});
+}
+
+export interface CalendarEventLink {
+  id: number;
+  google_calendar_id: string;
+  google_event_id: string;
+  event_title: string | null;
+  event_start: string | null;
+  event_end: string | null;
+  event_html_link: string | null;
+  created_at: string;
+  mine: boolean;
+}
+
+export async function listCalendarLinksForEntity(
+  entityType: 'task' | 'follow_up',
+  entityId: string,
+): Promise<CalendarEventLink[]> {
+  return callRpc<CalendarEventLink[]>('rpc_calendar_links_for_entity', {
+    p_entity_type: entityType,
+    p_entity_id: entityId,
+  });
+}
+
+// =========================================================
+// Frontend OAuth URL builder. The client_id is public per Google's
+// guidance; the client_secret stays server-side only (Edge Functions).
+// The redirect_uri must exactly match what's whitelisted in Google
+// Cloud Console; we point it at the calendar-oauth-callback function.
+// =========================================================
+
+const GOOGLE_AUTH_BASE = 'https://accounts.google.com/o/oauth2/v2/auth';
+const SCOPES = [
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/userinfo.email',
+  'openid',
+].join(' ');
+
+export interface BuildAuthUrlResult {
+  url: string;
+  missingEnv?: string[];
+}
+
+export function buildGoogleAuthUrl(state: string): BuildAuthUrlResult {
+  const clientId = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID as
+    | string
+    | undefined;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const missing: string[] = [];
+  if (!clientId) missing.push('VITE_GOOGLE_OAUTH_CLIENT_ID');
+  if (!supabaseUrl) missing.push('VITE_SUPABASE_URL');
+  if (missing.length > 0) return { url: '', missingEnv: missing };
+
+  const redirectUri = `${supabaseUrl}/functions/v1/calendar-oauth-callback`;
+  const params = new URLSearchParams({
+    client_id: clientId!,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: SCOPES,
+    access_type: 'offline',
+    // `prompt=consent` forces Google to return a refresh_token every time —
+    // otherwise on re-consent for an already-authorised user we'd only get
+    // an access_token and the upsert would fail validation.
+    prompt: 'consent',
+    include_granted_scopes: 'true',
+    state,
+  });
+  return { url: `${GOOGLE_AUTH_BASE}?${params.toString()}` };
+}

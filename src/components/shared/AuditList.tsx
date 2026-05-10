@@ -37,6 +37,15 @@ const ACTION_VERB: Record<string, string> = {
   reminder_sent: 'Reminder fired',
   reminder_dismissed: 'Dismissed a reminder',
   reminder_cancelled: 'Cancelled a reminder',
+  reminder_failed: 'Reminder delivery failed',
+  // Google Calendar (Phase D)
+  calendar_linked: 'Connected Google Calendar',
+  calendar_unlinked: 'Disconnected Google Calendar',
+  calendar_event_created: 'Created a calendar event',
+  calendar_event_deleted: 'Removed a calendar event',
+  // Telegram lifecycle
+  telegram_link: 'Linked Telegram',
+  telegram_unlink: 'Unlinked Telegram',
   // Purchasing-specific
   submit: 'Submitted for approval',
   approve: 'Approved and ordered',
@@ -76,6 +85,13 @@ const ACTION_TONE: Record<string, string> = {
   reminder_sent: 'bg-primary',
   reminder_dismissed: 'bg-muted-foreground',
   reminder_cancelled: 'bg-muted-foreground',
+  reminder_failed: 'bg-destructive',
+  calendar_linked: 'bg-primary',
+  calendar_unlinked: 'bg-muted-foreground',
+  calendar_event_created: 'bg-primary',
+  calendar_event_deleted: 'bg-muted-foreground',
+  telegram_link: 'bg-primary',
+  telegram_unlink: 'bg-muted-foreground',
 };
 
 const TRACKED_FIELDS = [
