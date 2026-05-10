@@ -26,8 +26,30 @@ export interface DisconnectResult {
   message?: string;
 }
 
+// Calls the Edge Function so Google's revoke endpoint is hit alongside
+// the local is_active=false flip. The Edge Function uses the user's JWT.
 export async function disconnectCalendar(): Promise<DisconnectResult> {
-  return callRpc<DisconnectResult>('rpc_calendar_disconnect_self', {});
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (!supabaseUrl) {
+    return { success: false, message: 'VITE_SUPABASE_URL missing' };
+  }
+  const { supabase } = await import('./supabase');
+  const session = (await supabase.auth.getSession()).data.session;
+  const jwt = session?.access_token;
+  if (!jwt) return { success: false, message: 'not authenticated' };
+
+  const res = await fetch(`${supabaseUrl}/functions/v1/calendar-oauth-revoke`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`disconnect failed (${res.status}): ${text}`);
+  }
+  return res.json();
 }
 
 export interface CalendarEventLink {
