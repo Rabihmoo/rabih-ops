@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCurrentUserProfile, useSession } from '@/hooks/useAuth';
 import { TelegramCard } from '@/components/settings/TelegramCard';
 import { GoogleCalendarCard } from '@/components/settings/GoogleCalendarCard';
+import { GmailCard } from '@/components/settings/GmailCard';
 
 export function SettingsPage() {
   const { data: session } = useSession();
@@ -26,6 +27,7 @@ export function SettingsPage() {
       </Card>
       <TelegramCard />
       <GoogleCalendarCard />
+      <GmailCard />
     </div>
   );
 }
