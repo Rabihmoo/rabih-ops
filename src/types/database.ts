@@ -533,6 +533,7 @@ export type Database = {
           created_by: string
           deleted_at: string | null
           id: string
+          module: string | null
           status: string
           title: string
           tsv: unknown
@@ -548,6 +549,7 @@ export type Database = {
           created_by: string
           deleted_at?: string | null
           id?: string
+          module?: string | null
           status?: string
           title: string
           tsv?: unknown
@@ -563,6 +565,7 @@ export type Database = {
           created_by?: string
           deleted_at?: string | null
           id?: string
+          module?: string | null
           status?: string
           title?: string
           tsv?: unknown
@@ -665,6 +668,7 @@ export type Database = {
           description: string | null
           due_date: string
           id: string
+          module: string | null
           outcome: string | null
           person: string | null
           priority: string
@@ -685,6 +689,7 @@ export type Database = {
           description?: string | null
           due_date: string
           id?: string
+          module?: string | null
           outcome?: string | null
           person?: string | null
           priority?: string
@@ -705,6 +710,7 @@ export type Database = {
           description?: string | null
           due_date?: string
           id?: string
+          module?: string | null
           outcome?: string | null
           person?: string | null
           priority?: string
@@ -911,6 +917,88 @@ export type Database = {
           },
         ]
       }
+      notes: {
+        Row: {
+          archived_at: string | null
+          body_md: string
+          branch: string | null
+          created_at: string
+          created_by: string
+          decided_at: string | null
+          decision_impact: string | null
+          decision_reason: string | null
+          decision_status: string | null
+          deleted_at: string | null
+          id: string
+          kind: string
+          module: string
+          title: string | null
+          updated_at: string
+          updated_by: string
+          visibility: string
+        }
+        Insert: {
+          archived_at?: string | null
+          body_md: string
+          branch?: string | null
+          created_at?: string
+          created_by: string
+          decided_at?: string | null
+          decision_impact?: string | null
+          decision_reason?: string | null
+          decision_status?: string | null
+          deleted_at?: string | null
+          id?: string
+          kind?: string
+          module?: string
+          title?: string | null
+          updated_at?: string
+          updated_by: string
+          visibility?: string
+        }
+        Update: {
+          archived_at?: string | null
+          body_md?: string
+          branch?: string | null
+          created_at?: string
+          created_by?: string
+          decided_at?: string | null
+          decision_impact?: string | null
+          decision_reason?: string | null
+          decision_status?: string | null
+          deleted_at?: string | null
+          id?: string
+          kind?: string
+          module?: string
+          title?: string | null
+          updated_at?: string
+          updated_by?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_branch_fkey"
+            columns: ["branch"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_log: {
         Row: {
           channel: string
@@ -1074,6 +1162,7 @@ export type Database = {
           deleted_at: string | null
           expected_delivery_date: string | null
           id: string
+          module: string | null
           notes: string | null
           order_date: string | null
           payment_method: string | null
@@ -1102,6 +1191,7 @@ export type Database = {
           deleted_at?: string | null
           expected_delivery_date?: string | null
           id?: string
+          module?: string | null
           notes?: string | null
           order_date?: string | null
           payment_method?: string | null
@@ -1130,6 +1220,7 @@ export type Database = {
           deleted_at?: string | null
           expected_delivery_date?: string | null
           id?: string
+          module?: string | null
           notes?: string | null
           order_date?: string | null
           payment_method?: string | null
@@ -1250,6 +1341,7 @@ export type Database = {
           follow_up_reminder_at: string | null
           id: string
           is_template: boolean
+          module: string | null
           next_spawn_at: string | null
           outcome: string | null
           priority: string
@@ -1283,6 +1375,7 @@ export type Database = {
           follow_up_reminder_at?: string | null
           id?: string
           is_template?: boolean
+          module?: string | null
           next_spawn_at?: string | null
           outcome?: string | null
           priority?: string
@@ -1316,6 +1409,7 @@ export type Database = {
           follow_up_reminder_at?: string | null
           id?: string
           is_template?: boolean
+          module?: string | null
           next_spawn_at?: string | null
           outcome?: string | null
           priority?: string
@@ -1598,6 +1692,8 @@ export type Database = {
         }
         Returns: string
       }
+      _note_visible: { Args: { p_id: string }; Returns: boolean }
+      _note_writable: { Args: { p_id: string }; Returns: boolean }
       _remove_attachment: { Args: { p_attachment_id: string }; Returns: Json }
       _require_auth: { Args: never; Returns: string }
       _require_branch_access: { Args: { p_branch: string }; Returns: undefined }
@@ -1687,6 +1783,7 @@ export type Database = {
       rpc_archive_company: { Args: { p_id: string }; Returns: Json }
       rpc_archive_contact: { Args: { p_id: string }; Returns: Json }
       rpc_archive_document: { Args: { p_doc_id: string }; Returns: Json }
+      rpc_archive_note: { Args: { p_id: string }; Returns: Json }
       rpc_archive_recurring_template: {
         Args: { p_reason?: string; p_template_id: string }
         Returns: Json
@@ -1881,6 +1978,21 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_create_note: {
+        Args: {
+          p_body_md: string
+          p_branch?: string
+          p_decided_at?: string
+          p_decision_impact?: string
+          p_decision_reason?: string
+          p_decision_status?: string
+          p_kind?: string
+          p_module?: string
+          p_title?: string
+          p_visibility?: string
+        }
+        Returns: Json
+      }
       rpc_create_purchase_request: {
         Args: {
           p_branch: string
@@ -1979,6 +2091,7 @@ export type Database = {
       rpc_get_document: { Args: { p_doc_id: string }; Returns: Json }
       rpc_get_follow_up: { Args: { p_follow_up_id: string }; Returns: Json }
       rpc_get_inspection: { Args: { p_inspection_id: string }; Returns: Json }
+      rpc_get_note: { Args: { p_id: string }; Returns: Json }
       rpc_get_purchase_request: { Args: { p_id: string }; Returns: Json }
       rpc_get_task: { Args: { p_task_id: string }; Returns: Json }
       rpc_get_user_dashboard: { Args: { p_user_id?: string }; Returns: Json }
@@ -2081,6 +2194,18 @@ export type Database = {
       }
       rpc_list_my_reminders: {
         Args: { p_limit?: number; p_unread_only?: boolean }
+        Returns: Json
+      }
+      rpc_list_notes: {
+        Args: {
+          p_branch?: string
+          p_include_archived?: boolean
+          p_kind?: string
+          p_limit?: number
+          p_module?: string
+          p_search?: string
+          p_visibility?: string
+        }
         Returns: Json
       }
       rpc_list_purchase_dashboard: { Args: { p_limit?: number }; Returns: Json }
@@ -2329,6 +2454,7 @@ export type Database = {
       rpc_unarchive_company: { Args: { p_id: string }; Returns: Json }
       rpc_unarchive_contact: { Args: { p_id: string }; Returns: Json }
       rpc_unarchive_document: { Args: { p_doc_id: string }; Returns: Json }
+      rpc_unarchive_note: { Args: { p_id: string }; Returns: Json }
       rpc_unarchive_recurring_template: {
         Args: { p_template_id: string }
         Returns: Json
@@ -2356,6 +2482,10 @@ export type Database = {
       }
       rpc_update_inspection: {
         Args: { p_inspection_id: string; p_updates: Json }
+        Returns: Json
+      }
+      rpc_update_note: {
+        Args: { p_id: string; p_patches: Json }
         Returns: Json
       }
       rpc_update_purchase_request: {
@@ -2645,3 +2775,14 @@ export type RecordLinkEntityType =
   | 'task' | 'follow_up' | 'purchase_request' | 'inspection' | 'document';
 export type RecordLinkExternalApp =
   | 'gmail' | 'calendar' | 'drive' | 'cater_co' | 'teamlink' | 'salt_reservation' | 'url';
+
+// Notes (Phase H3.1).
+export type NoteRow = Database['public']['Tables']['notes']['Row'];
+export type NoteKind =
+  | 'note' | 'decision' | 'meeting' | 'idea' | 'lesson' | 'incident';
+export type NoteVisibility = 'work' | 'personal';
+export type NoteModule =
+  | 'general' | 'personal' | 'finance' | 'supplier' | 'maintenance' | 'hr'
+  | 'operations' | 'marketing' | 'catering' | 'knowledge';
+export type DecisionStatus =
+  | 'proposed' | 'accepted' | 'rejected' | 'revisited' | 'superseded';
