@@ -395,6 +395,65 @@ export type Database = {
           },
         ]
       }
+      email_links: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          entity_id: string
+          entity_type: string
+          from_address: string | null
+          from_name: string | null
+          gmail_message_id: string
+          gmail_thread_id: string
+          html_link: string | null
+          id: number
+          internal_date: string | null
+          snippet: string | null
+          subject: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          entity_id: string
+          entity_type: string
+          from_address?: string | null
+          from_name?: string | null
+          gmail_message_id: string
+          gmail_thread_id: string
+          html_link?: string | null
+          id?: number
+          internal_date?: string | null
+          snippet?: string | null
+          subject?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          from_address?: string | null
+          from_name?: string | null
+          gmail_message_id?: string
+          gmail_thread_id?: string
+          html_link?: string | null
+          id?: number
+          internal_date?: string | null
+          snippet?: string | null
+          subject?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_links_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       follow_ups: {
         Row: {
           assigned_to: string | null
@@ -500,6 +559,7 @@ export type Database = {
           last_used_at: string | null
           refresh_token_secret_id: string
           scope: string
+          service: string
           updated_at: string
           user_id: string
         }
@@ -515,6 +575,7 @@ export type Database = {
           last_used_at?: string | null
           refresh_token_secret_id: string
           scope: string
+          service?: string
           updated_at?: string
           user_id: string
         }
@@ -530,6 +591,7 @@ export type Database = {
           last_used_at?: string | null
           refresh_token_secret_id?: string
           scope?: string
+          service?: string
           updated_at?: string
           user_id?: string
         }
@@ -537,7 +599,7 @@ export type Database = {
           {
             foreignKeyName: "google_oauth_tokens_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -769,6 +831,7 @@ export type Database = {
           expires_at: string
           provider: string
           redirect_to: string | null
+          service: string
           state: string
           user_id: string
         }
@@ -777,6 +840,7 @@ export type Database = {
           expires_at?: string
           provider: string
           redirect_to?: string | null
+          service?: string
           state: string
           user_id: string
         }
@@ -785,6 +849,7 @@ export type Database = {
           expires_at?: string
           provider?: string
           redirect_to?: string | null
+          service?: string
           state?: string
           user_id?: string
         }
@@ -1589,12 +1654,64 @@ export type Database = {
         Args: { p_entity_id: string; p_entity_type: string }
         Returns: Json
       }
+      rpc_email_link_create: {
+        Args: {
+          p_entity_id: string
+          p_entity_type: string
+          p_from_address: string
+          p_from_name: string
+          p_html_link: string
+          p_internal_date: string
+          p_message_id: string
+          p_snippet: string
+          p_subject: string
+          p_thread_id: string
+        }
+        Returns: Json
+      }
+      rpc_email_link_remove: { Args: { p_link_id: number }; Returns: Json }
+      rpc_email_links_for_entity: {
+        Args: { p_entity_id: string; p_entity_type: string }
+        Returns: Json
+      }
       rpc_get_document: { Args: { p_doc_id: string }; Returns: Json }
       rpc_get_follow_up: { Args: { p_follow_up_id: string }; Returns: Json }
       rpc_get_inspection: { Args: { p_inspection_id: string }; Returns: Json }
       rpc_get_purchase_request: { Args: { p_id: string }; Returns: Json }
       rpc_get_task: { Args: { p_task_id: string }; Returns: Json }
       rpc_get_user_dashboard: { Args: { p_user_id?: string }; Returns: Json }
+      rpc_gmail_consume_state: { Args: { p_state: string }; Returns: Json }
+      rpc_gmail_disconnect_self: { Args: never; Returns: Json }
+      rpc_gmail_get_token: { Args: { p_user_id: string }; Returns: Json }
+      rpc_gmail_link_status: { Args: never; Returns: Json }
+      rpc_gmail_mark_disconnected: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      rpc_gmail_request_authorize: {
+        Args: { p_redirect_to?: string }
+        Returns: Json
+      }
+      rpc_gmail_store_tokens: {
+        Args: {
+          p_access_expires_at: string
+          p_access_token: string
+          p_account_id: string
+          p_email: string
+          p_refresh_token: string
+          p_scope: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      rpc_gmail_update_access_token: {
+        Args: {
+          p_access_expires_at: string
+          p_access_token: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       rpc_link_document: {
         Args: { p_doc_id: string; p_entity_id: string; p_entity_type: string }
         Returns: Json
@@ -2134,3 +2251,8 @@ export type NotificationsQueueRow =
   Database['public']['Tables']['notifications_queue']['Row'];
 export type NotificationLogRow =
   Database['public']['Tables']['notification_log']['Row'];
+
+// Gmail / email_links (Phase F).
+export type EmailLinkEntityType = 'task' | 'follow_up';
+export type EmailLinkRow = Database['public']['Tables']['email_links']['Row'];
+export type GoogleOAuthService = 'calendar' | 'gmail';
