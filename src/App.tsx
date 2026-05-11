@@ -3,6 +3,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
 import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
+import { ActivityInboxPage } from './pages/ActivityInbox';
 import { TasksPage } from './pages/Tasks';
 import { TaskNewPage } from './pages/TaskNew';
 import { TaskDetailPage } from './pages/TaskDetail';
@@ -39,6 +40,7 @@ export default function App() {
           }
         >
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/inbox" element={<ActivityInboxPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/tasks/new" element={<TaskNewPage />} />
           <Route path="/tasks/:id" element={<TaskDetailPage />} />

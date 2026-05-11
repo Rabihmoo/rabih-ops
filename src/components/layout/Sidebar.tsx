@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import {
+  Inbox,
   LayoutDashboard,
   ListChecks,
   PhoneCall,
@@ -12,15 +13,19 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BRANCH_LIST } from '@/lib/branches';
+import { useActivityInbox } from '@/hooks/useActivityInbox';
 
 interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
   end?: boolean;
+  /** Optional accessor that returns a badge count for this nav entry. */
+  badgeKey?: 'inbox';
 }
 
 const NAV: NavItem[] = [
+  { to: '/inbox', label: 'Inbox', icon: Inbox, badgeKey: 'inbox' },
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/tasks', label: 'Tasks', icon: ListChecks },
   { to: '/fixed-tasks', label: 'Fixed tasks', icon: Repeat },
@@ -30,6 +35,30 @@ const NAV: NavItem[] = [
   { to: '/documents', label: 'Documents', icon: FileText },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
+
+// DB-owned sources only: tasks, follow-ups, purchases, findings, documents,
+// telegram reminders. Gmail and Calendar are intentionally excluded from the
+// sidebar badge so the user isn't pestered by routine inbox traffic.
+const DB_OWNED_FOR_BADGE = new Set([
+  'task',
+  'follow_up',
+  'purchase',
+  'inspection_finding',
+  'document',
+  'telegram',
+]);
+
+function useInboxBadgeCount(): number {
+  const inbox = useActivityInbox();
+  const items = inbox.data?.items ?? [];
+  return items.filter(
+    (i) =>
+      DB_OWNED_FOR_BADGE.has(i.source) &&
+      (i.severity === 'critical' ||
+        i.severity === 'overdue' ||
+        i.severity === 'due_today'),
+  ).length;
+}
 
 // Shared active/idle classes used by both desktop sidebar and mobile bottom
 // nav. The desktop layout adds the left-edge bar; mobile uses a top bar.
@@ -43,6 +72,7 @@ const desktopLink = (isActive: boolean) =>
   );
 
 export function Sidebar() {
+  const inboxBadge = useInboxBadgeCount();
   return (
     <aside className="bg-surface-1 border-border hidden border-r md:flex md:w-60 md:flex-col">
       <div className="border-border flex h-14 items-center border-b px-5">
@@ -58,14 +88,25 @@ export function Sidebar() {
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-0.5">
-          {NAV.map(({ to, label, icon: Icon, end }) => (
-            <li key={to}>
-              <NavLink to={to} end={end} className={({ isActive }) => desktopLink(isActive)}>
-                <Icon className="h-4 w-4 shrink-0" />
-                <span>{label}</span>
-              </NavLink>
-            </li>
-          ))}
+          {NAV.map(({ to, label, icon: Icon, end, badgeKey }) => {
+            const badge = badgeKey === 'inbox' ? inboxBadge : 0;
+            return (
+              <li key={to}>
+                <NavLink to={to} end={end} className={({ isActive }) => desktopLink(isActive)}>
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1">{label}</span>
+                  {badge > 0 && (
+                    <span
+                      data-testid={`sidebar-badge-${badgeKey}`}
+                      className="bg-destructive text-destructive-foreground inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+                    >
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  )}
+                </NavLink>
+              </li>
+            );
+          })}
         </ul>
 
         <div className="mt-6 px-3">
@@ -96,30 +137,41 @@ export function Sidebar() {
 }
 
 export function MobileNav() {
+  const inboxBadge = useInboxBadgeCount();
   return (
     <nav
       className="bg-surface-1 border-border fixed inset-x-0 bottom-0 z-40 flex h-16 border-t md:hidden"
       aria-label="Primary"
     >
-      {NAV.map(({ to, label, icon: Icon, end }) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={end}
-          className={({ isActive }) =>
-            cn(
-              'relative flex flex-1 flex-col items-center justify-center gap-1 px-1 text-[11px] transition-colors',
-              'before:absolute before:top-0 before:h-0.5 before:w-10 before:rounded-full before:transition-colors',
-              isActive
-                ? 'text-primary-ink before:bg-primary'
-                : 'text-muted-foreground hover:text-foreground before:bg-transparent',
-            )
-          }
-        >
-          <Icon className="h-5 w-5" />
-          <span className="font-medium tracking-wide">{label}</span>
-        </NavLink>
-      ))}
+      {NAV.map(({ to, label, icon: Icon, end, badgeKey }) => {
+        const badge = badgeKey === 'inbox' ? inboxBadge : 0;
+        return (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={({ isActive }) =>
+              cn(
+                'relative flex flex-1 flex-col items-center justify-center gap-1 px-1 text-[11px] transition-colors',
+                'before:absolute before:top-0 before:h-0.5 before:w-10 before:rounded-full before:transition-colors',
+                isActive
+                  ? 'text-primary-ink before:bg-primary'
+                  : 'text-muted-foreground hover:text-foreground before:bg-transparent',
+              )
+            }
+          >
+            <div className="relative">
+              <Icon className="h-5 w-5" />
+              {badge > 0 && (
+                <span className="bg-destructive text-destructive-foreground absolute -right-2 -top-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 text-[9px] font-bold tabular-nums">
+                  {badge > 9 ? '9+' : badge}
+                </span>
+              )}
+            </div>
+            <span className="font-medium tracking-wide">{label}</span>
+          </NavLink>
+        );
+      })}
     </nav>
   );
 }
