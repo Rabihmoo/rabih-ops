@@ -1,15 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Loader2, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useActivityInbox } from '@/hooks/useActivityInbox';
 import {
   ActivityFilterChips,
+  isValidFilterKey,
   matchesFilter,
   type FilterKey,
 } from '@/components/inbox/ActivityFilterChips';
 import { ActivityRow } from '@/components/inbox/ActivityRow';
 import { ActivityEmptyState } from '@/components/inbox/ActivityEmptyState';
+import { ActivityListSkeleton } from '@/components/inbox/ActivityRowSkeleton';
+import { SourceStatusNotice } from '@/components/inbox/SourceStatusNotice';
 
 const FILTER_LABEL: Record<FilterKey, string> = {
   all: 'all',
@@ -27,7 +31,22 @@ const FILTER_LABEL: Record<FilterKey, string> = {
 };
 
 export function ActivityInboxPage() {
-  const [filter, setFilter] = useState<FilterKey>('all');
+  // Filter state lives in the URL so reload + back/forward preserve it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterParam = searchParams.get('filter');
+  const filter: FilterKey = isValidFilterKey(filterParam) ? filterParam : 'all';
+
+  const setFilter = useCallback(
+    (key: FilterKey) => {
+      const next = new URLSearchParams(searchParams);
+      if (key === 'all') next.delete('filter');
+      else next.set('filter', key);
+      // Push so back/forward navigates between filter states.
+      setSearchParams(next);
+    },
+    [searchParams, setSearchParams],
+  );
+
   const inbox = useActivityInbox();
 
   const all = useMemo(() => inbox.data?.items ?? [], [inbox.data]);
@@ -42,11 +61,14 @@ export function ActivityInboxPage() {
   const today = all.filter((i) => i.severity === 'due_today').length;
   const incoming = all.filter((i) => i.source === 'gmail' || i.source === 'telegram').length;
 
-  // Surface partial failures without blanking the page.
+  // Errors surface in the warning banner; disconnected sources surface
+  // in the SourceStatusNotice strip below it.
   const warnings: string[] = [];
   if (inbox.data?.dbError) warnings.push(`Database: ${inbox.data.dbError}`);
   if (inbox.data?.gmailError) warnings.push(`Gmail: ${inbox.data.gmailError}`);
   if (inbox.data?.calendarError) warnings.push(`Calendar: ${inbox.data.calendarError}`);
+
+  const isRefreshing = inbox.isFetching && !inbox.isLoading;
 
   return (
     <div className="space-y-5">
@@ -60,6 +82,7 @@ export function ActivityInboxPage() {
             variant="outline"
             onClick={() => inbox.refetch()}
             disabled={inbox.isFetching}
+            aria-busy={inbox.isFetching}
             data-testid="inbox-refresh-button"
           >
             {inbox.isFetching ? (
@@ -67,7 +90,7 @@ export function ActivityInboxPage() {
             ) : (
               <RefreshCcw className="mr-1 h-4 w-4" />
             )}
-            Refresh
+            {isRefreshing ? 'Refreshing…' : 'Refresh'}
           </Button>
         </div>
         <p className="text-muted-foreground text-sm">
@@ -101,12 +124,19 @@ export function ActivityInboxPage() {
         </div>
       )}
 
+      {inbox.data && (
+        <SourceStatusNotice
+          statuses={[
+            { source: 'gmail',    connected: inbox.data.gmailConnected },
+            { source: 'calendar', connected: inbox.data.calendarConnected },
+          ]}
+        />
+      )}
+
       <ActivityFilterChips items={all} active={filter} onSelect={setFilter} />
 
       {inbox.isLoading ? (
-        <div className="text-muted-foreground flex items-center gap-2 py-12 text-sm">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-        </div>
+        <ActivityListSkeleton />
       ) : filtered.length === 0 ? (
         <ActivityEmptyState
           filtered={filter !== 'all' && all.length > 0}

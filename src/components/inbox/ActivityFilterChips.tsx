@@ -45,6 +45,12 @@ const CHIPS: { key: FilterKey; label: string }[] = [
   { key: 'telegram',           label: 'Telegram' },
 ];
 
+const VALID_KEYS = new Set<string>(CHIPS.map((c) => c.key));
+
+export function isValidFilterKey(s: string | null | undefined): s is FilterKey {
+  return typeof s === 'string' && VALID_KEYS.has(s);
+}
+
 export function ActivityFilterChips({
   items,
   active,

@@ -102,3 +102,117 @@ test.describe('Activity inbox — viewer', () => {
     // narrower visibility.
   });
 });
+
+// ---------------------------------------------------------------------
+// G1.4 — URL filter sync, loading skeletons, disconnected notices,
+// refresh-in-flight state.
+// ---------------------------------------------------------------------
+
+test.describe('Activity inbox — URL filter sync', () => {
+  test.use({ storageState: 'tests/fixtures/.auth/admin.json' });
+
+  test('loading /inbox?filter=overdue activates the Overdue chip', async ({ page }) => {
+    await page.goto('/inbox?filter=overdue');
+    await expect(page.getByTestId('inbox-filter-overdue')).toHaveAttribute(
+      'data-active',
+      'true',
+    );
+    await expect(page.getByTestId('inbox-filter-all')).toHaveAttribute(
+      'data-active',
+      'false',
+    );
+  });
+
+  test('clicking a chip updates the URL query', async ({ page }) => {
+    await page.goto('/inbox');
+    await page.getByTestId('inbox-filter-critical').click();
+    await expect(page).toHaveURL(/\/inbox\?filter=critical$/);
+    await page.getByTestId('inbox-filter-all').click();
+    // Going back to All removes the query param entirely.
+    await expect(page).toHaveURL(/\/inbox$/);
+  });
+
+  test('reload preserves the active filter', async ({ page }) => {
+    await page.goto('/inbox?filter=today');
+    await expect(page.getByTestId('inbox-filter-today')).toHaveAttribute(
+      'data-active',
+      'true',
+    );
+    await page.reload();
+    await expect(page.getByTestId('inbox-filter-today')).toHaveAttribute(
+      'data-active',
+      'true',
+    );
+  });
+
+  test('back/forward navigates between filter states', async ({ page }) => {
+    await page.goto('/inbox');
+    await page.getByTestId('inbox-filter-overdue').click();
+    await expect(page).toHaveURL(/\/inbox\?filter=overdue$/);
+    await page.getByTestId('inbox-filter-critical').click();
+    await expect(page).toHaveURL(/\/inbox\?filter=critical$/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/inbox\?filter=overdue$/);
+    await expect(page.getByTestId('inbox-filter-overdue')).toHaveAttribute(
+      'data-active',
+      'true',
+    );
+  });
+
+  test('invalid ?filter value falls back to All', async ({ page }) => {
+    await page.goto('/inbox?filter=mystery');
+    await expect(page.getByTestId('inbox-filter-all')).toHaveAttribute(
+      'data-active',
+      'true',
+    );
+  });
+});
+
+test.describe('Activity inbox — loading skeleton', () => {
+  test.use({ storageState: 'tests/fixtures/.auth/admin.json' });
+
+  test('shows skeleton rows while the RPC is in flight', async ({ page }) => {
+    // Delay the RPC call so the initial render still shows the skeleton.
+    await page.route('**/rest/v1/rpc/rpc_activity_inbox', async (route) => {
+      await new Promise((r) => setTimeout(r, 1500));
+      await route.continue();
+    });
+    await page.goto('/inbox');
+    // Skeleton list appears immediately, the real list later.
+    await expect(page.getByTestId('inbox-list-skeleton')).toBeVisible();
+  });
+});
+
+test.describe('Activity inbox — source-status notices', () => {
+  test.use({ storageState: 'tests/fixtures/.auth/admin.json' });
+
+  test('Gmail-disconnected payload surfaces a "Connect" notice', async ({ page }) => {
+    // Force gmail-list-important to return connected=false (the same
+    // shape it would emit if the user hasn't linked Gmail at all).
+    await page.route('**/functions/v1/gmail-list-important', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ connected: false, messages: [] }),
+      }),
+    );
+    // Calendar can stay as-is from staging.
+    await page.goto('/inbox');
+    await expect(page.getByTestId('inbox-status-gmail')).toBeVisible();
+  });
+});
+
+test.describe('Activity inbox — refresh state', () => {
+  test.use({ storageState: 'tests/fixtures/.auth/admin.json' });
+
+  test('refresh button is disabled while a fetch is in flight', async ({ page }) => {
+    // Slow the RPC to keep the button in the "refreshing" state long
+    // enough to assert on.
+    await page.route('**/rest/v1/rpc/rpc_activity_inbox', async (route) => {
+      await new Promise((r) => setTimeout(r, 1500));
+      await route.continue();
+    });
+    await page.goto('/inbox');
+    await expect(page.getByTestId('inbox-refresh-button')).toBeDisabled();
+  });
+});
