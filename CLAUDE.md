@@ -204,12 +204,59 @@ Refresh tokens live in `supabase_vault` — `google_oauth_tokens` only stores th
 
 ### What V1 does NOT do
 
-- No Gmail
 - No two-way sync (Calendar event changes don't flow back into RabihOS)
 - No automatic deadline → calendar event sync (manual "Add to Calendar" only)
 - No follow-up → calendar (schema is polymorphic so V2 just turns it on)
 - Primary calendar only (no calendar selection)
 - No meeting → follow-up
+
+## Gmail (Phase F — live; read-only)
+
+Schema in [supabase/migrations/20260523_gmail_module.sql](supabase/migrations/20260523_gmail_module.sql). Four Edge Functions live in [supabase/functions/](supabase/functions/):
+
+- **gmail-oauth-callback** — `verify_jwt=false`. Google's redirect lands here; consumes the CSRF state via `rpc_gmail_consume_state`, exchanges code for tokens, writes them via `rpc_gmail_store_tokens` (refresh into Vault), 302s the user back to `/settings?gmail=connected`.
+- **gmail-oauth-revoke** — JWT-auth'd. Looks up the user's refresh token, hits Google's revoke endpoint, calls `rpc_gmail_mark_disconnected`. Wired to the Settings "Disconnect" button.
+- **gmail-list-important** — JWT-auth'd. Runs `is:important is:unread` against Gmail (metadata only — no body), returns up to 15 messages. Powers the Dashboard "Important emails" section.
+- **gmail-action** — JWT-auth'd. Single verb `action=link`: fetches a message's metadata server-side and snapshots it via `rpc_email_link_create` (using the caller's JWT so `auth.uid()` inside the RPC matches the linker).
+
+### Shared OAuth machinery
+
+The Calendar `google_oauth_tokens` table is extended with a `service` column (`'calendar' | 'gmail'`) and the PK is now `(user_id, service)` so a user can connect each independently. The `oauth_state` CSRF nonce table gains the same column so a stray Calendar nonce can't complete a Gmail handshake (and vice-versa).
+
+### Token storage
+
+Same as Calendar: refresh tokens live in `supabase_vault` (one secret per `(user_id, service)` row); access tokens are stored inline and refreshed on demand by the Edge Functions. RLS on `google_oauth_tokens` has **no SELECT policies** — only Edge Functions reach it via service role.
+
+### email_links
+
+Polymorphic snapshot table: `(entity_type in ('task','follow_up'), entity_id, gmail_message_id)`. Subject / from / snippet / internalDate are captured at link time so the row survives if the message is deleted in Gmail later. SELECT visible to the linker + admin/CEO. Unlink restricted to the linker (or admin/CEO).
+
+### Setup (one-time per environment)
+
+The OAuth client is shared with Calendar (same project in Google Cloud Console). One extra Authorized Redirect URI is needed:
+
+1. **Google Cloud Console**:
+   - OAuth consent screen → add the `https://www.googleapis.com/auth/gmail.readonly` scope.
+   - On the existing OAuth 2.0 Client ID, add the redirect URI: `https://<project-ref>.supabase.co/functions/v1/gmail-oauth-callback`.
+2. **Deploy** (already done): `supabase functions deploy gmail-oauth-callback --no-verify-jwt`, `supabase functions deploy gmail-oauth-revoke`, `supabase functions deploy gmail-list-important`, `supabase functions deploy gmail-action`.
+3. Reuse the same Edge Function secrets pushed by `scripts/calendar-setup.mjs` — `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `RABIHOS_APP_URL`. No Gmail-specific secrets.
+4. In RabihOS → Settings → **Connect Gmail** → consent (`gmail.readonly`) → bounce back → "Connected as you@gmail.com".
+
+### What V1 does
+
+- Connect / disconnect from Settings (read-only scope, no write access)
+- Dashboard "Important emails" section (live fetch, no DB cache)
+- Link an email to a task or follow-up (server-side snapshot)
+- Open in Gmail via `mail.google.com/mail/u/0/#inbox/<id>`
+- Audit verbs: `gmail_linked`, `gmail_unlinked`, `email_linked`, `email_unlinked`
+
+### What V1 does NOT do
+
+- No write scopes — RabihOS never sends, deletes, drafts, or modifies email
+- No mark-as-read (would require `gmail.modify`; intentionally out of V1)
+- No labels, no archive, no thread navigation
+- No nightly sync — "Important emails" is computed live from Gmail's importance signal
+- No "auto-link from inbox" — every link is a deliberate user action
 
 ## Things to avoid
 
