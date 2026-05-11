@@ -89,9 +89,8 @@ export function ActivityInboxPage() {
     pruneStale(loadDismissed()),
   );
   useEffect(() => {
+    // Prune once per mount; loadDismissed already runs in the state initializer.
     setDismissed((m) => pruneStale(m));
-    // intentional: prune once per mount; loadDismissed already runs in init.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const handleDismissSuggestion = useCallback((suggestionId: string) => {
     setDismissed(persistDismissal(suggestionId));

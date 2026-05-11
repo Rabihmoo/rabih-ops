@@ -140,7 +140,7 @@ export function parseDatePhrase(
   }
 
   // dd/mm/yyyy or dd-mm-yyyy
-  m = lc.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/);
+  m = lc.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/);
   if (m) {
     const dd = +m[1];
     const mm = +m[2];
@@ -151,7 +151,7 @@ export function parseDatePhrase(
   }
 
   // dd/mm or dd-mm (not part of a longer dd/mm/yyyy, asserted via negative lookahead)
-  m = lc.match(/\b(\d{1,2})[\/\-](\d{1,2})\b(?![\/\-]\d)/);
+  m = lc.match(/\b(\d{1,2})[/-](\d{1,2})\b(?![/-]\d)/);
   if (m) {
     const dd = +m[1];
     const mm = +m[2];
