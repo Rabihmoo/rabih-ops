@@ -92,11 +92,9 @@ export function composeSuggestionsForItem(
 
 /**
  * Run rules over every item and return a Map<itemId, Suggestion[]>.
- * The same SuggestionContext is reused across all items.
- *
- * NOTE: G2.1 does not yet implement reciprocal-link suppression
- * ("if Gmail X suggests Task Y, Task Y must not suggest Gmail X").
- * That post-pass lands in G2.5 once link_to_existing rules exist.
+ * The same SuggestionContext is reused across all items. A post-pass
+ * suppresses reciprocal link_to_existing suggestions ("A → B" and
+ * "B → A") keeping only the higher-scoring side.
  */
 export function composeAllSuggestions(
   items: ActivityItem[],
@@ -107,5 +105,80 @@ export function composeAllSuggestions(
   for (const item of items) {
     out.set(item.id, composeSuggestionsForItem(item, ctx, opts));
   }
-  return out;
+  return suppressReciprocalLinks(out);
+}
+
+/**
+ * Removes the lower-scoring side of every reciprocal pair of
+ * link_to_existing suggestions: when item A suggests linking to B AND
+ * item B suggests linking to A, only the suggestion with the higher
+ * score survives. Score ties keep the suggestion whose `id` sorts
+ * first (deterministic).
+ *
+ * Exported for direct unit testing — composeAllSuggestions runs this
+ * automatically.
+ */
+export function suppressReciprocalLinks(
+  map: Map<string, Suggestion[]>,
+): Map<string, Suggestion[]> {
+  // 1) Collect every link_to_existing suggestion with its (from, to) pair.
+  interface Edge {
+    fromId: string;
+    toId: string;
+    suggestion: Suggestion;
+  }
+  const edges: Edge[] = [];
+  for (const [fromId, list] of map) {
+    for (const s of list) {
+      if (s.action !== 'link_to_existing' || !s.target) continue;
+      const toId = `${s.target.source}:${s.target.native_id}`;
+      edges.push({ fromId, toId, suggestion: s });
+    }
+  }
+  if (edges.length === 0) return map;
+
+  // 2) Index edges by their "from→to" key so we can look up the reverse.
+  const byKey = new Map<string, Edge>();
+  for (const e of edges) {
+    byKey.set(`${e.fromId}->${e.toId}`, e);
+  }
+
+  // 3) Find reciprocal pairs. For each pair, mark the loser's id for removal.
+  const toRemove = new Set<string>();
+  const handled = new Set<string>();
+  for (const e of edges) {
+    const key = `${e.fromId}->${e.toId}`;
+    const reverseKey = `${e.toId}->${e.fromId}`;
+    if (handled.has(key) || handled.has(reverseKey)) continue;
+    const reverse = byKey.get(reverseKey);
+    if (!reverse) continue;
+
+    // Pick the survivor: higher score wins; ties → lexicographically
+    // smaller suggestion id wins (deterministic and test-stable).
+    let loser: Suggestion;
+    if (e.suggestion.score > reverse.suggestion.score) {
+      loser = reverse.suggestion;
+    } else if (reverse.suggestion.score > e.suggestion.score) {
+      loser = e.suggestion;
+    } else {
+      loser =
+        e.suggestion.id <= reverse.suggestion.id
+          ? reverse.suggestion
+          : e.suggestion;
+    }
+    toRemove.add(loser.id);
+    handled.add(key);
+    handled.add(reverseKey);
+  }
+  if (toRemove.size === 0) return map;
+
+  // 4) Apply removal.
+  const next = new Map<string, Suggestion[]>();
+  for (const [itemId, list] of map) {
+    next.set(
+      itemId,
+      list.filter((s) => !toRemove.has(s.id)),
+    );
+  }
+  return next;
 }

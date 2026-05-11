@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ExternalLink, FileText, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -34,6 +34,18 @@ export function LinkedDocumentsCard({
 
   const [picking, setPicking] = useState(false);
   const [search, setSearch] = useState('');
+  // Auto-open the picker when navigated here with ?openLinkDocs=1
+  // (e.g., from an inbox suggestion). The flag is consumed once: we
+  // open the picker, then strip the param so reloading doesn't loop.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (!canMutate) return;
+    if (searchParams.get('openLinkDocs') !== '1') return;
+    setPicking(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('openLinkDocs');
+    setSearchParams(next, { replace: true });
+  }, [canMutate, searchParams, setSearchParams]);
   const docOptions = useDocuments({
     search: search.trim() || null,
     status: 'active',

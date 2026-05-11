@@ -4,6 +4,7 @@ vi.mock('@/lib/supabase', () => ({ supabase: {} }));
 import {
   composeAllSuggestions,
   composeSuggestionsForItem,
+  suppressReciprocalLinks,
 } from './compose';
 import {
   buildSuggestionContext,
@@ -171,6 +172,46 @@ describe('composeAllSuggestions', () => {
     expect(out.get('task:t1')![0].id).toBe('task:t1:hello');
   });
 
+  it('drops the lower-scoring side of reciprocal link_to_existing pairs', () => {
+    // Manually build the two items + rules that will produce the
+    // reciprocal pair.
+    const items = [
+      fakeItem({ source: 'task', native_id: 't1', title: 'Renew gas cylinder contract' }),
+      fakeItem({ source: 'task', native_id: 't2', title: 'Renew gas cylinder contract for SALT' }),
+    ];
+    const ruleAtoB: SuggestionRule = (item) => {
+      if (item.native_id !== 't1') return [];
+      return [
+        suggestion({
+          id: 't1:link:t2',
+          rule: 'similar',
+          action: 'link_to_existing',
+          label: 'Link to t2',
+          reason: 'r',
+          score: 0.7,
+          target: { source: 'task', native_id: 't2', title: 'Renew gas cylinder contract for SALT' },
+        }),
+      ];
+    };
+    const ruleBtoA: SuggestionRule = (item) => {
+      if (item.native_id !== 't2') return [];
+      return [
+        suggestion({
+          id: 't2:link:t1',
+          rule: 'similar',
+          action: 'link_to_existing',
+          label: 'Link to t1',
+          reason: 'r',
+          score: 0.9, // higher — survives
+          target: { source: 'task', native_id: 't1', title: 'Renew gas cylinder contract' },
+        }),
+      ];
+    };
+    const out = composeAllSuggestions(items, { rules: [ruleAtoB, ruleBtoA] });
+    expect(out.get('task:t1')).toEqual([]);
+    expect(out.get('task:t2')?.map((s) => s.id)).toEqual(['t2:link:t1']);
+  });
+
   it('exposes a stable context (bySource bucketing) to rules', () => {
     const items = [
       fakeItem({ source: 'task',  native_id: 't1' }),
@@ -185,5 +226,106 @@ describe('composeAllSuggestions', () => {
     composeAllSuggestions(items, { rules: [rule] });
     // Rule runs once per item; bySource should be (2, 1) every time.
     expect(seen).toEqual([2, 1, 2, 1, 2, 1]);
+  });
+});
+
+// ---------------------------------------------------------------------
+// suppressReciprocalLinks (direct unit test)
+// ---------------------------------------------------------------------
+
+describe('suppressReciprocalLinks', () => {
+  it('keeps both sides when scores differ and the loser is dropped', () => {
+    const map = new Map<string, Suggestion[]>([
+      [
+        'task:t1',
+        [
+          suggestion({
+            id: 't1->t2',
+            rule: 'r',
+            action: 'link_to_existing',
+            label: 'l',
+            reason: 'r',
+            score: 0.7,
+            target: { source: 'task', native_id: 't2', title: 't2' },
+          }),
+        ],
+      ],
+      [
+        'task:t2',
+        [
+          suggestion({
+            id: 't2->t1',
+            rule: 'r',
+            action: 'link_to_existing',
+            label: 'l',
+            reason: 'r',
+            score: 0.9,
+            target: { source: 'task', native_id: 't1', title: 't1' },
+          }),
+        ],
+      ],
+    ]);
+    const out = suppressReciprocalLinks(map);
+    expect(out.get('task:t1')).toEqual([]);
+    expect(out.get('task:t2')?.map((s) => s.id)).toEqual(['t2->t1']);
+  });
+
+  it('on score tie keeps the suggestion with the lexicographically smaller id', () => {
+    const map = new Map<string, Suggestion[]>([
+      [
+        'task:a',
+        [
+          suggestion({
+            id: 'a->b',
+            rule: 'r',
+            action: 'link_to_existing',
+            label: 'l',
+            reason: 'r',
+            score: 0.8,
+            target: { source: 'task', native_id: 'b', title: 'b' },
+          }),
+        ],
+      ],
+      [
+        'task:b',
+        [
+          suggestion({
+            id: 'b->a',
+            rule: 'r',
+            action: 'link_to_existing',
+            label: 'l',
+            reason: 'r',
+            score: 0.8,
+            target: { source: 'task', native_id: 'a', title: 'a' },
+          }),
+        ],
+      ],
+    ]);
+    const out = suppressReciprocalLinks(map);
+    // 'a->b' sorts before 'b->a' so it survives.
+    expect(out.get('task:a')?.map((s) => s.id)).toEqual(['a->b']);
+    expect(out.get('task:b')).toEqual([]);
+  });
+
+  it('leaves non-reciprocal link suggestions untouched', () => {
+    const map = new Map<string, Suggestion[]>([
+      [
+        'task:t1',
+        [
+          suggestion({
+            id: 't1->t2',
+            rule: 'r',
+            action: 'link_to_existing',
+            label: 'l',
+            reason: 'r',
+            score: 0.7,
+            target: { source: 'task', native_id: 't2', title: 't2' },
+          }),
+        ],
+      ],
+      ['task:t2', []],
+    ]);
+    const out = suppressReciprocalLinks(map);
+    expect(out.get('task:t1')?.map((s) => s.id)).toEqual(['t1->t2']);
   });
 });

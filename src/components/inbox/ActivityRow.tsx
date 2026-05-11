@@ -19,6 +19,8 @@ import type {
   ActivitySeverity,
   ActivitySource,
 } from '@/lib/activity-inbox';
+import type { Suggestion } from '@/lib/inbox-suggestions/types';
+import { SuggestionStrip } from './SuggestionStrip';
 
 // Sources whose entity_url points outside RabihOS — open in a new tab.
 const EXTERNAL_SOURCES = new Set<ActivitySource>(['gmail', 'calendar']);
@@ -111,9 +113,13 @@ function BranchTag({ branch }: { branch: string | null }) {
 export function ActivityRow({
   item,
   now = new Date(),
+  suggestions = [],
+  onDismissSuggestion,
 }: {
   item: ActivityItem;
   now?: Date;
+  suggestions?: Suggestion[];
+  onDismissSuggestion?: (suggestionId: string) => void;
 }) {
   const Icon = SOURCE_ICON[item.source];
   const external = EXTERNAL_SOURCES.has(item.source);
@@ -176,20 +182,17 @@ export function ActivityRow({
   const className =
     'hover:bg-surface-1 border-border flex items-stretch rounded-md border transition-colors';
 
-  if (external) {
-    return (
-      <a
-        href={item.entity_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={className}
-        data-testid={`inbox-row-${item.source}`}
-      >
-        {content}
-      </a>
-    );
-  }
-  return (
+  const rowLink = external ? (
+    <a
+      href={item.entity_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={className}
+      data-testid={`inbox-row-${item.source}`}
+    >
+      {content}
+    </a>
+  ) : (
     <Link
       to={item.entity_url}
       className={className}
@@ -197,5 +200,19 @@ export function ActivityRow({
     >
       {content}
     </Link>
+  );
+
+  if (suggestions.length === 0 || !onDismissSuggestion) {
+    return rowLink;
+  }
+  return (
+    <div>
+      {rowLink}
+      <SuggestionStrip
+        parentItem={item}
+        suggestions={suggestions}
+        onDismiss={onDismissSuggestion}
+      />
+    </div>
   );
 }

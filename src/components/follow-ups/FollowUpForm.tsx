@@ -45,15 +45,25 @@ type FormValues = z.infer<typeof schema>;
 const fieldClass =
   'bg-card border-border text-foreground h-10 w-full rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring';
 
+export interface FollowUpFormSeed {
+  title?: string;
+  description?: string;
+  person?: string;
+  branch?: string;
+  due_date?: string; // yyyy-mm-dd
+}
+
 export function FollowUpForm({
   initial,
   initialTaskId,
+  seed,
   submitting,
   onSubmit,
   submitLabel,
 }: {
   initial?: FollowUpRow;
   initialTaskId?: string;
+  seed?: FollowUpFormSeed;
   submitting?: boolean;
   submitLabel: string;
   onSubmit: (input: CreateFollowUpInput | UpdateFollowUpInput) => Promise<void>;
@@ -64,6 +74,15 @@ export function FollowUpForm({
     if (profile.role === 'admin' || profile.role === 'ceo') return true;
     return profile.branches.includes(b.code) || profile.branches.includes('all');
   });
+
+  const safeSeedBranch =
+    seed?.branch && allowedBranches.some((b) => b.code === seed.branch)
+      ? seed.branch
+      : undefined;
+  const safeSeedDate =
+    seed?.due_date && /^\d{4}-\d{2}-\d{2}$/.test(seed.due_date)
+      ? seed.due_date
+      : undefined;
 
   const isEdit = !!initial;
   const form = useForm<FormValues>({
@@ -84,13 +103,13 @@ export function FollowUpForm({
           task_id: initial.task_id ?? '',
         }
       : {
-          title: '',
-          description: '',
-          person: '',
-          branch: '',
+          title: seed?.title?.slice(0, 200) ?? '',
+          description: seed?.description?.slice(0, 2000) ?? '',
+          person: seed?.person?.slice(0, 120) ?? '',
+          branch: safeSeedBranch ?? '',
           category: 'call',
           priority: 'normal',
-          due_date: new Date().toISOString().slice(0, 10),
+          due_date: safeSeedDate ?? new Date().toISOString().slice(0, 10),
           snoozed_until: '',
           assignment: 'unassigned',
           task_id: initialTaskId ?? '',

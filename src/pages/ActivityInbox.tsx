@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Loader2, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,34 @@ import { ActivityRow } from '@/components/inbox/ActivityRow';
 import { ActivityEmptyState } from '@/components/inbox/ActivityEmptyState';
 import { ActivityListSkeleton } from '@/components/inbox/ActivityRowSkeleton';
 import { SourceStatusNotice } from '@/components/inbox/SourceStatusNotice';
+import { composeAllSuggestions } from '@/lib/inbox-suggestions/compose';
+import {
+  dismissSuggestion as persistDismissal,
+  isDismissed as isDismissedIn,
+  loadDismissed,
+  pruneStale,
+  type DismissedMap,
+} from '@/lib/inbox-suggestions/dismiss';
+import { GMAIL_RULES } from '@/lib/inbox-suggestions/rules/gmail';
+import { CALENDAR_RULES } from '@/lib/inbox-suggestions/rules/calendar';
+import { TELEGRAM_RULES } from '@/lib/inbox-suggestions/rules/telegram';
+import { TASK_RULES } from '@/lib/inbox-suggestions/rules/task';
+import { FOLLOWUP_RULES } from '@/lib/inbox-suggestions/rules/followup';
+import { PURCHASE_RULES } from '@/lib/inbox-suggestions/rules/purchase';
+import { FINDING_RULES } from '@/lib/inbox-suggestions/rules/finding';
+import { DOCUMENT_RULES } from '@/lib/inbox-suggestions/rules/document';
+import type { Suggestion } from '@/lib/inbox-suggestions/types';
+
+const ALL_RULES = [
+  ...GMAIL_RULES,
+  ...CALENDAR_RULES,
+  ...TELEGRAM_RULES,
+  ...TASK_RULES,
+  ...FOLLOWUP_RULES,
+  ...PURCHASE_RULES,
+  ...FINDING_RULES,
+  ...DOCUMENT_RULES,
+];
 
 const FILTER_LABEL: Record<FilterKey, string> = {
   all: 'all',
@@ -54,6 +82,33 @@ export function ActivityInboxPage() {
     () => all.filter((i) => matchesFilter(i, filter)),
     [all, filter],
   );
+
+  // Suggestion machinery -------------------------------------------------
+  // dismissed map is loaded once on mount + pruned to <=30 days.
+  const [dismissed, setDismissed] = useState<DismissedMap>(() =>
+    pruneStale(loadDismissed()),
+  );
+  useEffect(() => {
+    setDismissed((m) => pruneStale(m));
+    // intentional: prune once per mount; loadDismissed already runs in init.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const handleDismissSuggestion = useCallback((suggestionId: string) => {
+    setDismissed(persistDismissal(suggestionId));
+  }, []);
+
+  const suggestionsByItem = useMemo<Map<string, Suggestion[]>>(() => {
+    if (all.length === 0) return new Map();
+    try {
+      return composeAllSuggestions(all, {
+        rules: ALL_RULES,
+        isDismissed: (id) => isDismissedIn(id, dismissed),
+      });
+    } catch {
+      // A bug in any rule should never blank the inbox.
+      return new Map();
+    }
+  }, [all, dismissed]);
 
   // Top-line counts for the header strip.
   const critical = all.filter((i) => i.severity === 'critical').length;
@@ -146,7 +201,11 @@ export function ActivityInboxPage() {
         <ul className="space-y-1.5" data-testid="inbox-list">
           {filtered.map((item) => (
             <li key={item.id}>
-              <ActivityRow item={item} />
+              <ActivityRow
+                item={item}
+                suggestions={suggestionsByItem.get(item.id) ?? []}
+                onDismissSuggestion={handleDismissSuggestion}
+              />
             </li>
           ))}
         </ul>

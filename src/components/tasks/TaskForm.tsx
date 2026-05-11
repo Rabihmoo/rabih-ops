@@ -61,13 +61,23 @@ type FormValues = z.infer<typeof baseSchema>;
 const fieldClass =
   'bg-card border-border text-foreground h-10 w-full rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring';
 
+export interface TaskFormSeed {
+  title?: string;
+  description?: string;
+  branch?: string;
+  priority?: TaskPriority;
+  due_date?: string; // yyyy-mm-dd
+}
+
 export function TaskForm({
   initial,
+  seed,
   submitting,
   onSubmit,
   submitLabel,
 }: {
   initial?: TaskRow;
+  seed?: TaskFormSeed;
   submitting?: boolean;
   submitLabel: string;
   onSubmit: (input: CreateTaskInput | UpdateTaskInput) => Promise<void>;
@@ -78,6 +88,21 @@ export function TaskForm({
     if (profile.role === 'admin' || profile.role === 'ceo') return true;
     return profile.branches.includes(b.code) || profile.branches.includes('all');
   });
+
+  // Sanitise seed values against allowed enums + branch access. Reject
+  // anything we don't recognise rather than letting it land in the form.
+  const safeSeedBranch =
+    seed?.branch && allowedBranches.some((b) => b.code === seed.branch)
+      ? seed.branch
+      : undefined;
+  const safeSeedPriority =
+    seed?.priority && (PRIORITIES as string[]).includes(seed.priority)
+      ? seed.priority
+      : undefined;
+  const safeSeedDate =
+    seed?.due_date && /^\d{4}-\d{2}-\d{2}$/.test(seed.due_date)
+      ? seed.due_date
+      : undefined;
 
   const isEdit = !!initial;
   const form = useForm<FormValues>({
@@ -97,12 +122,12 @@ export function TaskForm({
           deadline_reminder_at: toLocalInputValue(initial.deadline_reminder_at),
         }
       : {
-          title: '',
-          description: '',
-          branch: allowedBranches[0]?.code ?? '',
+          title: seed?.title?.slice(0, 200) ?? '',
+          description: seed?.description?.slice(0, 2000) ?? '',
+          branch: safeSeedBranch ?? allowedBranches[0]?.code ?? '',
           category: 'operations',
-          priority: 'normal',
-          due_date: '',
+          priority: safeSeedPriority ?? 'normal',
+          due_date: safeSeedDate ?? '',
           assignment: 'unassigned',
           start_reminder_at: '',
           follow_up_reminder_at: '',

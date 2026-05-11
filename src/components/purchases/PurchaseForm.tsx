@@ -59,13 +59,22 @@ const fieldClass =
 
 const numericFieldClass = `${fieldClass} text-right tabular-nums`;
 
+export interface PurchaseFormSeed {
+  title?: string;
+  supplier_name?: string;
+  branch?: string;
+  description?: string; // mapped to notes
+}
+
 export function PurchaseForm({
   initial,
+  seed,
   submitting,
   onSubmit,
   submitLabel,
 }: {
   initial?: PurchaseRequestRow;
+  seed?: PurchaseFormSeed;
   submitting?: boolean;
   submitLabel: string;
   onSubmit: (input: CreatePurchaseInput | UpdatePurchaseInput) => Promise<void>;
@@ -76,6 +85,11 @@ export function PurchaseForm({
     if (profile.role === 'admin' || profile.role === 'ceo') return true;
     return profile.branches.includes(b.code) || profile.branches.includes('all');
   });
+
+  const safeSeedBranch =
+    seed?.branch && allowedBranches.some((b) => b.code === seed.branch)
+      ? seed.branch
+      : undefined;
 
   const isEdit = !!initial;
   const form = useForm<FormValues>({
@@ -96,10 +110,10 @@ export function PurchaseForm({
           notes: initial.notes ?? '',
         }
       : {
-          title: '',
-          supplier_name: '',
+          title: seed?.title?.slice(0, 200) ?? '',
+          supplier_name: seed?.supplier_name?.slice(0, 200) ?? '',
           supplier_website: '',
-          branch: allowedBranches[0]?.code ?? '',
+          branch: safeSeedBranch ?? allowedBranches[0]?.code ?? '',
           priority: 'normal',
           currency: 'MZN',
           payment_method: '',
@@ -107,7 +121,7 @@ export function PurchaseForm({
           qty_ordered: '',
           expected_delivery_date: '',
           reminder_date: '',
-          notes: '',
+          notes: seed?.description?.slice(0, 2000) ?? '',
         },
   });
 

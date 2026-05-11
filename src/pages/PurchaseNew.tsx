@@ -1,7 +1,7 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { PurchaseForm } from '@/components/purchases/PurchaseForm';
+import { PurchaseForm, type PurchaseFormSeed } from '@/components/purchases/PurchaseForm';
 import { toast } from '@/components/ui/toaster';
 import { useCreatePurchase } from '@/hooks/usePurchaseRequests';
 import type {
@@ -9,8 +9,23 @@ import type {
   UpdatePurchaseInput,
 } from '@/lib/purchase-requests';
 
+function readPurchaseSeed(params: URLSearchParams): PurchaseFormSeed {
+  const seed: PurchaseFormSeed = {};
+  const title = params.get('title');
+  if (title && title.trim()) seed.title = title;
+  const supplier = params.get('supplier_name');
+  if (supplier && supplier.trim()) seed.supplier_name = supplier;
+  const branch = params.get('branch');
+  if (branch && branch.trim()) seed.branch = branch;
+  const desc = params.get('description');
+  if (desc && desc.trim()) seed.description = desc;
+  return seed;
+}
+
 export function PurchaseNewPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const seed = readPurchaseSeed(searchParams);
   const create = useCreatePurchase();
 
   const handleSubmit = async (input: CreatePurchaseInput | UpdatePurchaseInput) => {
@@ -41,6 +56,7 @@ export function PurchaseNewPage() {
       <Card>
         <CardContent className="p-5">
           <PurchaseForm
+            seed={seed}
             submitting={create.isPending}
             onSubmit={handleSubmit}
             submitLabel="Create draft"
