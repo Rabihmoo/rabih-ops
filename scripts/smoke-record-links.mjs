@@ -16,8 +16,9 @@
 
 const t = process.env.SUPABASE_ACCESS_TOKEN;
 const r = process.env.SUPABASE_PROJECT_REF;
-const RABIH = 'aa593e81-9efe-4091-b70e-f2fbf907b394';
-const E2E   = 'a2ffab6b-28aa-4df7-9be4-4caf42d8708b';
+const RABIH  = 'aa593e81-9efe-4091-b70e-f2fbf907b394';
+const E2E    = 'a2ffab6b-28aa-4df7-9be4-4caf42d8708b';
+const VIEWER = '645aca0d-62d0-4f70-bd15-56d6b35faaa8'; // role=viewer, branches=['salt']
 
 async function sql(query) {
   const res = await fetch(`https://api.supabase.com/v1/projects/${r}/database/query`, {
@@ -46,6 +47,13 @@ async function asE2e(stmt) {
   return sql(`
     select set_config('request.jwt.claims',
       '{"sub":"${E2E}","role":"authenticated"}', true);
+    ${stmt}
+  `);
+}
+async function asViewer(stmt) {
+  return sql(`
+    select set_config('request.jwt.claims',
+      '{"sub":"${VIEWER}","role":"authenticated"}', true);
     ${stmt}
   `);
 }
@@ -151,14 +159,16 @@ try {
 } catch (e) { selfRejected = /cannot link an entity to itself/.test(e.message); }
 check('self-link rejected', selfRejected);
 
-// Invalid entity_type is rejected (proves the H1 whitelist).
+// Invalid entity_type is rejected. 'contact' is allowed as of H2.3, so
+// we use a value that's still not in the whitelist — 'note' lands with
+// Phase H3.
 let invalidRejected = false;
 try {
   await asRabih(`
-    select rpc_record_link_internal('contact','${taskAId}'::uuid,'task','${taskBId}'::uuid,'relates_to')
+    select rpc_record_link_internal('note','${taskAId}'::uuid,'task','${taskBId}'::uuid,'relates_to')
   `);
 } catch (e) { invalidRejected = /invalid from_entity_type/.test(e.message); }
-check('non-H1 entity type rejected (contact not yet allowed)', invalidRejected);
+check('unknown entity_type rejected (note not yet allowed; H3)', invalidRejected);
 
 // =====================================================================
 // External CRUD
@@ -253,6 +263,124 @@ check('e2e does NOT see the personal-doc link in rpc_record_relations',
 // so that one assertion is the load-bearing privacy guarantee.
 
 // =====================================================================
+// H2.3 widening — company / contact as link endpoints
+// =====================================================================
+console.log('\nH2.3 — company / contact links');
+
+// Salt-tagged company + contact (visible to viewer).
+const coSaltRow = await asRabih(`
+  select rpc_create_company('RL smoke Co Salt ${ts}', 'supplier',
+    array['salt']::text[]) as r
+`);
+const coSaltId = coSaltRow.find(x => x.r)?.r?.id;
+check('rabih creates salt-tagged company', !!coSaltId);
+
+const ctSaltRow = await asRabih(`
+  select rpc_create_contact('RL smoke Contact ${ts}', '${coSaltId}'::uuid,
+    '{}'::text[], 'Manager', null, null, null, null, null) as r
+`);
+const ctSaltId = ctSaltRow.find(x => x.r)?.r?.id;
+check('rabih creates contact under salt company (branches default-copied)',
+  !!ctSaltId);
+
+// Zero-branch company (admin-only).
+const coZeroRow = await asRabih(`
+  select rpc_create_company('RL smoke Co ZERO ${ts}', 'partner', '{}'::text[]) as r
+`);
+const coZeroId = coZeroRow.find(x => x.r)?.r?.id;
+check('rabih creates zero-branch company (admin-only)', !!coZeroId);
+
+// Link task A → company (supplier_for).
+const taskToCo = await asRabih(`
+  select rpc_record_link_internal('task','${taskAId}'::uuid,
+    'company','${coSaltId}'::uuid,'supplier_for') as r
+`);
+const taskToCoId = taskToCo.find(x => x.r)?.r?.id;
+check('link task → company (supplier_for) succeeds', !!taskToCoId);
+
+// Link task A → contact (staff_for).
+const taskToCt = await asRabih(`
+  select rpc_record_link_internal('task','${taskAId}'::uuid,
+    'contact','${ctSaltId}'::uuid,'staff_for') as r
+`);
+const taskToCtId = taskToCt.find(x => x.r)?.r?.id;
+check('link task → contact (staff_for) succeeds', !!taskToCtId);
+
+// Link company → contact (relates_to) — internal-to-internal across the
+// new types.
+const coToCt = await asRabih(`
+  select rpc_record_link_internal('company','${coSaltId}'::uuid,
+    'contact','${ctSaltId}'::uuid,'relates_to') as r
+`);
+const coToCtId = coToCt.find(x => x.r)?.r?.id;
+check('link company → contact (relates_to) succeeds', !!coToCtId);
+
+// Self-link rejection on the new types.
+let companySelfRejected = false;
+try {
+  await asRabih(`
+    select rpc_record_link_internal('company','${coSaltId}'::uuid,
+      'company','${coSaltId}'::uuid,'relates_to')
+  `);
+} catch (e) { companySelfRejected = /cannot link an entity to itself/.test(e.message); }
+check('company → same company rejected (self-link)', companySelfRejected);
+
+// Idempotency on the new endpoint.
+const taskToCoDup = await asRabih(`
+  select rpc_record_link_internal('task','${taskAId}'::uuid,
+    'company','${coSaltId}'::uuid,'supplier_for') as r
+`);
+check('idempotent re-link task → company returns same id',
+  taskToCoDup.find(x => x.r)?.r?.id === taskToCoId);
+
+// rpc_record_relations on task A should show both new outbound links.
+const relTaskA = await asRabih(`select rpc_record_relations('task','${taskAId}'::uuid, 50) as r`);
+const relTaskARows = relTaskA.find(x => x.r)?.r ?? [];
+check('relations on task A shows outbound → company',
+  relTaskARows.some((x) => x.direction === 'outbound'
+    && x.to_entity_type === 'company' && x.to_entity_id === coSaltId));
+check('relations on task A shows outbound → contact',
+  relTaskARows.some((x) => x.direction === 'outbound'
+    && x.to_entity_type === 'contact' && x.to_entity_id === ctSaltId));
+
+// rpc_record_relations on the company should show task as inbound AND
+// contact as outbound.
+const relCo = await asRabih(`select rpc_record_relations('company','${coSaltId}'::uuid, 50) as r`);
+const relCoRows = relCo.find(x => x.r)?.r ?? [];
+check('relations on company shows inbound link from task',
+  relCoRows.some((x) => x.direction === 'inbound'
+    && x.to_entity_type === 'task' && x.to_entity_id === taskAId));
+check('relations on company shows outbound link to contact',
+  relCoRows.some((x) => x.direction === 'outbound'
+    && x.to_entity_type === 'contact' && x.to_entity_id === ctSaltId));
+
+// =====================================================================
+// Privacy probe — zero-branch company target
+// =====================================================================
+console.log('\nPrivacy: zero-branch company target');
+
+const taskToCoZero = await asRabih(`
+  select rpc_record_link_internal('task','${taskAId}'::uuid,
+    'company','${coZeroId}'::uuid,'supplier_for') as r
+`);
+const taskToCoZeroId = taskToCoZero.find(x => x.r)?.r?.id;
+check('rabih links task → zero-branch company', !!taskToCoZeroId);
+
+// Viewer (branches=['salt']) calling rpc_record_relations on task A —
+// must NOT see the zero-branch company link (no salt access on the
+// target), but MUST see the salt-tagged company link (counter-case).
+//
+// Heads-up: task A is on the 'salt' branch (see fixtures above), so
+// the viewer can access the from-side. The privacy rule is then
+// determined by the to-side, which is what we're probing.
+const viewerRel = await asViewer(`select rpc_record_relations('task','${taskAId}'::uuid, 50) as r`);
+const viewerRows = viewerRel.find(x => x.r)?.r ?? [];
+check('viewer does NOT see the zero-branch-company link',
+  !viewerRows.some((x) => x.link_id === taskToCoZeroId));
+check('viewer DOES see the salt-tagged company link (counter-case)',
+  viewerRows.some((x) => x.link_id === taskToCoId));
+
+// =====================================================================
 // Remove
 // =====================================================================
 console.log('\nUnlink');
@@ -273,10 +401,20 @@ check('re-removing a deleted link errors with not-found', removeAgainRejected);
 // =====================================================================
 console.log('\nCleanup');
 await sql(`delete from record_links where created_by = '${RABIH}' and (
-  to_entity_id in ('${taskAId}'::uuid,'${taskBId}'::uuid,'${persDocId}'::uuid)
-  or from_entity_id in ('${taskAId}'::uuid,'${taskBId}'::uuid)
+  to_entity_id in (
+    '${taskAId}'::uuid,'${taskBId}'::uuid,'${persDocId}'::uuid,
+    '${coSaltId}'::uuid,'${coZeroId}'::uuid,'${ctSaltId}'::uuid
+  )
+  or from_entity_id in (
+    '${taskAId}'::uuid,'${taskBId}'::uuid,
+    '${coSaltId}'::uuid,'${coZeroId}'::uuid,'${ctSaltId}'::uuid
+  )
   or external_record_id like 'smoke-drive-%'
 )`);
+await sql(`delete from contact_branches where contact_id = '${ctSaltId}'`);
+await sql(`delete from contacts where id = '${ctSaltId}'`);
+await sql(`delete from company_branches where company_id in ('${coSaltId}','${coZeroId}')`);
+await sql(`delete from companies where id in ('${coSaltId}','${coZeroId}')`);
 await sql(`delete from documents where id = '${persDocId}'`);
 await sql(`update tasks set deleted_at = now() where id in ('${taskAId}','${taskBId}')`);
 
