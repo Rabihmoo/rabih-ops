@@ -37,6 +37,7 @@ import {
 import { BRANCHES, type BranchCode } from '@/lib/branches';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { DashboardCalendarToday } from '@/components/dashboard/DashboardCalendarToday';
+import { DashboardImportantEmails } from '@/components/dashboard/DashboardImportantEmails';
 import { useDismissReminder, useMyReminders } from '@/hooks/useReminders';
 import {
   REMINDER_KIND_LABEL,
@@ -603,6 +604,9 @@ export function DashboardPage() {
       {/* Today's Google Calendar — under the stat tiles, above the
           actionable lists. Renders nothing when not connected. */}
       <DashboardCalendarToday />
+
+      {/* Important unread Gmail messages. Renders nothing when not connected. */}
+      <DashboardImportantEmails />
 
       {allClear ? (
         <Card>
