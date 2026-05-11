@@ -1,7 +1,7 @@
-// Shared helpers for Google Calendar Edge Functions.
+// Shared helpers for Google Calendar / Gmail Edge Functions.
 // - Validates a Supabase user JWT and returns the user_id.
-// - Returns a fresh access_token for that user, refreshing if expired
-//   and persisting the new token via rpc_calendar_update_access_token.
+// - Returns a fresh access_token for a (user, service) pair, refreshing
+//   if expired and persisting via rpc_<service>_update_access_token.
 
 // deno-lint-ignore-file no-explicit-any
 
@@ -25,19 +25,27 @@ export interface GoogleTokenInfo {
   email?: string;
 }
 
-export async function getFreshGoogleAccessToken(
+export type GoogleService = 'calendar' | 'gmail';
+
+export async function getFreshGoogleAccessTokenFor(
+  service: GoogleService,
   rpc: <T = any>(name: string, args: Record<string, unknown>) => Promise<T>,
   userId: string,
   clientId: string,
   clientSecret: string,
 ): Promise<GoogleTokenInfo> {
-  const tok = await rpc<any>('rpc_calendar_get_token', { p_user_id: userId });
+  const getRpc = service === 'calendar' ? 'rpc_calendar_get_token' : 'rpc_gmail_get_token';
+  const updateRpc =
+    service === 'calendar'
+      ? 'rpc_calendar_update_access_token'
+      : 'rpc_gmail_update_access_token';
+
+  const tok = await rpc<any>(getRpc, { p_user_id: userId });
   if (!tok || !tok.connected) {
     return { connected: false };
   }
 
   const expiresAt = new Date(tok.access_token_expires_at).getTime();
-  // Refresh if expiring within 60 seconds.
   if (expiresAt > Date.now() + 60_000) {
     return {
       connected: true,
@@ -62,7 +70,7 @@ export async function getFreshGoogleAccessToken(
   const refreshed = JSON.parse(text);
 
   const newExpiresAt = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
-  await rpc('rpc_calendar_update_access_token', {
+  await rpc(updateRpc, {
     p_user_id: userId,
     p_access_token: refreshed.access_token,
     p_access_expires_at: newExpiresAt,
@@ -74,6 +82,16 @@ export async function getFreshGoogleAccessToken(
     refreshToken: tok.refresh_token,
     email: tok.google_email,
   };
+}
+
+// Backwards-compat shim — Calendar Edge Functions still call this name.
+export function getFreshGoogleAccessToken(
+  rpc: <T = any>(name: string, args: Record<string, unknown>) => Promise<T>,
+  userId: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<GoogleTokenInfo> {
+  return getFreshGoogleAccessTokenFor('calendar', rpc, userId, clientId, clientSecret);
 }
 
 // Today's range in Africa/Maputo as RFC3339 strings.
