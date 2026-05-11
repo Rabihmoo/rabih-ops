@@ -1,0 +1,8 @@
+# Cloudflare Pages SPA fallback — every non-asset request returns
+# index.html so React Router (browser history mode) can resolve deep
+# links like /tasks/<id>, /companies/<id>, /inbox?filter=overdue, etc.
+#
+# Pages serves static assets (anything matching a real file under dist/)
+# first, then falls back to this rule. The 200 status is important — a
+# 301/302 would break URL parameters and history-state on direct loads.
+/*    /index.html    200

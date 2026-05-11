@@ -35,7 +35,7 @@ The full product plan lives in `PLAN.md`. Read it before doing non-trivial work.
 - **Backend**: Supabase (Postgres + Auth). RLS everywhere. SECURITY DEFINER RPCs only.
 - **Routing**: react-router-dom 7.
 - **Testing**: Playwright for E2E (`tests/e2e`), Vitest for units (not yet wired).
-- **Deployment target** (later): Cloudflare Pages.
+- **Hosting**: Cloudflare Pages (setup pending — see "Cloudflare Pages deployment" below).
 - **CI**: GitHub Actions, `.github/workflows/ci.yml`.
 
 ## Repo layout
@@ -123,6 +123,75 @@ Each migration should:
 - Stay inside one transaction.
 - Add comments to every new column and function.
 - Update RLS and RPCs together when the schema changes — never leave a table with writes enabled but no RPC to drive them.
+
+## Cloudflare Pages deployment
+
+RabihOS is currently local-only. The repo-side setup for Cloudflare Pages is in place; the project must be created in the Cloudflare dashboard separately (one-time, by the operator).
+
+### Cloudflare dashboard setup (one-time)
+
+1. **Cloudflare → Pages → Create a project → Connect to GitHub.**
+2. Repository: `Rabihmoo/rabih-ops`.
+3. Production branch: `main`.
+4. **Framework preset**: none (we configure manually below).
+5. **Build command**: `npm run build`
+6. **Build output directory**: `dist`
+7. **Root directory**: `/` (leave default).
+8. **Node version**: pin to `22` via env var `NODE_VERSION=22` (matches CI; Vite/TS needs ≥20).
+9. **Environment variables** (Production + Preview, unless noted):
+
+   | Key                              | Value (production)                            | Notes |
+   |---|---|---|
+   | `NODE_VERSION`                   | `22`                                          | build step |
+   | `VITE_SUPABASE_URL`              | staging Supabase URL                          | same as `.env.local` for now |
+   | `VITE_SUPABASE_ANON_KEY`         | staging anon JWT                              | public by design |
+   | `VITE_GOOGLE_OAUTH_CLIENT_ID`    | Google Cloud OAuth client id                  | public per Google docs |
+   | `VITE_TELEGRAM_BOT_USERNAME`     | `Rabihmoo_bot` (or current bot)               | drives the Settings deep-link |
+   | `VITE_APP_ENV`                   | `production`                                  | also set `preview` for Preview deployments |
+
+   **Never** put `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_OAUTH_CLIENT_SECRET`, `TELEGRAM_BOT_TOKEN`, or any `*_SECRET` into Cloudflare. Those stay in Supabase Edge Function secrets (server-only).
+
+10. Hit **Save and Deploy**. Cloudflare will give you a URL like `https://rabih-ops.pages.dev`.
+
+### SPA routing
+
+`public/_redirects` ships a single rule:
+
+```
+/*    /index.html    200
+```
+
+That's a real-file-first 200 rewrite — Cloudflare serves static assets normally, then falls back to `index.html` so React Router (browser history) can resolve deep links like `/tasks/<id>`, `/inbox?filter=overdue`, `/companies/<id>`, etc. A 301/302 would corrupt URL params and history-state on direct loads — keep it `200`.
+
+### Auto-deploy behaviour
+
+Once the Pages project is connected, every push to `main` triggers a Cloudflare build + deploy in parallel with the existing GitHub Actions CI run. PRs get Preview deployments at `https://<pr-sha>.rabih-ops.pages.dev`. We don't add Wrangler / a deploy GitHub Action — the Pages GitHub integration handles it.
+
+### After the first deploy succeeds — operator checklist
+
+Once the live Pages URL is known (e.g. `https://rabih-ops.pages.dev`):
+
+1. **Supabase Edge Function secret** — update `RABIHOS_APP_URL` to the Pages URL so OAuth bounces land back on production, not localhost:
+   ```bash
+   supabase secrets set RABIHOS_APP_URL=https://rabih-ops.pages.dev --project-ref $SUPABASE_PROJECT_REF
+   ```
+   The Calendar + Gmail callback Edge Functions read this when building the redirect target.
+
+2. **Google Cloud Console** — add the Pages-side redirect URI to the OAuth client's *Authorised redirect URIs* list. The Supabase Edge Function URLs (`/functions/v1/calendar-oauth-callback`, `/functions/v1/gmail-oauth-callback`) stay as-is — Google still calls those — but if you also want to allow auth flows initiated from the Pages domain, add it explicitly.
+
+3. **Supabase Auth → URL Configuration** — set Site URL to the Pages URL and add it to "Additional Redirect URLs" so magic-link emails point at production.
+
+4. **Smoke the live site** — admin login, create a task, link Gmail, dismiss a suggestion. The Activity Inbox should hydrate from staging Supabase.
+
+5. **Mobile add-to-home-screen** — open the Pages URL on a phone, install via "Add to Home Screen". The existing PWA manifest (configured in `vite.config.ts`) gives RabihOS a name, icons, and standalone-display mode.
+
+6. **Sanity-check CORS** — every browser-facing Edge Function has CORS_HEADERS in `_shared/cors.ts` allowing `Access-Control-Allow-Origin: *`. Should just work; verify on first OAuth attempt.
+
+### What we did NOT add
+
+- **No Wrangler config** (`wrangler.toml`). Cloudflare's Pages GitHub integration handles builds; Wrangler would be a parallel path we'd have to maintain.
+- **No Cloudflare API deploy workflow** in `.github/workflows/`. CI still only runs typecheck / lint / unit / build / Playwright. Deploy is owned by the Pages integration.
+- **No secret rotation.** Supabase secrets stay as they are. We update `RABIHOS_APP_URL` once after the Pages URL is known; everything else carries over.
 
 ## Permissions model (Part 9 of PLAN.md)
 
