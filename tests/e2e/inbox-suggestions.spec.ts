@@ -125,6 +125,224 @@ test.describe('Suggestion strip', () => {
   });
 });
 
+// =====================================================================
+// G2.6 — "+N more" toggle and mobile layout polish
+// =====================================================================
+//
+// To get more than 3 suggestions on a single row we need an item whose
+// rule mix actually exceeds the default visible cap. A waiting+overdue
+// task with two near-duplicate siblings gives us four:
+//   * task-waiting-on-someone (create_follow_up)
+//   * task-critical-no-doc    (link_document)
+//   * task-similar-other → B  (link_to_existing)
+//   * task-similar-other → C  (link_to_existing — second of two; cap)
+
+const HEAVY_A_ID = 'aaaaaaaa-1111-aaaa-aaaa-aaaaaaaaaaaa';
+const HEAVY_B_ID = 'bbbbbbbb-2222-bbbb-bbbb-bbbbbbbbbbbb';
+const HEAVY_C_ID = 'cccccccc-3333-cccc-cccc-cccccccccccc';
+
+const HEAVY_INBOX = [
+  {
+    source: 'task',
+    id: `task:${HEAVY_A_ID}`,
+    native_id: HEAVY_A_ID,
+    title: 'Renew gas cylinder contract for SALT branch',
+    summary: null,
+    branch: 'salt',
+    entity_url: `/tasks/${HEAVY_A_ID}`,
+    occurred_at: '2026-05-08T08:00:00Z',
+    due_at: '2026-04-30T00:00:00Z',
+    severity: 'overdue',
+    is_unread: false,
+    is_blocked: true,
+    meta: {
+      priority: 'normal',
+      status: 'waiting_for_someone',
+      category: 'operations',
+      waiting_on_label: 'Legal team',
+    },
+  },
+  {
+    source: 'task',
+    id: `task:${HEAVY_B_ID}`,
+    native_id: HEAVY_B_ID,
+    title: 'Annual maintenance plan: completely unrelated chore',
+    summary: null,
+    branch: 'salt',
+    entity_url: `/tasks/${HEAVY_B_ID}`,
+    occurred_at: '2026-05-09T08:00:00Z',
+    due_at: '2026-05-20T00:00:00Z',
+    severity: 'soon',
+    is_unread: false,
+    is_blocked: false,
+    meta: { priority: 'normal', status: 'started', category: 'operations' },
+  },
+  {
+    source: 'task',
+    id: `task:${HEAVY_C_ID}`,
+    native_id: HEAVY_C_ID,
+    title: 'Renew gas cylinder contract for Cleaning service',
+    summary: null,
+    branch: 'cleaning',
+    entity_url: `/tasks/${HEAVY_C_ID}`,
+    occurred_at: '2026-05-09T08:00:00Z',
+    due_at: '2026-05-22T00:00:00Z',
+    severity: 'soon',
+    is_unread: false,
+    is_blocked: false,
+    meta: { priority: 'normal', status: 'started', category: 'operations' },
+  },
+  {
+    source: 'task',
+    id: `task:dddddddd-4444-dddd-dddd-dddddddddddd`,
+    native_id: 'dddddddd-4444-dddd-dddd-dddddddddddd',
+    title: 'Renew gas cylinder contract for Central Kitchen', // a third sibling — used to test +N more clearly
+    summary: null,
+    branch: 'centralkitchen',
+    entity_url: `/tasks/dddddddd-4444-dddd-dddd-dddddddddddd`,
+    occurred_at: '2026-05-09T08:00:00Z',
+    due_at: '2026-05-22T00:00:00Z',
+    severity: 'soon',
+    is_unread: false,
+    is_blocked: false,
+    meta: { priority: 'normal', status: 'started', category: 'operations' },
+  },
+];
+
+async function stubHeavyInbox(page: import('@playwright/test').Page) {
+  await page.route('**/rest/v1/rpc/rpc_activity_inbox', (route: Route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(HEAVY_INBOX),
+    }),
+  );
+  await page.route('**/functions/v1/gmail-list-important', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ connected: false, messages: [] }),
+    }),
+  );
+  await page.route('**/functions/v1/calendar-list-today', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ connected: false, events: [] }),
+    }),
+  );
+}
+
+test.describe('Suggestion strip — show more / mobile polish', () => {
+  test.use({ storageState: 'tests/fixtures/.auth/admin.json' });
+
+  test.beforeEach(async ({ page }) => {
+    await page
+      .evaluate(() => window.localStorage.removeItem('inbox-suggestion-dismissed'))
+      .catch(() => {});
+    await stubHeavyInbox(page);
+  });
+
+  test('"+N more" toggle appears and reveals hidden chips', async ({ page }) => {
+    await page.goto('/inbox');
+    await page.getByTestId(`inbox-suggest-affordance-task:${HEAVY_A_ID}`).click();
+
+    const showMore = page.getByTestId(`inbox-suggest-show-more-task:${HEAVY_A_ID}`);
+    await expect(showMore).toBeVisible();
+    await expect(showMore).toContainText(/\+\d+ more/);
+
+    // Count chip rows before expanding — exactly the default 3.
+    const chipsBefore = page.locator(
+      `[data-testid^="inbox-suggest-task:${HEAVY_A_ID}:"]`,
+    );
+    await expect(chipsBefore).toHaveCount(3);
+
+    await showMore.click();
+    await expect(showMore).toContainText('Show fewer');
+
+    const chipsAfter = page.locator(
+      `[data-testid^="inbox-suggest-task:${HEAVY_A_ID}:"]`,
+    );
+    const afterCount = await chipsAfter.count();
+    expect(afterCount).toBeGreaterThan(3);
+  });
+
+  test('dismissed suggestions stay hidden after expanding "+N more"', async ({ page }) => {
+    await page.goto('/inbox');
+    await page.getByTestId(`inbox-suggest-affordance-task:${HEAVY_A_ID}`).click();
+
+    // Dismiss the first visible chip (whichever it is).
+    const firstChip = page
+      .locator(`[data-testid^="inbox-suggest-task:${HEAVY_A_ID}:"]`)
+      .first();
+    const firstChipTestId = await firstChip.getAttribute('data-testid');
+    expect(firstChipTestId).toBeTruthy();
+    const suggestionId = firstChipTestId!.replace('inbox-suggest-', '');
+    await page.getByTestId(`inbox-suggest-dismiss-${suggestionId}`).click();
+    await expect(page.getByTestId(`inbox-suggest-${suggestionId}`)).toHaveCount(0);
+
+    // Expand more (it might still exist after dismissal pushes one in).
+    const showMore = page.getByTestId(`inbox-suggest-show-more-task:${HEAVY_A_ID}`);
+    if (await showMore.isVisible().catch(() => false)) {
+      await showMore.click();
+    }
+
+    // The dismissed chip must remain hidden.
+    await expect(page.getByTestId(`inbox-suggest-${suggestionId}`)).toHaveCount(0);
+  });
+});
+
+test.describe('Suggestion strip — mobile layout', () => {
+  test.use({
+    storageState: 'tests/fixtures/.auth/admin.json',
+    viewport: { width: 380, height: 720 },
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page
+      .evaluate(() => window.localStorage.removeItem('inbox-suggestion-dismissed'))
+      .catch(() => {});
+    await stubHeavyInbox(page);
+  });
+
+  test('chips stack cleanly, dismiss X stays reachable, reason wraps', async ({ page }) => {
+    await page.goto('/inbox');
+    await page.getByTestId(`inbox-suggest-affordance-task:${HEAVY_A_ID}`).click();
+
+    const firstChip = page
+      .locator(`[data-testid^="inbox-suggest-task:${HEAVY_A_ID}:"]`)
+      .first();
+    const chipBox = await firstChip.boundingBox();
+    expect(chipBox).toBeTruthy();
+    if (chipBox) {
+      // Chip should fit inside the viewport width with some margin.
+      expect(chipBox.width).toBeLessThanOrEqual(380);
+      expect(chipBox.height).toBeLessThan(160);
+    }
+
+    const firstChipTestId = await firstChip.getAttribute('data-testid');
+    const suggestionId = firstChipTestId!.replace('inbox-suggest-', '');
+    const dismissBtn = page.getByTestId(`inbox-suggest-dismiss-${suggestionId}`);
+    const dismissBox = await dismissBtn.boundingBox();
+    expect(dismissBox).toBeTruthy();
+    if (dismissBox) {
+      // Dismiss button must be on-screen, not pushed off the right edge.
+      expect(dismissBox.x + dismissBox.width).toBeLessThanOrEqual(380);
+      // And tall enough to tap (>= 18px to allow for sub-24 buttons with padding).
+      expect(dismissBox.height).toBeGreaterThanOrEqual(18);
+    }
+
+    // Open the reason and confirm it renders inside the viewport.
+    await page.getByTestId(`inbox-suggest-info-${suggestionId}`).click();
+    const reason = page.getByTestId(`inbox-suggest-reason-${suggestionId}`);
+    await expect(reason).toBeVisible();
+    const reasonBox = await reason.boundingBox();
+    if (reasonBox) {
+      expect(reasonBox.x + reasonBox.width).toBeLessThanOrEqual(380);
+    }
+  });
+});
+
 test.describe('Suggestion → new-form URL prefill', () => {
   test.use({ storageState: 'tests/fixtures/.auth/admin.json' });
 

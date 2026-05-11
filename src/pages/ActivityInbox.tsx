@@ -100,9 +100,14 @@ export function ActivityInboxPage() {
   const suggestionsByItem = useMemo<Map<string, Suggestion[]>>(() => {
     if (all.length === 0) return new Map();
     try {
+      // maxPerItem=8 lets the SuggestionStrip show top-3 by default
+      // with a "+N more" toggle that reveals the rest. Per-action cap
+      // stays at the orchestrator default (2) so we never flood a row
+      // with five "link to existing" of the same type.
       return composeAllSuggestions(all, {
         rules: ALL_RULES,
         isDismissed: (id) => isDismissedIn(id, dismissed),
+        maxPerItem: 8,
       });
     } catch {
       // A bug in any rule should never blank the inbox.
