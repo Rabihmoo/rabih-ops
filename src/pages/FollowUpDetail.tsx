@@ -20,6 +20,7 @@ import { AuditList } from '@/components/shared/AuditList';
 import { CommentList } from '@/components/shared/CommentList';
 import { AttachmentList } from '@/components/shared/AttachmentList';
 import { LinkedDocumentsCard } from '@/components/shared/LinkedDocumentsCard';
+import { LinkedEmailsCard } from '@/components/shared/LinkedEmailsCard';
 import {
   useFollowUpDetail,
   useUpdateFollowUp,
@@ -346,6 +347,9 @@ export function FollowUpDetailPage() {
 
       {/* Linked SOPs / policies / notes */}
       <LinkedDocumentsCard entityType="follow_up" entityId={id!} />
+
+      {/* Linked Gmail messages */}
+      <LinkedEmailsCard entityType="follow_up" entityId={id!} />
 
       {/* Activity */}
       <Card>

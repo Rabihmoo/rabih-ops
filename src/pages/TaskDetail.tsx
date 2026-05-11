@@ -9,6 +9,7 @@ import { TaskForm } from '@/components/tasks/TaskForm';
 import { TaskActions } from '@/components/tasks/TaskActions';
 import { TaskCalendarCard } from '@/components/tasks/TaskCalendarCard';
 import { LinkedDocumentsCard } from '@/components/shared/LinkedDocumentsCard';
+import { LinkedEmailsCard } from '@/components/shared/LinkedEmailsCard';
 import {
   BranchBadge,
   DueDateBadge,
@@ -231,6 +232,9 @@ export function TaskDetailPage() {
 
       {/* Linked SOPs / policies / notes */}
       {!editing && <LinkedDocumentsCard entityType="task" entityId={taskId} />}
+
+      {/* Linked Gmail messages */}
+      {!editing && <LinkedEmailsCard entityType="task" entityId={taskId} />}
 
       {/* Reminders summary (Phase B will fire them; Phase A just stores) */}
       {!editing && hasAnyReminder && (
