@@ -220,6 +220,205 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+          updated_by: string
+          website: string | null
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          created_at?: string
+          created_by: string
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+          updated_by: string
+          website?: string | null
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+          updated_by?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_branches: {
+        Row: {
+          branch: string
+          company_id: string
+        }
+        Insert: {
+          branch: string
+          company_id: string
+        }
+        Update: {
+          branch?: string
+          company_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_branches_branch_fkey"
+            columns: ["branch"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "company_branches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_branches: {
+        Row: {
+          branch: string
+          contact_id: string
+        }
+        Insert: {
+          branch: string
+          contact_id: string
+        }
+        Update: {
+          branch?: string
+          contact_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_branches_branch_fkey"
+            columns: ["branch"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "contact_branches_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          active: boolean
+          company_id: string | null
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          email: string | null
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          role: string | null
+          telegram_handle: string | null
+          updated_at: string
+          updated_by: string
+          whatsapp: string | null
+        }
+        Insert: {
+          active?: boolean
+          company_id?: string | null
+          created_at?: string
+          created_by: string
+          deleted_at?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          telegram_handle?: string | null
+          updated_at?: string
+          updated_by: string
+          whatsapp?: string | null
+        }
+        Update: {
+          active?: boolean
+          company_id?: string | null
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          telegram_handle?: string | null
+          updated_at?: string
+          updated_by?: string
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_links: {
         Row: {
           created_at: string
@@ -972,6 +1171,68 @@ export type Database = {
           },
         ]
       }
+      record_links: {
+        Row: {
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          external_app: string | null
+          external_label: string | null
+          external_record_id: string | null
+          external_record_type: string | null
+          external_snapshot: Json
+          external_url: string | null
+          from_entity_id: string
+          from_entity_type: string
+          id: number
+          relationship: string
+          to_entity_id: string | null
+          to_entity_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          deleted_at?: string | null
+          external_app?: string | null
+          external_label?: string | null
+          external_record_id?: string | null
+          external_record_type?: string | null
+          external_snapshot?: Json
+          external_url?: string | null
+          from_entity_id: string
+          from_entity_type: string
+          id?: number
+          relationship?: string
+          to_entity_id?: string | null
+          to_entity_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          external_app?: string | null
+          external_label?: string | null
+          external_record_id?: string | null
+          external_record_type?: string | null
+          external_snapshot?: Json
+          external_url?: string | null
+          from_entity_id?: string
+          from_entity_type?: string
+          id?: number
+          relationship?: string
+          to_entity_id?: string | null
+          to_entity_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -1287,6 +1548,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _activity_severity_rank: { Args: { p_severity: string }; Returns: number }
       _add_attachment: {
         Args: {
           p_entity_id: string
@@ -1320,6 +1582,8 @@ export type Database = {
       _can_admin_inspect: { Args: never; Returns: boolean }
       _can_admin_purchases: { Args: never; Returns: boolean }
       _can_mutate: { Args: never; Returns: boolean }
+      _company_visible: { Args: { p_id: string }; Returns: boolean }
+      _contact_visible: { Args: { p_id: string }; Returns: boolean }
       _delete_comment: { Args: { p_comment_id: string }; Returns: Json }
       _drain_reminders: { Args: never; Returns: number }
       _enqueue_followup_due_today: { Args: never; Returns: number }
@@ -1337,6 +1601,10 @@ export type Database = {
       _remove_attachment: { Args: { p_attachment_id: string }; Returns: Json }
       _require_auth: { Args: never; Returns: string }
       _require_branch_access: { Args: { p_branch: string }; Returns: undefined }
+      _require_branches_assignable: {
+        Args: { p_branches: string[] }
+        Returns: undefined
+      }
       _resolve_task_id: {
         Args: { p_chat_id: number; p_input: string; p_user_id: string }
         Returns: string
@@ -1372,6 +1640,10 @@ export type Database = {
         Returns: boolean
       }
       current_user_role: { Args: never; Returns: string }
+      rpc_activity_inbox: {
+        Args: { p_horizon_days?: number; p_limit_per_source?: number }
+        Returns: Json
+      }
       rpc_add_document_comment: {
         Args: { p_body: string; p_doc_id: string }
         Returns: Json
@@ -1412,6 +1684,8 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_archive_company: { Args: { p_id: string }; Returns: Json }
+      rpc_archive_contact: { Args: { p_id: string }; Returns: Json }
       rpc_archive_document: { Args: { p_doc_id: string }; Returns: Json }
       rpc_archive_recurring_template: {
         Args: { p_reason?: string; p_template_id: string }
@@ -1547,6 +1821,32 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_create_company: {
+        Args: {
+          p_branches?: string[]
+          p_category: string
+          p_email?: string
+          p_name: string
+          p_notes?: string
+          p_phone?: string
+          p_website?: string
+        }
+        Returns: Json
+      }
+      rpc_create_contact: {
+        Args: {
+          p_branches?: string[]
+          p_company_id?: string
+          p_email?: string
+          p_full_name: string
+          p_notes?: string
+          p_phone?: string
+          p_role?: string
+          p_telegram_handle?: string
+          p_whatsapp?: string
+        }
+        Returns: Json
+      }
       rpc_create_document: {
         Args: {
           p_body_md?: string
@@ -1674,6 +1974,8 @@ export type Database = {
         Args: { p_entity_id: string; p_entity_type: string }
         Returns: Json
       }
+      rpc_get_company: { Args: { p_id: string }; Returns: Json }
+      rpc_get_contact: { Args: { p_id: string }; Returns: Json }
       rpc_get_document: { Args: { p_doc_id: string }; Returns: Json }
       rpc_get_follow_up: { Args: { p_follow_up_id: string }; Returns: Json }
       rpc_get_inspection: { Args: { p_inspection_id: string }; Returns: Json }
@@ -1717,6 +2019,26 @@ export type Database = {
         Returns: Json
       }
       rpc_list_active_telegram_chats: { Args: never; Returns: Json }
+      rpc_list_companies: {
+        Args: {
+          p_branch?: string
+          p_category?: string
+          p_include_inactive?: boolean
+          p_limit?: number
+          p_search?: string
+        }
+        Returns: Json
+      }
+      rpc_list_contacts: {
+        Args: {
+          p_branch?: string
+          p_company_id?: string
+          p_include_inactive?: boolean
+          p_limit?: number
+          p_search?: string
+        }
+        Returns: Json
+      }
       rpc_list_critical_findings: { Args: { p_limit?: number }; Returns: Json }
       rpc_list_documents: {
         Args: {
@@ -1830,12 +2152,45 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_record_link_external: {
+        Args: {
+          p_external_app: string
+          p_external_label: string
+          p_external_record_id: string
+          p_external_record_type: string
+          p_external_snapshot?: Json
+          p_external_url: string
+          p_from_id: string
+          p_from_type: string
+          p_relationship?: string
+        }
+        Returns: Json
+      }
+      rpc_record_link_internal: {
+        Args: {
+          p_from_id: string
+          p_from_type: string
+          p_relationship?: string
+          p_to_id: string
+          p_to_type: string
+        }
+        Returns: Json
+      }
+      rpc_record_link_remove: { Args: { p_link_id: number }; Returns: Json }
       rpc_record_payment: {
         Args: {
           p_amount_paid: number
           p_id: string
           p_payment_method?: string
           p_payment_status?: string
+        }
+        Returns: Json
+      }
+      rpc_record_relations: {
+        Args: {
+          p_entity_id: string
+          p_entity_type: string
+          p_limit_per_source?: number
         }
         Returns: Json
       }
@@ -1873,6 +2228,14 @@ export type Database = {
       }
       rpc_revert_document: {
         Args: { p_doc_id: string; p_version_no: number }
+        Returns: Json
+      }
+      rpc_set_company_branches: {
+        Args: { p_branches: string[]; p_id: string }
+        Returns: Json
+      }
+      rpc_set_contact_branches: {
+        Args: { p_branches: string[]; p_id: string }
         Returns: Json
       }
       rpc_set_purchase_reminder: {
@@ -1963,12 +2326,22 @@ export type Database = {
       rpc_telegram_unlink: { Args: { p_chat_id: number }; Returns: Json }
       rpc_telegram_unlink_self: { Args: never; Returns: Json }
       rpc_telegram_waiting: { Args: { p_chat_id: number }; Returns: string }
+      rpc_unarchive_company: { Args: { p_id: string }; Returns: Json }
+      rpc_unarchive_contact: { Args: { p_id: string }; Returns: Json }
       rpc_unarchive_document: { Args: { p_doc_id: string }; Returns: Json }
       rpc_unarchive_recurring_template: {
         Args: { p_template_id: string }
         Returns: Json
       }
       rpc_unlink_document: { Args: { p_link_id: number }; Returns: Json }
+      rpc_update_company: {
+        Args: { p_id: string; p_patches: Json }
+        Returns: Json
+      }
+      rpc_update_contact: {
+        Args: { p_id: string; p_patches: Json }
+        Returns: Json
+      }
       rpc_update_document: {
         Args: { p_change_note?: string; p_doc_id: string; p_updates: Json }
         Returns: Json
@@ -2256,3 +2629,19 @@ export type NotificationLogRow =
 export type EmailLinkEntityType = 'task' | 'follow_up';
 export type EmailLinkRow = Database['public']['Tables']['email_links']['Row'];
 export type GoogleOAuthService = 'calendar' | 'gmail';
+
+// Companies + Contacts (Phase H2.1).
+export type CompanyRow  = Database['public']['Tables']['companies']['Row'];
+export type ContactRow  = Database['public']['Tables']['contacts']['Row'];
+export type CompanyBranchRow = Database['public']['Tables']['company_branches']['Row'];
+export type ContactBranchRow = Database['public']['Tables']['contact_branches']['Row'];
+export type CompanyCategory =
+  | 'supplier' | 'contractor' | 'landlord' | 'government'
+  | 'agency' | 'partner' | 'customer' | 'other';
+
+// record_links (Phase H1).
+export type RecordLinkRow = Database['public']['Tables']['record_links']['Row'];
+export type RecordLinkEntityType =
+  | 'task' | 'follow_up' | 'purchase_request' | 'inspection' | 'document';
+export type RecordLinkExternalApp =
+  | 'gmail' | 'calendar' | 'drive' | 'cater_co' | 'teamlink' | 'salt_reservation' | 'url';
