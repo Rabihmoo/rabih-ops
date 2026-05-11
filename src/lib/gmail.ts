@@ -121,10 +121,22 @@ export async function listGmailImportant(): Promise<GmailImportantResult> {
     method: 'GET',
     headers: { Authorization: `Bearer ${jwt}` },
   });
-  if (!res.ok) {
-    return { connected: false, messages: [], error: `HTTP ${res.status}` };
+  const text = await res.text();
+  // The Edge Function returns JSON with `error` even on non-OK status — try
+  // to surface that so we can see what Gmail is actually complaining about.
+  try {
+    const j = JSON.parse(text);
+    if (!res.ok) {
+      return {
+        connected: j.connected ?? false,
+        messages: [],
+        error: typeof j.error === 'string' ? j.error : `HTTP ${res.status}`,
+      };
+    }
+    return j as GmailImportantResult;
+  } catch {
+    return { connected: false, messages: [], error: text || `HTTP ${res.status}` };
   }
-  return res.json();
 }
 
 // =========================================================
