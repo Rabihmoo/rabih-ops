@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   Inbox,
   LayoutDashboard,
@@ -9,6 +9,7 @@ import {
   Repeat,
   FileText,
   Settings,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,8 @@ interface NavItem {
   end?: boolean;
   /** Optional accessor that returns a badge count for this nav entry. */
   badgeKey?: 'inbox';
+  /** Extra path prefixes that should ALSO highlight this nav entry. */
+  alsoActiveOn?: string[];
 }
 
 const NAV: NavItem[] = [
@@ -33,6 +36,7 @@ const NAV: NavItem[] = [
   { to: '/inspections', label: 'Inspections', icon: ClipboardCheck },
   { to: '/purchases', label: 'Purchasing', icon: Receipt },
   { to: '/documents', label: 'Documents', icon: FileText },
+  { to: '/directory', label: 'Directory', icon: Users, alsoActiveOn: ['/companies', '/contacts'] },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -71,8 +75,16 @@ const desktopLink = (isActive: boolean) =>
       : 'text-muted-foreground hover:bg-surface-1 hover:text-foreground before:bg-transparent',
   );
 
+function alsoActive(pathname: string, alsoActiveOn: string[] | undefined): boolean {
+  if (!alsoActiveOn) return false;
+  return alsoActiveOn.some(
+    (p) => pathname === p || pathname.startsWith(p + '/'),
+  );
+}
+
 export function Sidebar() {
   const inboxBadge = useInboxBadgeCount();
+  const { pathname } = useLocation();
   return (
     <aside className="bg-surface-1 border-border hidden border-r md:flex md:w-60 md:flex-col">
       <div className="border-border flex h-14 items-center border-b px-5">
@@ -88,11 +100,16 @@ export function Sidebar() {
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-0.5">
-          {NAV.map(({ to, label, icon: Icon, end, badgeKey }) => {
+          {NAV.map(({ to, label, icon: Icon, end, badgeKey, alsoActiveOn }) => {
             const badge = badgeKey === 'inbox' ? inboxBadge : 0;
+            const forceActive = alsoActive(pathname, alsoActiveOn);
             return (
               <li key={to}>
-                <NavLink to={to} end={end} className={({ isActive }) => desktopLink(isActive)}>
+                <NavLink
+                  to={to}
+                  end={end}
+                  className={({ isActive }) => desktopLink(isActive || forceActive)}
+                >
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className="flex-1">{label}</span>
                   {badge > 0 && (
@@ -138,13 +155,15 @@ export function Sidebar() {
 
 export function MobileNav() {
   const inboxBadge = useInboxBadgeCount();
+  const { pathname } = useLocation();
   return (
     <nav
       className="bg-surface-1 border-border fixed inset-x-0 bottom-0 z-40 flex h-16 border-t md:hidden"
       aria-label="Primary"
     >
-      {NAV.map(({ to, label, icon: Icon, end, badgeKey }) => {
+      {NAV.map(({ to, label, icon: Icon, end, badgeKey, alsoActiveOn }) => {
         const badge = badgeKey === 'inbox' ? inboxBadge : 0;
+        const forceActive = alsoActive(pathname, alsoActiveOn);
         return (
           <NavLink
             key={to}
@@ -154,7 +173,7 @@ export function MobileNav() {
               cn(
                 'relative flex flex-1 flex-col items-center justify-center gap-1 px-1 text-[11px] transition-colors',
                 'before:absolute before:top-0 before:h-0.5 before:w-10 before:rounded-full before:transition-colors',
-                isActive
+                (isActive || forceActive)
                   ? 'text-primary-ink before:bg-primary'
                   : 'text-muted-foreground hover:text-foreground before:bg-transparent',
               )

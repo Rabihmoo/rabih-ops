@@ -23,6 +23,10 @@ const anonKey = process.env.VITE_SUPABASE_ANON_KEY ?? '';
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const adminEmail = process.env.TEST_USER_ADMIN_EMAIL ?? '';
 const viewerEmail = process.env.TEST_USER_VIEWER_EMAIL ?? '';
+// Optional: only seeded when set. Tests that need a non-admin mutator
+// (e.g. branch-overreach in H2.2) gate themselves on the resulting
+// fixture file existing, so CI without the secret just skips cleanly.
+const managerEmail = process.env.TEST_USER_MANAGER_EMAIL ?? '';
 
 const projectRef = supabaseUrl.replace(/^https?:\/\//, '').split('.')[0];
 const STORAGE_KEY = `sb-${projectRef}-auth-token`;
@@ -163,5 +167,29 @@ setup('seed viewer', async ({ page, context }) => {
     context,
     session,
     filePath: path.join(AUTH_DIR, 'viewer.json'),
+  });
+});
+
+setup('seed manager', async ({ page, context }) => {
+  // Optional fixture — skip when the email isn't configured (CI without
+  // the secret continues to pass; specs that need this fixture gate
+  // themselves on its file existing).
+  setup.skip(
+    !managerEmail,
+    'TEST_USER_MANAGER_EMAIL not set — skipping manager fixture',
+  );
+
+  await ensureUser({
+    email: managerEmail,
+    fullName: 'E2E Manager',
+    role: 'manager',
+    branches: ['salt'],
+  });
+  const session = await mintSession(managerEmail);
+  await persistStorageState({
+    page,
+    context,
+    session,
+    filePath: path.join(AUTH_DIR, 'manager.json'),
   });
 });

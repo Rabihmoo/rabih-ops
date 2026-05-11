@@ -23,6 +23,13 @@ import { PurchasesPage } from './pages/Purchases';
 import { PurchaseNewPage } from './pages/PurchaseNew';
 import { PurchaseDetailPage } from './pages/PurchaseDetail';
 import { SettingsPage } from './pages/Settings';
+import { DirectoryPage } from './pages/Directory';
+import { CompaniesPage } from './pages/Companies';
+import { CompanyNewPage } from './pages/CompanyNew';
+import { CompanyDetailPage } from './pages/CompanyDetail';
+import { ContactsPage } from './pages/Contacts';
+import { ContactNewPage } from './pages/ContactNew';
+import { ContactDetailPage } from './pages/ContactDetail';
 import { AuthCallbackPage } from './pages/AuthCallback';
 import { Toaster } from './components/ui/toaster';
 
@@ -59,6 +66,13 @@ export default function App() {
           <Route path="/purchases" element={<PurchasesPage />} />
           <Route path="/purchases/new" element={<PurchaseNewPage />} />
           <Route path="/purchases/:id" element={<PurchaseDetailPage />} />
+          <Route path="/directory" element={<DirectoryPage />} />
+          <Route path="/companies" element={<CompaniesPage />} />
+          <Route path="/companies/new" element={<CompanyNewPage />} />
+          <Route path="/companies/:id" element={<CompanyDetailPage />} />
+          <Route path="/contacts" element={<ContactsPage />} />
+          <Route path="/contacts/new" element={<ContactNewPage />} />
+          <Route path="/contacts/:id" element={<ContactDetailPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
