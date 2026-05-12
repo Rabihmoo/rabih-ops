@@ -1,9 +1,13 @@
 import type { ReactNode } from 'react';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SearchInput } from '@/components/ui/search-input';
+import { StatusChip } from '@/components/ui/status-chip';
 
 // Shared chrome around the filter bar — wraps it in a surface-1 panel with
-// a thin border and consistent spacing.
+// a thin border and consistent spacing. When `buckets` is null the divider
+// between the bucket row and the controls row is suppressed so callers
+// that only have controls (Contacts) don't get a stray hairline.
 export function FilterPanel({
   buckets,
   controls,
@@ -22,15 +26,15 @@ export function FilterPanel({
         className,
       )}
     >
-      <div className="flex flex-wrap items-center gap-2">{buckets}</div>
-      <div className="border-border border-t pt-3">
+      {buckets && <div className="flex flex-wrap items-center gap-2">{buckets}</div>}
+      <div className={cn(buckets && 'border-border border-t pt-3')}>
         <div className="flex flex-wrap items-center gap-2">
-          <SlidersHorizontal className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+          <SlidersHorizontal className="text-foreground-56 h-3.5 w-3.5 shrink-0" />
           {controls}
           {active && (
-            <span className="bg-primary-soft text-primary-ink ml-auto inline-flex items-center rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+            <StatusChip tone="info" size="xs" className="ml-auto">
               filters active
-            </span>
+            </StatusChip>
           )}
         </div>
       </div>
@@ -79,8 +83,9 @@ export function BucketGroup<TBucket extends string>({
   );
 }
 
-// Wrapper around the search <Input> that adds a leading icon, keeping the
-// filter row visually consistent.
+// Wrapper around the shared <SearchInput> that constrains the width to
+// match the rest of the filter row. The pill style + bigger touch
+// target come from the underlying component.
 export function SearchField({
   value,
   onChange,
@@ -93,17 +98,12 @@ export function SearchField({
   className?: string;
 }) {
   return (
-    <div className={cn('relative w-full sm:max-w-xs', className)}>
-      <Search className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
-      <input
-        type="search"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="bg-card border-border focus-visible:ring-ring/70 h-9 w-full rounded-md border pl-7.5 pr-3 text-sm placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        style={{ paddingLeft: '1.875rem' }}
-      />
-    </div>
+    <SearchInput
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className={cn('w-full sm:max-w-xs', className)}
+    />
   );
 }
 

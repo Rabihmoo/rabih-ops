@@ -1,17 +1,10 @@
 import { Link } from 'react-router-dom';
-import { ChevronRight, Mail, Phone, User } from 'lucide-react';
+import { ChevronRight, Mail, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BRANCHES, type BranchCode } from '@/lib/branches';
+import { Avatar } from '@/components/ui/avatar';
+import { StatusChip } from '@/components/ui/status-chip';
 import type { ContactListItem as Item } from '@/lib/contacts';
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('');
-}
 
 export function ContactListItem({ contact }: { contact: Item }) {
   const archived = !contact.active;
@@ -32,20 +25,22 @@ export function ContactListItem({ contact }: { contact: Item }) {
         )}
       />
       <div className="flex flex-1 items-center gap-3 px-4 py-3 min-w-0">
-        <div className="bg-surface-1 text-primary-ink flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
-          {initials(contact.full_name) || <User className="h-4 w-4" />}
-        </div>
+        <Avatar
+          name={contact.full_name}
+          size="md"
+          tone={archived ? 'neutral' : 'primary'}
+        />
         <div className="min-w-0 flex-1">
-          <div className="text-foreground line-clamp-1 text-sm font-medium">
-            {contact.full_name}
+          <div className="flex items-center gap-2">
+            <span className="text-foreground line-clamp-1 text-sm font-medium">
+              {contact.full_name}
+            </span>
             {archived && (
-              <span className="text-subtle-foreground ml-2 text-[10px] uppercase tracking-wider">
-                archived
-              </span>
+              <StatusChip tone="muted" size="xs">archived</StatusChip>
             )}
           </div>
-          <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-            {contact.role && <span className="text-foreground/85">{contact.role}</span>}
+          <div className="text-foreground-72 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+            {contact.role && <span>{contact.role}</span>}
             {contact.company && (
               <>
                 {contact.role && <span className="text-subtle-foreground">·</span>}
@@ -70,11 +65,11 @@ export function ContactListItem({ contact }: { contact: Item }) {
             })}
           </div>
         </div>
-        <div className="text-subtle-foreground hidden items-center gap-3 text-xs sm:flex">
+        <div className="text-foreground-56 hidden items-center gap-3 text-xs sm:flex">
           {contact.email && <Mail className="h-3 w-3" />}
           {contact.phone && <Phone className="h-3 w-3" />}
         </div>
-        <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
+        <ChevronRight className="text-foreground-56 h-4 w-4 shrink-0" />
       </div>
     </Link>
   );
