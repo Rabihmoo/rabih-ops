@@ -3,16 +3,21 @@
 @tailwind utilities;
 
 @layer base {
-  /*
-   * RabihOS premium dark theme tokens.
-   * Light mode is kept structurally compatible for shadcn primitives but the
-   * app forces .dark on <html>; light values are not optimised for production.
-   */
+  /* =====================================================================
+   * Warm Studio — light mode (default)
+   * Warm off-white background, white cards, soft amber accent,
+   * blue primary preserved for cross-mode consistency. Phase 1
+   * rebuild — light mode is now production-grade, not "kept
+   * structurally compatible". Both modes look excellent.
+   * ===================================================================== */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 220 14% 11%;
-    --surface-1: 220 14% 98%;
-    --surface-2: 220 14% 96%;
+    /* Surface scale: page → highest popover. Four steps so cards-on-cards
+       always have a believable elevation step when unavoidable. */
+    --background: 36 33% 97%;   /* #FAFAF7 warm off-white */
+    --surface-1:  36 25% 95%;
+    --surface-2:  36 20% 92%;
+    --surface-3:  36 16% 88%;
+    --surface-4:  36 12% 82%;
 
     --card: 0 0% 100%;
     --card-foreground: 220 14% 11%;
@@ -20,24 +25,33 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 14% 11%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-    --subtle-foreground: 220 9% 60%;
+    /* Foreground hierarchy — pure → 72 → 56 → 40 (opacity). */
+    --foreground: 220 14% 11%;
+    --foreground-72: 220 14% 11% / 0.72;
+    --foreground-56: 220 14% 11% / 0.56;
+    --foreground-40: 220 14% 11% / 0.40;
 
-    --border: 220 14% 91%;
-    --border-strong: 220 14% 82%;
-    --input: 220 14% 91%;
+    --muted: 36 20% 92%;
+    --muted-foreground: 220 9% 38%;
+    --subtle-foreground: 220 9% 52%;
 
+    /* Borders slightly cooler than surfaces. */
+    --border: 220 14% 88%;
+    --border-strong: 220 14% 78%;
+    --input: 220 14% 88%;
+
+    /* Blue primary, warm amber accent. */
     --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
     --primary-hover: 221 83% 48%;
     --primary-ink: 221 83% 35%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 14% 11%;
-
-    --accent: 220 14% 96%;
+    --accent: 43 96% 56%;          /* #FBBF24 */
     --accent-foreground: 220 14% 11%;
+    --accent-ink: 38 92% 35%;
+
+    --secondary: 36 20% 92%;
+    --secondary-foreground: 220 14% 11%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -47,83 +61,94 @@
     --warning-foreground: 0 0% 100%;
     --warning-ink: 38 92% 35%;
 
-    --success: 142 71% 45%;
+    --success: 142 71% 38%;
     --success-foreground: 0 0% 100%;
-    --success-ink: 142 71% 30%;
+    --success-ink: 142 71% 28%;
 
     --ring: 221 83% 53%;
 
-    --radius: 0.5rem;
-    --radius-sm: 0.375rem;
-    --radius-xs: 0.25rem;
+    /* Radius scale — premium-tuned. Default Card / Button is 12px;
+       16/20/24 are opt-in for content cards / hero / ambient surfaces. */
+    --radius-xs: 0.375rem;     /*  6px */
+    --radius-sm: 0.5rem;       /*  8px */
+    --radius:    0.75rem;      /* 12px — default */
+    --radius-lg: 1rem;         /* 16px — content cards */
+    --radius-xl: 1.25rem;      /* 20px — hero cards */
+    --radius-2xl: 1.5rem;      /* 24px — login / ambient surfaces */
+
+    /* Glow ramps — defined for cross-mode tokens; light mode prefers
+       warm shadows over glow, but the .glow-* utilities still resolve. */
+    --glow-blue:        221 83% 53%;
+    --glow-amber:       43 96% 56%;
+    --glow-success:     142 71% 38%;
+    --glow-destructive: 0 84% 60%;
   }
 
+  /* =====================================================================
+   * OLED Command Center — dark mode (forced default on <html class="dark">)
+   * Pure black base, four elevated surfaces, blue ambient glow,
+   * 6%-white borders (Linear/Vercel signature).
+   * ===================================================================== */
   .dark {
-    /*
-     * Background scale — 3% lightness steps on a near-black, cool-tinted base.
-     * background → surface-1 → card → surface-2 → popover.
-     */
-    --background: 220 14% 4%;
-    --foreground: 220 14% 96%;
-    --surface-1: 220 14% 7%;
-    --surface-2: 220 14% 12%;
+    --background: 0 0% 0%;           /* #000000 OLED true black */
+    --surface-1:  240 8% 5%;         /* #08080C */
+    --surface-2:  240 8% 7%;         /* #0E0E14 */
+    --surface-3:  240 9% 9%;         /* #15151D */
+    --surface-4:  240 8% 13%;        /* elevated popover */
 
-    --card: 220 14% 9%;
-    --card-foreground: 220 14% 96%;
+    --card: 240 8% 5%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 220 14% 14%;
-    --popover-foreground: 220 14% 96%;
+    --popover: 240 8% 9%;
+    --popover-foreground: 0 0% 100%;
 
-    --muted: 220 14% 11%;
-    --muted-foreground: 220 9% 64%;
-    --subtle-foreground: 220 9% 48%;
+    /* Foreground: 100% / 72% / 56% / 40%. */
+    --foreground: 0 0% 100%;
+    --foreground-72: 0 0% 100% / 0.72;
+    --foreground-56: 0 0% 100% / 0.56;
+    --foreground-40: 0 0% 100% / 0.40;
 
-    --border: 220 14% 18%;
-    --border-strong: 220 14% 24%;
-    --input: 220 14% 18%;
+    --muted: 240 8% 9%;
+    --muted-foreground: 0 0% 72%;
+    --subtle-foreground: 0 0% 50%;
 
-    /*
-     * Primary is the system-wide action / active accent — blue #2563eb.
-     * Defined separately from the SALT branch dot (#3b82f6, slightly brighter)
-     * so the two can diverge later if the brand demands it.
-     */
-    --primary: 221 83% 53%;
+    /* 6% white border — Linear / Vercel signature. */
+    --border: 0 0% 100% / 0.06;
+    --border-strong: 0 0% 100% / 0.12;
+    --input: 0 0% 100% / 0.10;
+
+    /* Blue primary brighter on dark (#3B82F6). Glow tint #60A5FA. */
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 221 83% 48%;
-    --primary-ink: 213 94% 68%;
+    --primary-hover: 217 91% 66%;
+    --primary-ink: 213 94% 78%;
 
-    --secondary: 220 14% 11%;
-    --secondary-foreground: 220 14% 96%;
+    --accent: 43 96% 60%;
+    --accent-foreground: 0 0% 0%;
+    --accent-ink: 46 97% 70%;
 
-    --accent: 220 14% 12%;
-    --accent-foreground: 220 14% 96%;
+    --secondary: 240 8% 9%;
+    --secondary-foreground: 0 0% 100%;
 
-    /*
-     * Semantic palette. Each role has three forms:
-     *   --X            solid fill (buttons, dot indicators)
-     *   --X-foreground text on top of the solid fill (white)
-     *   --X-ink        text on top of bg-X-soft (brighter, AA / AAA on dark)
-     *
-     * Soft fills are computed in tailwind.config as `hsl(var(--X) / 0.14)`.
-     * Contrast verified on near-black surface:
-     *   warning-ink on warning-soft = 9.6:1  (AAA)
-     *   destructive-ink on destructive-soft = 5.6:1 (AA)
-     *   success-ink on success-soft = 7.1:1 (AAA)
-     *   primary-ink on primary-soft = 8.0:1 (AAA)
-     */
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 62%;
     --destructive-foreground: 0 0% 100%;
-    --destructive-ink: 0 91% 71%;
+    --destructive-ink: 0 91% 75%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --warning-ink: 46 97% 65%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 0%;
+    --warning-ink: 46 97% 68%;
 
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
-    --success-ink: 142 71% 60%;
+    --success: 142 71% 50%;
+    --success-foreground: 0 0% 0%;
+    --success-ink: 142 71% 65%;
 
-    --ring: 217 91% 60%;
+    --ring: 217 91% 65%;
+
+    /* Glow ramps — brighter than primary so the halo reads on near-black. */
+    --glow-blue:        217 91% 70%;
+    --glow-amber:       43 96% 65%;
+    --glow-success:     142 71% 60%;
+    --glow-destructive: 0 91% 70%;
   }
 }
 
@@ -137,14 +162,18 @@
     @apply h-full;
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
     /*
-     * Inter character variants:
-     *   cv11 — open digit 4 / single-storey 1
-     *   ss01 — alternate 6 / 9
-     *   ss03 — single-storey g / a (more legible at small sizes)
-     *   rlig + calt — required ligatures + contextual alternates (default Inter)
+     * Font stack falls back to system fonts. Inter / Geist can be loaded
+     * locally (npm or self-hosted) in a later phase if we want the exact
+     * SaaS look. We deliberately do NOT load from Google Fonts to avoid
+     * external dependency, render delay, and privacy variance.
+     *
+     * The OpenType feature settings below activate when Inter is actually
+     * loaded; they're harmless no-ops on system fonts.
      */
+    font-family: 'Inter', 'Geist', system-ui, -apple-system, BlinkMacSystemFont,
+      'Segoe UI', sans-serif;
     font-feature-settings:
       'cv11' 1,
       'ss01' 1,
@@ -152,14 +181,69 @@
       'rlig' 1,
       'calt' 1;
   }
+
+  /* Hero numbers — opt-in via .text-tabular. */
+  .text-tabular {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
 }
 
 @layer components {
   /*
    * Opt-in section label. Apply to <h2>/<h3>/<div> when a header should read
    * as a column / panel label rather than a page title. Not applied globally.
+   * (Pre-existing — kept verbatim so existing callers don't change.)
    */
   .text-section-label {
     @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+
+  /*
+   * Ambient gradient backgrounds. Apply to <main> or the wrapper of a
+   * hero card / login / empty-state surface. NEVER on operational pages —
+   * they kill scannability. Use sparingly.
+   */
+  .bg-ambient-dark {
+    background:
+      radial-gradient(80% 50% at 50% -10%, hsl(217 91% 60% / 0.10), transparent 60%),
+      radial-gradient(60% 40% at 100% 100%, hsl(217 91% 60% / 0.05), transparent 60%),
+      hsl(var(--background));
+  }
+  .bg-ambient-light {
+    background:
+      radial-gradient(80% 50% at 50% -10%, hsl(43 96% 56% / 0.08), transparent 60%),
+      radial-gradient(60% 40% at 100% 100%, hsl(221 83% 53% / 0.05), transparent 60%),
+      hsl(var(--background));
+  }
+}
+
+@layer utilities {
+  /*
+   * Glow utility — opt-in box-shadow. Use ONLY on:
+   *   - active dashboard tiles (status-coloured glow)
+   *   - hero cards on login / empty states
+   *   - the primary CTA when emphasis is warranted
+   * Do NOT apply to list rows, sidebar items, or anything dense.
+   */
+  .glow-blue {
+    box-shadow:
+      0 0 0 1px hsl(var(--glow-blue) / 0.15),
+      0 8px 32px -8px hsl(var(--glow-blue) / 0.35);
+  }
+  .glow-amber {
+    box-shadow:
+      0 0 0 1px hsl(var(--glow-amber) / 0.18),
+      0 8px 32px -8px hsl(var(--glow-amber) / 0.30);
+  }
+  .glow-success {
+    box-shadow:
+      0 0 0 1px hsl(var(--glow-success) / 0.18),
+      0 8px 32px -8px hsl(var(--glow-success) / 0.30);
+  }
+  .glow-destructive {
+    box-shadow:
+      0 0 0 1px hsl(var(--glow-destructive) / 0.18),
+      0 8px 32px -8px hsl(var(--glow-destructive) / 0.30);
   }
 }
