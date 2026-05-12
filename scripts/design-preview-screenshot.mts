@@ -159,14 +159,18 @@ interface PageCapture {
 }
 
 const PHASE_4_PAGES: PageCapture[] = [
-  { slug: 'dashboard',  route: '/',           settle: 'h1' },
-  { slug: 'inbox',      route: '/inbox',      settle: 'h1' },
-  { slug: 'tasks',      route: '/tasks',      settle: 'h1' },
-  { slug: 'follow-ups', route: '/follow-ups', settle: 'h1' },
-  { slug: 'settings',   route: '/settings',   settle: 'h1' },
-  { slug: 'directory',  route: '/directory',  settle: 'h1' },
-  { slug: 'companies',  route: '/companies',  settle: 'h1' },
-  { slug: 'contacts',   route: '/contacts',   settle: 'h1' },
+  { slug: 'dashboard',   route: '/',            settle: 'h1' },
+  { slug: 'inbox',       route: '/inbox',       settle: 'h1' },
+  { slug: 'tasks',       route: '/tasks',       settle: 'h1' },
+  { slug: 'follow-ups',  route: '/follow-ups',  settle: 'h1' },
+  { slug: 'settings',    route: '/settings',    settle: 'h1' },
+  { slug: 'directory',   route: '/directory',   settle: 'h1' },
+  { slug: 'companies',   route: '/companies',   settle: 'h1' },
+  { slug: 'contacts',    route: '/contacts',    settle: 'h1' },
+  { slug: 'documents',   route: '/documents',   settle: 'h1' },
+  { slug: 'purchases',   route: '/purchases',   settle: 'h1' },
+  { slug: 'inspections', route: '/inspections', settle: 'h1' },
+  { slug: 'fixed-tasks', route: '/fixed-tasks', settle: 'h1' },
 ];
 
 // Desktop captures.
@@ -215,10 +219,15 @@ interface DetailCapture {
 }
 
 const DETAIL_PAGES: DetailCapture[] = [
-  // Both list pages default to the "Today" bucket which can legitimately be
-  // empty in staging. Click the broadest filter so the row selector matches.
-  { slug: 'task-detail',      listRoute: '/tasks',      rowSelector: 'ul li button', broadFilter: 'Active' },
-  { slug: 'follow-up-detail', listRoute: '/follow-ups', rowSelector: 'ul li button', broadFilter: 'All' },
+  // Click the broadest filter so the row selector matches even when the
+  // page defaults to an empty bucket. `broadFilter: ''` skips the click
+  // for pages that don't have a default filter that excludes rows.
+  { slug: 'task-detail',       listRoute: '/tasks',       rowSelector: 'ul li button', broadFilter: 'Active' },
+  { slug: 'follow-up-detail',  listRoute: '/follow-ups',  rowSelector: 'ul li button', broadFilter: 'All'    },
+  { slug: 'document-detail',   listRoute: '/documents',   rowSelector: 'ul li a',      broadFilter: ''       },
+  { slug: 'purchase-detail',   listRoute: '/purchases',   rowSelector: 'ul li button', broadFilter: 'All'    },
+  { slug: 'inspection-detail', listRoute: '/inspections', rowSelector: 'ul li button', broadFilter: 'All'    },
+  { slug: 'fixed-task-detail', listRoute: '/fixed-tasks', rowSelector: 'ul li a',      broadFilter: ''       },
 ];
 
 {
@@ -228,16 +237,17 @@ const DETAIL_PAGES: DetailCapture[] = [
     for (const theme of ['dark', 'light'] as const) {
       await gotoRoute(page, d.listRoute, 'h1');
       await applyTheme(page, theme);
-      // Switch to the broad bucket so we have something to click.
-      // Bucket buttons carry role="tab" (Phase 5 polish) — fall back to
-      // text matching if no tablist is present.
-      const filter = page.getByRole('tab', { name: d.broadFilter, exact: true }).first();
-      await filter.click();
+      // Switch to the broad bucket so we have something to click. Skip
+      // when broadFilter is empty (page has no bucket-group filter).
+      if (d.broadFilter) {
+        const filter = page.getByRole('tab', { name: d.broadFilter, exact: true }).first();
+        await filter.click();
+      }
       // Wait for the row list to render after the filter change.
       try {
         await page.waitForSelector(d.rowSelector, { timeout: 5000 });
       } catch {
-        console.log(`⚠ ${d.slug}-${theme}: no rows under ${d.broadFilter}, skipping`);
+        console.log(`⚠ ${d.slug}-${theme}: no rows, skipping`);
         continue;
       }
       const row = page.locator(d.rowSelector).first();
