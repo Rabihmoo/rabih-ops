@@ -6,6 +6,7 @@ import {
   HandshakeIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { StatusChip, type StatusTone } from '@/components/ui/status-chip';
 import type { FollowUpCategory, FollowUpStatus } from '@/types/database';
 
 const STATUS_LABEL: Record<FollowUpStatus, string> = {
@@ -15,15 +16,15 @@ const STATUS_LABEL: Record<FollowUpStatus, string> = {
   cancelled: 'Cancelled',
 };
 
-const STATUS_CLASSES: Record<FollowUpStatus, string> = {
-  pending: 'bg-muted text-muted-foreground',
-  done: 'bg-success-soft text-success-ink',
-  snoozed: 'bg-warning-soft text-warning-ink',
-  cancelled: 'bg-muted text-subtle-foreground line-through',
+// Map FollowUpStatus to a StatusChip tone. Cancelled stays muted (no
+// strikethrough — StatusChip doesn't carry one) because the closed
+// state already line-throughs the title at the row + detail level.
+const STATUS_TONE: Record<FollowUpStatus, StatusTone> = {
+  pending:   'muted',
+  done:      'success',
+  snoozed:   'warning',
+  cancelled: 'muted',
 };
-
-const PILL_BASE =
-  'inline-flex items-center rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider';
 
 export function FollowUpStatusBadge({
   status,
@@ -33,9 +34,9 @@ export function FollowUpStatusBadge({
   className?: string;
 }) {
   return (
-    <span className={cn(PILL_BASE, STATUS_CLASSES[status], className)}>
+    <StatusChip tone={STATUS_TONE[status]} size="xs" className={className}>
       {STATUS_LABEL[status]}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -66,7 +67,7 @@ export function FollowUpCategoryBadge({
   return (
     <span
       className={cn(
-        'text-foreground/85 inline-flex items-center gap-1.5 text-xs font-medium',
+        'text-foreground-72 inline-flex items-center gap-1.5 text-xs font-medium',
         className,
       )}
     >

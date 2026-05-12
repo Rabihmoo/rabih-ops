@@ -201,7 +201,7 @@ export function FollowUpDetailPage() {
             <div className="text-section-label">Snooze</div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-foreground/90 text-xs font-medium" htmlFor="snooze-date">
+                <label className="text-foreground-72 text-xs font-medium" htmlFor="snooze-date">
                   Snooze until
                 </label>
                 <Input
@@ -213,7 +213,7 @@ export function FollowUpDetailPage() {
               </div>
               <div className="space-y-1">
                 <label
-                  className="text-foreground/90 text-xs font-medium"
+                  className="text-foreground-72 text-xs font-medium"
                   htmlFor="snooze-reason"
                 >
                   Reason (optional)
@@ -271,7 +271,7 @@ export function FollowUpDetailPage() {
               {row.description && (
                 <div className="space-y-2">
                   <div className="text-section-label">Description</div>
-                  <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
+                  <p className="text-foreground-72 text-sm leading-relaxed whitespace-pre-wrap">
                     {row.description}
                   </p>
                 </div>
@@ -279,7 +279,7 @@ export function FollowUpDetailPage() {
               {row.outcome && (
                 <div className="space-y-2">
                   <div className="text-section-label">Outcome</div>
-                  <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
+                  <p className="text-foreground-72 text-sm leading-relaxed whitespace-pre-wrap">
                     {row.outcome}
                   </p>
                 </div>
@@ -295,7 +295,7 @@ export function FollowUpDetailPage() {
           <div className="text-section-label flex items-center gap-2">
             Comments
             {comments.length > 0 && (
-              <span className="text-foreground/85 normal-case tracking-normal">
+              <span className="text-foreground-72 normal-case tracking-normal">
                 ({comments.length})
               </span>
             )}
@@ -318,7 +318,7 @@ export function FollowUpDetailPage() {
           <div className="text-section-label flex items-center gap-2">
             Attachments
             {attachments.length > 0 && (
-              <span className="text-foreground/85 normal-case tracking-normal">
+              <span className="text-foreground-72 normal-case tracking-normal">
                 ({attachments.length})
               </span>
             )}

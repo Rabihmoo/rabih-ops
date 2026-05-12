@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2, PhoneCall, Plus } from 'lucide-react';
+import { PhoneCall, Plus, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFollowUpList } from '@/hooks/useFollowUps';
 import { useFollowUpFiltersStore } from '@/stores/followUpFiltersStore';
@@ -119,13 +119,17 @@ function FollowUpsEmpty() {
     },
   };
 
+  // True all-clear: the unfiltered "all" bucket is empty. Anything else
+  // is a filter result, so it gets the muted treatment per Phase 4.2.
+  const isAllClear = bucket === 'all';
   const c = COPY[bucket];
   return (
     <EmptyState
-      icon={bucket === 'overdue' || bucket === 'today' ? CheckCircle2 : PhoneCall}
+      icon={isAllClear ? ShieldCheck : PhoneCall}
       title={c.title}
       description={c.description}
-      tone={bucket === 'overdue' || bucket === 'today' ? 'success' : 'muted'}
+      tone={isAllClear ? 'hero' : 'muted'}
+      size={isAllClear ? 'tall' : 'default'}
       action={
         canMutate && bucket !== 'overdue' && bucket !== 'today' ? (
           <Button size="sm" asChild>
