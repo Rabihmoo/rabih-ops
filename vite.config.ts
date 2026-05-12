@@ -15,8 +15,12 @@ export default defineConfig(({ mode }) => {
           name: 'Rabih Ops',
           short_name: 'RabihOps',
           description: 'Operations management for BBQ House, SALT, Central Kitchen, Executive Cleaning',
-          theme_color: '#0f172a',
-          background_color: '#0f172a',
+          // OLED Command Center splash on install. The runtime
+          // <meta name="theme-color"> is flipped dynamically by the
+          // pre-mount script in index.html when the user picks a
+          // theme; this manifest is the *installed PWA splash*.
+          theme_color: '#000000',
+          background_color: '#000000',
           display: 'standalone',
           start_url: '/',
           icons: [
