@@ -1,3 +1,4 @@
+import type { RefObject } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, Inbox, ListChecks, PhoneCall, Menu, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -35,7 +36,14 @@ const slotClass = (isActive: boolean) =>
       : 'text-foreground-72 hover:text-foreground before:bg-transparent',
   );
 
-export function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
+export function MobileBottomNav({
+  onMoreClick,
+  moreTriggerRef,
+}: {
+  onMoreClick: () => void;
+  // Owned by AppLayout so the drawer's onClose can restore focus here.
+  moreTriggerRef?: RefObject<HTMLButtonElement>;
+}) {
   const inboxBadge = useInboxBadgeCount();
   return (
     <nav
@@ -68,6 +76,7 @@ export function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
       })}
 
       <button
+        ref={moreTriggerRef}
         type="button"
         onClick={onMoreClick}
         className={cn(

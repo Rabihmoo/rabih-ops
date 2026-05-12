@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -8,6 +8,18 @@ import { MobileDrawer } from './MobileDrawer';
 
 export function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Holds the "More" bottom-nav button so onClose can hand focus back
+  // to it after ESC / backdrop / close-button / route-change closes
+  // the drawer. Keyboard users keep their place in the bottom bar.
+  const moreTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const handleDrawerClose = () => {
+    setDrawerOpen(false);
+    // Defer focus until after the close transition starts so the
+    // browser doesn't fight us mid-animation.
+    window.setTimeout(() => moreTriggerRef.current?.focus(), 0);
+  };
+
   return (
     <div className="bg-background text-foreground flex h-full min-h-screen flex-col md:flex-row">
       <Sidebar />
@@ -18,8 +30,11 @@ export function AppLayout() {
         </main>
         <OfflineIndicator />
       </div>
-      <MobileBottomNav onMoreClick={() => setDrawerOpen(true)} />
-      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <MobileBottomNav
+        onMoreClick={() => setDrawerOpen(true)}
+        moreTriggerRef={moreTriggerRef}
+      />
+      <MobileDrawer open={drawerOpen} onClose={handleDrawerClose} />
     </div>
   );
 }
