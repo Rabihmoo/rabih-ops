@@ -7,12 +7,13 @@ import {
   DOCUMENT_STATUS_LABEL,
   type DocumentListItem as Doc,
 } from '@/lib/documents';
+import { StatusChip, type StatusTone } from '@/components/ui/status-chip';
 import type { DocumentCategory, DocumentStatus } from '@/types/database';
 
-const STATUS_TONE: Record<string, string> = {
-  draft: 'bg-warning-soft text-warning-ink',
-  active: 'bg-success-soft text-success-ink',
-  archived: 'bg-muted text-subtle-foreground',
+const STATUS_TONE: Record<string, StatusTone> = {
+  draft: 'warning',
+  active: 'success',
+  archived: 'muted',
 };
 
 export function DocumentListItem({ doc }: { doc: Doc }) {
@@ -54,13 +55,13 @@ export function DocumentListItem({ doc }: { doc: Doc }) {
             </div>
             {doc.snippet && (
               <p
-                className="text-muted-foreground mt-1 line-clamp-2 text-xs"
+                className="text-foreground-72 mt-1 line-clamp-2 text-xs"
                 // ts_headline returns markup with «...» highlighting; render escaped.
                 dangerouslySetInnerHTML={{ __html: doc.snippet.replace(/«/g, '<mark>').replace(/»/g, '</mark>') }}
               />
             )}
           </div>
-          <span className="text-subtle-foreground shrink-0 text-xs">
+          <span className="text-foreground-56 shrink-0 text-xs">
             {new Date(doc.updated_at).toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric',
@@ -68,19 +69,14 @@ export function DocumentListItem({ doc }: { doc: Doc }) {
           </span>
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-          <span className="border-border text-foreground/85 inline-flex items-center gap-1 rounded-xs border px-1.5 py-0.5 text-[10px] uppercase tracking-wider">
-            <FileText className="h-3 w-3" /> {DOCUMENT_CATEGORY_LABEL[doc.category as DocumentCategory]}
-          </span>
-          <span
-            className={cn(
-              'inline-flex items-center rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
-              STATUS_TONE[doc.status] ?? 'bg-muted text-muted-foreground',
-            )}
-          >
+          <StatusChip tone="muted" size="xs" icon={FileText}>
+            {DOCUMENT_CATEGORY_LABEL[doc.category as DocumentCategory]}
+          </StatusChip>
+          <StatusChip tone={STATUS_TONE[doc.status] ?? 'muted'} size="xs">
             {DOCUMENT_STATUS_LABEL[doc.status as DocumentStatus]}
-          </span>
+          </StatusChip>
           {branchMeta && (
-            <span className="text-foreground/85 inline-flex items-center gap-1.5 text-xs">
+            <span className="text-foreground-72 inline-flex items-center gap-1.5 text-xs">
               <span
                 aria-hidden
                 className="h-1.5 w-1.5 rounded-full"
@@ -96,7 +92,7 @@ export function DocumentListItem({ doc }: { doc: Doc }) {
       </div>
       <ChevronRight
         aria-hidden
-        className="text-muted-foreground/0 group-hover:text-muted-foreground mr-3 h-4 w-4 self-center shrink-0 transition-colors"
+        className="text-foreground-56/0 group-hover:text-foreground-56 mr-3 h-4 w-4 self-center shrink-0 transition-colors"
       />
     </Link>
   );

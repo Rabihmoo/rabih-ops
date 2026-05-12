@@ -15,7 +15,14 @@ import { marked } from 'marked';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { StatusChip, type StatusTone } from '@/components/ui/status-chip';
 import { toast } from '@/components/ui/toaster';
+
+const STATUS_TONE: Record<string, StatusTone> = {
+  draft: 'warning',
+  active: 'success',
+  archived: 'muted',
+};
 import { AuditList } from '@/components/shared/AuditList';
 import { CommentList } from '@/components/shared/CommentList';
 import { AttachmentList } from '@/components/shared/AttachmentList';
@@ -163,14 +170,14 @@ export function DocumentDetailPage() {
             {doc.title}
           </h1>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <span className="bg-primary-soft text-primary-ink rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+            <StatusChip tone="info" size="xs">
               {DOCUMENT_CATEGORY_LABEL[doc.category as keyof typeof DOCUMENT_CATEGORY_LABEL]}
-            </span>
-            <span className="bg-muted text-muted-foreground rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+            </StatusChip>
+            <StatusChip tone={STATUS_TONE[doc.status] ?? 'muted'} size="xs">
               {DOCUMENT_STATUS_LABEL[doc.status as keyof typeof DOCUMENT_STATUS_LABEL]}
-            </span>
+            </StatusChip>
             {branchMeta && (
-              <span className="text-foreground/85 inline-flex items-center gap-1.5 text-xs">
+              <span className="text-foreground-72 inline-flex items-center gap-1.5 text-xs">
                 <span
                   aria-hidden
                   className="h-1.5 w-1.5 rounded-full"
@@ -316,7 +323,7 @@ export function DocumentDetailPage() {
             <ul className="divide-border divide-y">
               {data.versions.map((v) => (
                 <li key={v.id} className="flex items-start gap-3 py-2.5">
-                  <span className="text-foreground/85 w-12 shrink-0 text-sm font-medium tabular-nums">
+                  <span className="text-foreground-72 w-12 shrink-0 text-sm font-medium tabular-nums">
                     v{v.version_no}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -350,7 +357,7 @@ export function DocumentDetailPage() {
           <div className="text-section-label flex items-center gap-2">
             Comments
             {data.comments.length > 0 && (
-              <span className="text-foreground/85 normal-case tracking-normal">
+              <span className="text-foreground-72 normal-case tracking-normal">
                 ({data.comments.length})
               </span>
             )}
@@ -371,7 +378,7 @@ export function DocumentDetailPage() {
           <div className="text-section-label flex items-center gap-2">
             Attachments
             {data.attachments.length > 0 && (
-              <span className="text-foreground/85 normal-case tracking-normal">
+              <span className="text-foreground-72 normal-case tracking-normal">
                 ({data.attachments.length})
               </span>
             )}

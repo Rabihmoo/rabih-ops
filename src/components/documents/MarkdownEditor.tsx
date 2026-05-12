@@ -47,7 +47,7 @@ export function MarkdownEditor({
             'inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-xs font-medium transition-colors',
             mode === 'edit'
               ? 'border-primary bg-primary-soft text-primary-ink'
-              : 'border-border text-foreground/85 hover:bg-surface-1',
+              : 'border-border text-foreground-72 hover:bg-surface-1',
           )}
         >
           <Pencil className="h-3 w-3" /> Edit
@@ -59,7 +59,7 @@ export function MarkdownEditor({
             'inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-xs font-medium transition-colors',
             mode === 'preview'
               ? 'border-primary bg-primary-soft text-primary-ink'
-              : 'border-border text-foreground/85 hover:bg-surface-1',
+              : 'border-border text-foreground-72 hover:bg-surface-1',
           )}
         >
           <Eye className="h-3 w-3" /> Preview
