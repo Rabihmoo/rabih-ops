@@ -43,6 +43,14 @@ export function FilterPanel({
 }
 
 // Segmented-control bucket selector.
+//
+// Phase 5 polish — the inline-flex pill row overflows narrow viewports
+// with long bucket lists (Companies' 9 categories, Tasks' 8 buckets).
+// We wrap the segmented control in an `overflow-x-auto` scroller so
+// the buttons stay single-line (`whitespace-nowrap`) without "Needs
+// repeat" wrapping inside its own pill. A thin scrollbar shows up
+// only when the content actually overflows; touch swipe works on
+// mobile, mouse-drag/scroll-wheel works on desktop.
 export function BucketGroup<TBucket extends string>({
   buckets,
   active,
@@ -55,30 +63,32 @@ export function BucketGroup<TBucket extends string>({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        'bg-background border-border inline-flex rounded-md border p-0.5',
-        className,
-      )}
-    >
-      {buckets.map((b) => {
-        const isActive = active === b.id;
-        return (
-          <button
-            key={b.id}
-            type="button"
-            onClick={() => onSelect(b.id)}
-            className={cn(
-              'rounded-sm px-3 py-1.5 text-xs font-medium transition-colors',
-              isActive
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:bg-surface-2 hover:text-foreground',
-            )}
-          >
-            {b.label}
-          </button>
-        );
-      })}
+    <div className={cn('scrollbar-thin -mx-0.5 max-w-full overflow-x-auto', className)}>
+      <div
+        className="bg-background border-border inline-flex rounded-md border p-0.5"
+        role="tablist"
+      >
+        {buckets.map((b) => {
+          const isActive = active === b.id;
+          return (
+            <button
+              key={b.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onSelect(b.id)}
+              className={cn(
+                'whitespace-nowrap rounded-sm px-3 py-1.5 text-xs font-medium transition-colors',
+                isActive
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-foreground-72 hover:bg-surface-2 hover:text-foreground',
+              )}
+            >
+              {b.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
