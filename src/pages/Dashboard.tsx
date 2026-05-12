@@ -15,10 +15,12 @@ import {
   ShieldAlert,
   ShieldCheck,
   TimerReset,
-  type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
+import { DashboardTile } from '@/components/ui/dashboard-tile';
+import { AmbientBackground } from '@/components/ui/ambient-background';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { useCurrentUserProfile, useSession } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
 import { useTaskFiltersStore, type TaskBucket } from '@/stores/taskFiltersStore';
@@ -198,64 +200,6 @@ const TONE_CLASS: Record<
 };
 
 // =========================================================
-// Stat tile
-// =========================================================
-
-function StatTile({
-  label,
-  tone,
-  icon: Icon,
-  count,
-  isLoading,
-  to,
-  onView,
-}: {
-  label: string;
-  tone: Tone;
-  icon: LucideIcon;
-  count: number | null;
-  isLoading: boolean;
-  to: string;
-  onView: () => void;
-}) {
-  const isEmpty = (count ?? 0) === 0;
-  const t = isEmpty ? TONE_CLASS.muted : TONE_CLASS[tone];
-
-  return (
-    <Card className="relative overflow-hidden">
-      <div className={cn('absolute left-0 top-0 bottom-0 w-1', t.bar)} aria-hidden />
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between">
-          <span className={cn('text-xs font-semibold uppercase tracking-wider', t.label)}>
-            {label}
-          </span>
-          <Icon className={cn('h-4 w-4', t.icon)} />
-        </div>
-        <div
-          className={cn(
-            'mt-3 text-4xl font-bold tabular-nums tracking-tight leading-none',
-            t.number,
-          )}
-        >
-          {isLoading ? (
-            <Loader2 className="text-muted-foreground h-7 w-7 animate-spin" />
-          ) : (
-            (count ?? '—')
-          )}
-        </div>
-        <Link
-          to={to}
-          onClick={onView}
-          className="text-muted-foreground hover:text-foreground mt-4 inline-flex items-center text-xs font-medium transition-colors"
-        >
-          View all <ArrowRight className="ml-1 h-3 w-3" />
-        </Link>
-      </CardContent>
-    </Card>
-  );
-}
-
-// =========================================================
 // Compact rows for the lists below the tiles
 // =========================================================
 
@@ -407,7 +351,8 @@ function CompactList<T>({
     <Card>
       <CardContent className="p-5">
         <div className="border-border mb-2 flex items-baseline justify-between border-b pb-3">
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-center gap-2">
+            <span aria-hidden className={cn('h-1.5 w-1.5 shrink-0 rounded-full', t.bar)} />
             <span className={cn('text-xs font-semibold uppercase tracking-wider', t.label)}>
               {label}
             </span>
@@ -516,16 +461,15 @@ export function DashboardPage() {
     purchaseReminders.length === 0;
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1.5">
-        <h1 className="text-foreground text-3xl font-semibold tracking-tight">
-          {greeting}, {displayName}.
-        </h1>
-        <p className="text-muted-foreground text-sm">{dateLabel}</p>
-      </header>
+    <AmbientBackground intensity="subtle" className="-mx-4 -mt-4 -mb-[76px] px-4 pt-4 pb-[76px] md:-mx-6 md:-my-6 md:px-6 md:py-6">
+      <div className="space-y-6">
+      <PageHeader
+        eyebrow={dateLabel}
+        title={`${greeting}, ${displayName}.`}
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-        <StatTile
+        <DashboardTile
           label="Critical findings"
           tone="destructive"
           icon={ShieldAlert}
@@ -536,7 +480,7 @@ export function DashboardPage() {
             /* no bucket — list shows recent inspections, findings opened via detail */
           }}
         />
-        <StatTile
+        <DashboardTile
           label="Overdue"
           tone="destructive"
           icon={AlertTriangle}
@@ -545,7 +489,7 @@ export function DashboardPage() {
           to="/tasks"
           onView={goToTasksBucket('overdue')}
         />
-        <StatTile
+        <DashboardTile
           label="Today"
           tone="warning"
           icon={ListChecks}
@@ -554,7 +498,7 @@ export function DashboardPage() {
           to="/tasks"
           onView={goToTasksBucket('today')}
         />
-        <StatTile
+        <DashboardTile
           label="My tasks"
           tone="primary"
           icon={Clock}
@@ -563,7 +507,7 @@ export function DashboardPage() {
           to="/tasks"
           onView={goToTasksBucket('mine')}
         />
-        <StatTile
+        <DashboardTile
           label="Waiting"
           tone="warning"
           icon={Hand}
@@ -572,7 +516,7 @@ export function DashboardPage() {
           to="/tasks"
           onView={goToTasksBucket('waiting')}
         />
-        <StatTile
+        <DashboardTile
           label="Delayed"
           tone="destructive"
           icon={TimerReset}
@@ -581,7 +525,7 @@ export function DashboardPage() {
           to="/tasks"
           onView={goToTasksBucket('delayed')}
         />
-        <StatTile
+        <DashboardTile
           label="Needs repeat"
           tone="destructive"
           icon={Repeat2}
@@ -590,7 +534,7 @@ export function DashboardPage() {
           to="/tasks"
           onView={goToTasksBucket('repeat')}
         />
-        <StatTile
+        <DashboardTile
           label="Follow-ups today"
           tone="primary"
           icon={PhoneCall}
@@ -806,7 +750,8 @@ export function DashboardPage() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </AmbientBackground>
   );
 }
 
