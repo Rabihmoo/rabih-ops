@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { StatusChip, type StatusTone } from '@/components/ui/status-chip';
 import { toast } from '@/components/ui/toast';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { LinkedRecordsPanel } from '@/components/shared/LinkedRecordsPanel';
 import { NoteForm } from '@/components/notes/NoteForm';
 import {
   useArchiveNote,
@@ -286,6 +287,15 @@ export function NoteDetailPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Phase H4.2 — read-only universal Linked Records panel.
+          Mounted on NoteDetail only for now (Notes has no legacy
+          LinkedDocumentsCard/LinkedEmailsCard to coexist with).
+          Adding to other detail pages lands in H4.7 after the
+          add/link/unlink chunks. */}
+      {!editing && (
+        <LinkedRecordsPanel entityType="note" entityId={noteId} />
       )}
 
       {kind === 'decision' && !editing &&

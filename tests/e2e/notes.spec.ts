@@ -87,6 +87,31 @@ test.describe('Notes — admin happy path', () => {
   });
 });
 
+test.describe('Notes — Linked Records panel (Phase H4.2 read-only)', () => {
+  test.use({ storageState: 'tests/fixtures/.auth/admin.json' });
+
+  test('panel mounts on note detail with empty state when no relations', async ({ page }) => {
+    const title = `Linked-records target ${Date.now()}`;
+
+    // Create a note so we have a detail page to land on.
+    await page.goto('/notes/new');
+    await page.getByTestId('note-title-input').fill(title);
+    await page.getByTestId('markdown-textarea').fill('Body for linked-records smoke.');
+    await page.getByTestId('note-submit-button').click();
+    await page.waitForURL(/\/notes\/[0-9a-f-]+$/);
+    // Wait for the detail page to settle past its loading state.
+    await expect(page.getByRole('heading', { name: title })).toBeVisible();
+
+    // Panel renders, with empty-state hint until linking lands.
+    const panel = page.getByTestId('linked-records-panel');
+    await expect(panel).toBeVisible({ timeout: 10_000 });
+    // Header is "Linked records" exact. The empty-state copy contains
+    // "No linked records yet…" — use exact match to disambiguate.
+    await expect(panel.getByText('Linked records', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('linked-records-empty')).toBeVisible();
+  });
+});
+
 test.describe('Notes — viewer guard', () => {
   test.use({ storageState: 'tests/fixtures/.auth/viewer.json' });
 
