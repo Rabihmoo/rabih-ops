@@ -198,7 +198,7 @@ export function TaskDetailPage() {
               {task.description && (
                 <div className="space-y-2">
                   <div className="text-section-label">Description</div>
-                  <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
+                  <p className="text-foreground-72 text-sm leading-relaxed whitespace-pre-wrap">
                     {task.description}
                   </p>
                 </div>
@@ -214,7 +214,7 @@ export function TaskDetailPage() {
               {task.completion_note && (
                 <div className="space-y-2">
                   <div className="text-section-label">Completion note</div>
-                  <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
+                  <p className="text-foreground-72 text-sm leading-relaxed whitespace-pre-wrap">
                     {task.completion_note}
                   </p>
                 </div>
@@ -243,7 +243,7 @@ export function TaskDetailPage() {
             <div className="text-section-label flex items-center gap-2">
               <Bell className="h-4 w-4" /> Reminders
             </div>
-            <ul className="text-foreground/90 space-y-1 text-sm">
+            <ul className="text-foreground-72 space-y-1 text-sm">
               {task.start_reminder_at && (
                 <li>
                   <span className="text-muted-foreground">Start by</span>{' '}
@@ -277,7 +277,7 @@ export function TaskDetailPage() {
             <div className="text-section-label flex items-center gap-2">
               Follow-ups
               {(followUps.data?.length ?? 0) > 0 && (
-                <span className="text-foreground/85 normal-case tracking-normal">
+                <span className="text-foreground-72 normal-case tracking-normal">
                   ({followUps.data!.length})
                 </span>
               )}
@@ -322,7 +322,7 @@ export function TaskDetailPage() {
           <div className="text-section-label flex items-center gap-2">
             Comments
             {comments.length > 0 && (
-              <span className="text-foreground/85 normal-case tracking-normal">
+              <span className="text-foreground-72 normal-case tracking-normal">
                 ({comments.length})
               </span>
             )}
@@ -343,7 +343,7 @@ export function TaskDetailPage() {
           <div className="text-section-label flex items-center gap-2">
             Attachments
             {attachments.length > 0 && (
-              <span className="text-foreground/85 normal-case tracking-normal">
+              <span className="text-foreground-72 normal-case tracking-normal">
                 ({attachments.length})
               </span>
             )}

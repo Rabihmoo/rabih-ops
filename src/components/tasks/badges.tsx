@@ -1,25 +1,29 @@
 import { cn } from '@/lib/utils';
 import { BRANCHES, type BranchCode } from '@/lib/branches';
 import { TASK_STATUS_LABEL, isClosedTaskStatus } from '@/lib/tasks';
+import { StatusChip, type StatusTone } from '@/components/ui/status-chip';
 import type { FollowUpStatus, TaskPriority, TaskStatus } from '@/types/database';
 
 // Cross-module status accepted by due-tone helpers + DueDateBadge. Tasks and
 // follow-ups have different status enums but share the same row chrome.
 export type DueToneStatus = TaskStatus | FollowUpStatus;
 
-const STATUS_CLASSES: Record<TaskStatus, string> = {
-  not_started: 'bg-muted text-muted-foreground',
-  started: 'bg-primary-soft/60 text-primary-ink',
-  working: 'bg-primary-soft text-primary-ink',
-  waiting_for_someone: 'bg-warning-soft text-warning-ink',
-  delayed: 'bg-destructive-soft text-destructive-ink',
-  finished: 'bg-success-soft text-success-ink',
-  needs_repeat: 'bg-destructive-soft text-destructive-ink',
-  archived: 'bg-muted text-subtle-foreground',
+// Map every TaskStatus to a StatusChip tone. Phase 4.2 — graduates the
+// hand-rolled status pill to the shared StatusChip primitive. The DOM
+// shape changes (rounded-pill vs rounded-xs, tracking-wide vs -wider) but
+// the contract callers depend on stays intact: data-testid="task-status-
+// badge" + data-status="<status>" pass through via rest props, and the
+// outer span is the same element type.
+const STATUS_TONE: Record<TaskStatus, StatusTone> = {
+  not_started:         'muted',
+  started:             'info',
+  working:             'info',
+  waiting_for_someone: 'warning',
+  delayed:             'critical',
+  finished:            'success',
+  needs_repeat:        'critical',
+  archived:            'muted',
 };
-
-const PILL_BASE =
-  'inline-flex items-center rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider';
 
 export function StatusBadge({
   status,
@@ -29,13 +33,15 @@ export function StatusBadge({
   className?: string;
 }) {
   return (
-    <span
-      className={cn(PILL_BASE, STATUS_CLASSES[status], className)}
+    <StatusChip
+      tone={STATUS_TONE[status]}
+      size="xs"
       data-testid="task-status-badge"
       data-status={status}
+      className={className}
     >
       {TASK_STATUS_LABEL[status]}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -45,10 +51,10 @@ const PRIORITY_LABEL: Record<TaskPriority, string> = {
   low: 'Low',
 };
 
-const PRIORITY_CLASSES: Record<TaskPriority, string> = {
-  urgent: 'bg-destructive-soft text-destructive-ink',
-  normal: 'bg-muted text-muted-foreground',
-  low: 'bg-transparent text-subtle-foreground',
+const PRIORITY_TONE: Record<TaskPriority, StatusTone> = {
+  urgent: 'critical',
+  normal: 'muted',
+  low:    'muted',
 };
 
 export function PriorityBadge({
@@ -59,9 +65,9 @@ export function PriorityBadge({
   className?: string;
 }) {
   return (
-    <span className={cn(PILL_BASE, PRIORITY_CLASSES[priority], className)}>
+    <StatusChip tone={PRIORITY_TONE[priority]} size="xs" className={className}>
       {PRIORITY_LABEL[priority]}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -77,7 +83,7 @@ export function BranchBadge({ branch, className }: { branch: string; className?:
   return (
     <span
       className={cn(
-        'text-foreground/90 inline-flex items-center gap-1.5 text-xs font-medium',
+        'text-foreground-72 inline-flex items-center gap-1.5 text-xs font-medium',
         className,
       )}
     >

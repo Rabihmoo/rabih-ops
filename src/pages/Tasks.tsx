@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2, ListChecks, Plus } from 'lucide-react';
+import { ListChecks, Plus, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTaskList } from '@/hooks/useTasks';
 import { useTaskFiltersStore } from '@/stores/taskFiltersStore';
@@ -134,14 +134,17 @@ function TasksEmpty() {
     },
   };
 
-  const calmBuckets: typeof bucket[] = ['today', 'overdue', 'waiting', 'delayed', 'repeat'];
+  // True all-clear: no tasks at all under the default (active) bucket.
+  // Anything else is a filtered empty — stays muted per the Phase 4.2 rule.
+  const isAllClear = bucket === 'active';
   const c = COPY[bucket];
   return (
     <EmptyState
-      icon={calmBuckets.includes(bucket) ? CheckCircle2 : ListChecks}
+      icon={isAllClear ? ShieldCheck : ListChecks}
       title={c.title}
       description={c.description}
-      tone={calmBuckets.includes(bucket) ? 'success' : 'muted'}
+      tone={isAllClear ? 'hero' : 'muted'}
+      size={isAllClear ? 'tall' : 'default'}
       action={
         canMutate && bucket !== 'overdue' && bucket !== 'today' && bucket !== 'history' ? (
           <Button size="sm" asChild>
