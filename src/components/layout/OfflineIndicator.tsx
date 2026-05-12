@@ -22,7 +22,7 @@ export function OfflineIndicator() {
   return (
     <div
       role="status"
-      className="bg-destructive text-destructive-foreground fixed bottom-16 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-1.5 text-xs shadow-lg md:bottom-6"
+      className="bg-destructive text-destructive-foreground fixed bottom-[76px] left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-1.5 text-xs shadow-lg md:bottom-6"
     >
       <WifiOff className="h-3.5 w-3.5" />
       <span>Offline — changes will sync when reconnected</span>

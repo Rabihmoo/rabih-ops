@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BRANCH_LIST } from '@/lib/branches';
-import { useActivityInbox } from '@/hooks/useActivityInbox';
+import { useInboxBadgeCount } from '@/hooks/useInboxBadge';
 import { useCurrentUserProfile } from '@/hooks/useAuth';
 import { StatusChip, type StatusTone } from '@/components/ui/status-chip';
 
@@ -73,36 +73,8 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-// Flat list retained for MobileNav (untouched in this commit — gets
-// replaced by the 5-slot bar + drawer in the next commit).
-const NAV: NavItem[] = NAV_SECTIONS.flatMap((s) => s.items);
-
-// DB-owned sources only: tasks, follow-ups, purchases, findings, documents,
-// telegram reminders. Gmail and Calendar are intentionally excluded from the
-// sidebar badge so the user isn't pestered by routine inbox traffic.
-const DB_OWNED_FOR_BADGE = new Set([
-  'task',
-  'follow_up',
-  'purchase',
-  'inspection_finding',
-  'document',
-  'telegram',
-]);
-
-function useInboxBadgeCount(): number {
-  const inbox = useActivityInbox();
-  const items = inbox.data?.items ?? [];
-  return items.filter(
-    (i) =>
-      DB_OWNED_FOR_BADGE.has(i.source) &&
-      (i.severity === 'critical' ||
-        i.severity === 'overdue' ||
-        i.severity === 'due_today'),
-  ).length;
-}
-
-// Shared active/idle classes used by both desktop sidebar and mobile bottom
-// nav. The desktop layout adds the left-edge bar; mobile uses a top bar.
+// Desktop active/idle classes — the left-edge primary bar is the active
+// affordance. Mobile uses its own 5-slot bar in MobileBottomNav.
 const desktopLink = (isActive: boolean) =>
   cn(
     'group relative flex h-10 items-center gap-2.5 rounded-md px-3 text-sm transition-colors',
@@ -208,47 +180,5 @@ export function Sidebar() {
         <span className="text-subtle-foreground text-[11px] tracking-wide">v0.1</span>
       </div>
     </aside>
-  );
-}
-
-export function MobileNav() {
-  const inboxBadge = useInboxBadgeCount();
-  const { pathname } = useLocation();
-  return (
-    <nav
-      className="bg-surface-1 border-border fixed inset-x-0 bottom-0 z-40 flex h-16 border-t md:hidden"
-      aria-label="Primary"
-    >
-      {NAV.map(({ to, label, icon: Icon, end, badgeKey, alsoActiveOn }) => {
-        const badge = badgeKey === 'inbox' ? inboxBadge : 0;
-        const forceActive = alsoActive(pathname, alsoActiveOn);
-        return (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              cn(
-                'relative flex flex-1 flex-col items-center justify-center gap-1 px-1 text-[11px] transition-colors',
-                'before:absolute before:top-0 before:h-0.5 before:w-10 before:rounded-full before:transition-colors',
-                (isActive || forceActive)
-                  ? 'text-primary-ink before:bg-primary'
-                  : 'text-muted-foreground hover:text-foreground before:bg-transparent',
-              )
-            }
-          >
-            <div className="relative">
-              <Icon className="h-5 w-5" />
-              {badge > 0 && (
-                <span className="bg-destructive text-destructive-foreground absolute -right-2 -top-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 text-[9px] font-bold tabular-nums">
-                  {badge > 9 ? '9+' : badge}
-                </span>
-              )}
-            </div>
-            <span className="font-medium tracking-wide">{label}</span>
-          </NavLink>
-        );
-      })}
-    </nav>
   );
 }
