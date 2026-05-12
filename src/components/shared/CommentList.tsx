@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { StatusChip } from '@/components/ui/status-chip';
 import { toast } from '@/components/ui/toaster';
 import { useAuthStore } from '@/stores/authStore';
 import { useCanMutate } from '@/hooks/usePermissions';
@@ -88,15 +89,13 @@ export function CommentList({
                 key={c.id}
                 className="bg-surface-1 border-border rounded-md border px-4 py-3"
               >
-                <div className="flex items-baseline justify-between gap-3">
-                  <div className="text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm">
                     <span className="text-foreground font-semibold">{c.author_name}</span>
                     {isMine && (
-                      <span className="bg-primary-soft text-primary-ink ml-2 inline-flex items-center rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-                        you
-                      </span>
+                      <StatusChip tone="info" size="xs">you</StatusChip>
                     )}
-                    <span className="text-subtle-foreground ml-2 text-xs">
+                    <span className="text-subtle-foreground text-xs">
                       {relativeTime(c.created_at)}
                     </span>
                   </div>
@@ -112,7 +111,7 @@ export function CommentList({
                     </button>
                   )}
                 </div>
-                <div className="text-foreground/95 mt-2 text-sm leading-relaxed whitespace-pre-wrap">
+                <div className="text-foreground mt-2 text-sm leading-relaxed whitespace-pre-wrap">
                   {c.body}
                 </div>
               </li>
