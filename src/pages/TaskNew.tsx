@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { TaskForm, type TaskFormSeed } from '@/components/tasks/TaskForm';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { useCreateTask } from '@/hooks/useTasks';
 import type { CreateTaskInput, UpdateTaskInput } from '@/lib/tasks';
 import type { TaskPriority } from '@/types/database';

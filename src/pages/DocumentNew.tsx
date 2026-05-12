@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { DocumentForm } from '@/components/documents/DocumentForm';
 import { TemplatePicker } from '@/components/documents/TemplatePicker';
 import { useCreateDocument } from '@/hooks/useDocuments';

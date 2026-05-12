@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ContactForm, type ContactFormSeed } from '@/components/contacts/ContactForm';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { useCreateContact } from '@/hooks/useContacts';
 import { useCanMutate } from '@/hooks/usePermissions';
 

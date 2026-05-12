@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ExternalLink, Loader2, Mail, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import {
   useEmailLinksForEntity,
   useGmailActionLink,

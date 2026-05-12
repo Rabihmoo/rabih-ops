@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { TASK_STATUS_LABEL } from '@/lib/tasks';
 import {
   useArchiveTask,

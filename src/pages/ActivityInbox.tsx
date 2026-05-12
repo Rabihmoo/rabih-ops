@@ -4,12 +4,12 @@ import { AlertTriangle, Loader2, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader, HeaderStat } from '@/components/shared/PageHeader';
 import { useActivityInbox } from '@/hooks/useActivityInbox';
+import { ActivityFilterChips } from '@/components/inbox/ActivityFilterChips';
 import {
-  ActivityFilterChips,
   isValidFilterKey,
   matchesFilter,
   type FilterKey,
-} from '@/components/inbox/ActivityFilterChips';
+} from '@/components/inbox/activity-filter-utils';
 import { ActivityRow } from '@/components/inbox/ActivityRow';
 import { ActivityEmptyState } from '@/components/inbox/ActivityEmptyState';
 import { ActivityListSkeleton } from '@/components/inbox/ActivityRowSkeleton';

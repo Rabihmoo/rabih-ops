@@ -1,34 +1,19 @@
 import * as React from 'react';
 import * as ToastPrimitive from '@radix-ui/react-toast';
 import { cn } from '@/lib/utils';
-
-type ToastMessage = {
-  id: number;
-  title: string;
-  description?: string;
-  variant?: 'default' | 'destructive';
-};
-
-const listeners = new Set<(t: ToastMessage) => void>();
-let nextId = 1;
-
-export function toast(msg: Omit<ToastMessage, 'id'>) {
-  const t = { id: nextId++, ...msg };
-  listeners.forEach((l) => l(t));
-}
+import { subscribeToast, type ToastMessage } from './toast';
 
 export function Toaster() {
   const [messages, setMessages] = React.useState<ToastMessage[]>([]);
 
   React.useEffect(() => {
-    const handler = (t: ToastMessage) => {
+    return subscribeToast((t) => {
       setMessages((prev) => [...prev, t]);
-      setTimeout(() => setMessages((prev) => prev.filter((m) => m.id !== t.id)), 4000);
-    };
-    listeners.add(handler);
-    return () => {
-      listeners.delete(handler);
-    };
+      setTimeout(
+        () => setMessages((prev) => prev.filter((m) => m.id !== t.id)),
+        4000,
+      );
+    });
   }, []);
 
   return (

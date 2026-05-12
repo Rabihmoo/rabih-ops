@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AmbientBackground } from '@/components/ui/ambient-background';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 
 const schema = z.object({ email: z.string().email('Enter a valid email address') });
 type FormValues = z.infer<typeof schema>;

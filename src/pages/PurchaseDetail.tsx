@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusChip } from '@/components/ui/status-chip';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { PurchaseForm } from '@/components/purchases/PurchaseForm';
 import { PurchaseActions } from '@/components/purchases/PurchaseActions';
 import {

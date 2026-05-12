@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { InspectionForm } from '@/components/inspections/InspectionForm';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { useCreateInspection } from '@/hooks/useInspections';
 import type { CreateInspectionInput, UpdateInspectionInput } from '@/lib/inspections';
 

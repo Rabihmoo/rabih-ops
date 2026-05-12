@@ -3,7 +3,7 @@ import { Loader2, Pencil, Plus, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { useCanAdminInspect, useCanMutate } from '@/hooks/usePermissions';
 import {
   useAddFinding,

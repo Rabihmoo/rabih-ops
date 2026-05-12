@@ -4,7 +4,7 @@ import { ArrowLeft, Bell, Loader2, Plus, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { TaskForm } from '@/components/tasks/TaskForm';
 import { TaskActions } from '@/components/tasks/TaskActions';
 import { TaskCalendarCard } from '@/components/tasks/TaskCalendarCard';

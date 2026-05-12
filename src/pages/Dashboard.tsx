@@ -46,7 +46,7 @@ import {
   reminderTargetPath,
   type MyReminder,
 } from '@/lib/reminders';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import type {
   Currency,
   FollowUpRow,

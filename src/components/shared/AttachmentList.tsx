@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Loader2, Paperclip, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { useAuthStore } from '@/stores/authStore';
 import { useCanMutate } from '@/hooks/usePermissions';
 import {

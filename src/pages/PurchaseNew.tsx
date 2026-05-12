@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { PurchaseForm, type PurchaseFormSeed } from '@/components/purchases/PurchaseForm';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { useCreatePurchase } from '@/hooks/usePurchaseRequests';
 import type {
   CreatePurchaseInput,

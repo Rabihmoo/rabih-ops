@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { FollowUpForm, type FollowUpFormSeed } from '@/components/follow-ups/FollowUpForm';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { useCreateFollowUp } from '@/hooks/useFollowUps';
 import type { CreateFollowUpInput, UpdateFollowUpInput } from '@/lib/follow-ups';
 

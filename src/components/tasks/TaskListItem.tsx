@@ -8,9 +8,8 @@ import {
   DueDateBadge,
   PriorityBadge,
   StatusBadge,
-  TONE_BAR,
-  computeDueTone,
 } from './badges';
+import { TONE_BAR, computeDueTone } from './badge-utils';
 
 export function TaskListItem({
   task,

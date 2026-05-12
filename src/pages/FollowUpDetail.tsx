@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { FollowUpForm } from '@/components/follow-ups/FollowUpForm';
 import {
   FollowUpStatusBadge,

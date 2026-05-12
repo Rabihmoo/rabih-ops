@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CompanyForm } from '@/components/companies/CompanyForm';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { useCreateCompany, useSetCompanyBranches } from '@/hooks/useCompanies';
 import { useCanMutate } from '@/hooks/usePermissions';
 

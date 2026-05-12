@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Archive, ArchiveRestore, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { CompanyForm } from '@/components/companies/CompanyForm';
 import { BranchMultiSelect } from '@/components/shared/BranchMultiSelect';
 import { useContacts } from '@/hooks/useContacts';

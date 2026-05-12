@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusChip } from '@/components/ui/status-chip';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import { InspectionForm } from '@/components/inspections/InspectionForm';
 import { FindingsList } from '@/components/inspections/FindingsList';
 import { ResultBadge } from '@/components/inspections/badges';

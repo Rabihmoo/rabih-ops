@@ -12,9 +12,8 @@ import {
   BranchBadge,
   DueDateBadge,
   PriorityBadge,
-  TONE_BAR,
-  computeDueTone,
 } from '@/components/tasks/badges';
+import { TONE_BAR, computeDueTone } from '@/components/tasks/badge-utils';
 import { FollowUpStatusBadge, FollowUpCategoryBadge } from './badges';
 
 export function FollowUpListItem({

@@ -1,6 +1,7 @@
 import { AlertTriangle, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BranchBadge, TONE_BAR } from '@/components/tasks/badges';
+import { BranchBadge } from '@/components/tasks/badges';
+import { TONE_BAR } from '@/components/tasks/badge-utils';
 import { StatusChip } from '@/components/ui/status-chip';
 import {
   formatCurrency,

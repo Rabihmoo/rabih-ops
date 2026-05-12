@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusChip, type StatusTone } from '@/components/ui/status-chip';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 
 const STATUS_TONE: Record<string, StatusTone> = {
   draft: 'warning',

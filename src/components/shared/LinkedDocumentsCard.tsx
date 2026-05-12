@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ExternalLink, FileText, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { toast } from '@/components/ui/toaster';
+import { toast } from '@/components/ui/toast';
 import {
   useDocuments,
   useDocumentsForEntity,
