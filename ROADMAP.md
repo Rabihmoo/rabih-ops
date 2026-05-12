@@ -46,10 +46,11 @@ relaxed by the operator (Rabih) in a written instruction.
 
 ## Phase index
 
-| #  | Phase                                                        | Status      |
-|----|--------------------------------------------------------------|-------------|
-| 0  | Finish Current Work                                          | next        |
-| 1  | Business Memory — Notes UI                                   | queued      |
+| #    | Phase                                                      | Status      |
+|------|------------------------------------------------------------|-------------|
+| 0    | Finish Current Work                                        | next        |
+| 0.5  | Gmail Today View                                           | queued      |
+| 1    | Business Memory — Notes UI                                 | queued      |
 | 2  | Relationship Graph — `record_links` notes + Universal Panel  | queued      |
 | 3  | Find Anything Fast — global search + Cmd-K                   | queued      |
 | 4  | Full Visual Consistency — maintenance / audit                | continuous  |
@@ -127,6 +128,190 @@ harder to reason about.
 - **0.2** Visual audit gap fixes (settings/auth-callback/error states).
 - **0.3** Lint warning split or annotate.
 - **0.4** Staging hygiene + STATUS.md refresh.
+
+---
+
+## Phase 0.5 — Gmail Today View
+
+### Goal
+Show today's operational email in the Dashboard and the Activity Inbox
+while keeping the Gmail integration strictly read-only.
+
+### Why it matters
+The V1 Gmail surface only renders `is:important is:unread`. That filter
+relies on Gmail's automatic Importance signal, which routinely misses
+supplier replies, partner mail, and time-sensitive operational mail
+arriving today. Operators lose the "did the supplier reply yet today?"
+question to that gap. This phase closes the gap without expanding
+scope — `gmail.readonly` stays the only scope, no writes, no full
+inbox clone.
+
+### Dependencies
+- Phase 0 complete (clean baseline).
+- Existing Gmail OAuth + `gmail.readonly` already deployed in staging.
+- `PROJECT_TZ` shared constant introduced in chunk G.1 (Africa/Maputo).
+
+### Exact scope
+- New shared constant `PROJECT_TZ = 'Africa/Maputo'` in
+  `src/lib/timezone.ts`, plus helper `localMidnightUnix(date, tz)` that
+  returns the Unix timestamp (seconds) of the local midnight starting
+  the supplied date in the supplied IANA zone. **Why Maputo, not
+  Johannesburg:** the project already anchors at Africa/Maputo
+  (`telegram-tick` 08:00 fan-out, audit-log timestamps).
+  Johannesburg has the same offset today but is a different IANA zone;
+  consistency matters the day either zone adopts DST or we extend to a
+  second region.
+- New Edge Function `gmail-list-today` (sibling to
+  `gmail-list-important`, not a replacement). Returns
+  `{ important: GmailMessage[], today: GmailMessage[] }`.
+  - `important` query: `is:important is:unread` (unchanged from the
+    existing function — important+unread can be older than today).
+  - `today` query:
+    `after:<unix-local-midnight> -category:promotions -category:social -category:forums -label:muted`.
+  - Both arrays capped at 50 messages.
+  - Thread collapse: one message per `threadId`, latest by
+    `internalDate`.
+  - Metadata-only fetch (no message body) — same payload shape as the
+    existing function.
+- Client lib + `useGmailToday` hook returning the composed
+  `{ important, today, dedupedToday }` shape (dedupedToday omits rows
+  already in important; the Inbox renders both sections from the
+  un-deduped sets, the Dashboard cards use the deduped sets to avoid
+  visible repetition between the two cards).
+- Both Gmail queries opt out of the localStorage persister via
+  `meta: { persist: false }`. **This also applies retroactively to the
+  existing important-emails query** so email metadata stops sitting in
+  `localStorage` once this phase ships.
+- React Query options for both queries: `staleTime: 2 * 60_000`,
+  `gcTime: 30 * 60_000`, `refetchOnWindowFocus: true`. Manual refresh
+  button on each card header calls
+  `queryClient.invalidateQueries({ queryKey: ['gmail', ...] })`.
+- Dashboard: new "From today" card directly under the existing
+  Important Emails card. Same visual frame. Top 5 most recent rows,
+  count line ("12 emails since 00:00"), footer link to
+  `/inbox?source=gmail&period=today`. Empty state via the shared
+  `EmptyState` component with `tone="muted"`.
+- Inbox (`/inbox`): new `Today's emails` source-filter chip alongside
+  existing source chips. When selected, the list renders two section
+  headers — **Important & unread** then **From today** — using the
+  un-deduped sets so a message that's both still appears in both
+  sections.
+- Row labelling derives from each message's `labelIds` (`IMPORTANT`,
+  `UNREAD`) → existing `StatusChip` tones (`danger` / `warning` /
+  `muted`). No new chip variants.
+- Tail label when the 50-message cap hits ("Showing 50 of N — open
+  Gmail for the rest").
+
+### What not to do
+- **No Gmail write scopes.** No compose, send, modify, archive,
+  mark-read, label add/remove, trash, delete. Scope stays
+  `gmail.readonly` and `userinfo.email` only.
+- No inbox clone — no pagination beyond the 50/day cap, no infinite
+  scroll, no load-more button.
+- No per-sender mute UI inside RabihOS — operators mute threads or
+  senders in Gmail itself. (A `user_inbox_settings` per-sender mute
+  list is Phase 6's territory.)
+- No background polling. Window-focus refetch + manual button are the
+  only refresh paths.
+- No date range picker beyond "today" — yesterday/this-week views are
+  not in scope.
+- Do not change the existing `gmail-list-important` function's
+  contract or remove it. New function lands alongside.
+- Do not bundle this phase with Phase 6 (Smart Suggestions v2). Cross-
+  signal rules over email arrive in Phase 6; this phase is a read
+  surface.
+
+### Likely files / tables
+- New: `src/lib/timezone.ts`, `src/lib/timezone.test.ts`,
+  `src/lib/gmail-query.ts`, `src/lib/gmail-query.test.ts`,
+  `src/lib/gmail-compose.ts`, `src/lib/gmail-compose.test.ts`,
+  `src/hooks/useGmailToday.ts`.
+- New: `supabase/functions/gmail-list-today/index.ts` (reuses
+  `_shared/gmail` access-token refresh + helper).
+- Updated: `src/pages/Dashboard.tsx` (compose new card),
+  `src/components/dashboard/GmailTodayCard.tsx` (new),
+  `src/components/inbox/ActivityFilterChips.tsx` (new chip),
+  `src/pages/Inbox.tsx` (section renderer when the chip is active),
+  `src/main.tsx` (persister filter honors `meta.persist=false`).
+- No tables, no migrations. RPC surface unchanged.
+
+### Tests required
+- Vitest:
+  - `timezone.test.ts` — `localMidnightUnix` across UTC times of day,
+    a DST-observing zone (e.g. `America/New_York`) to prove the helper
+    generalizes, cross-year boundary (Dec 31 23:30 UTC → Jan 1 local
+    midnight unix).
+  - `gmail-query.test.ts` — query builder produces exact expected `q`
+    strings for both buckets including correct escaping of the unix
+    timestamp.
+  - `gmail-compose.test.ts` — dedupe + thread-collapse logic on mixed
+    inputs (overlap between important and today, multiple messages on
+    one thread, all-empty, only-important, only-today).
+- Playwright (extend `tests/e2e/gmail.spec.ts`):
+  - Admin happy path: connect Gmail → dashboard shows both cards
+    within 5 s → Inbox `Today's emails` filter renders two section
+    headers.
+  - Dedupe behavior: a message present in both Important and Today
+    appears in both Inbox sections (intentional), but only once across
+    the dashboard cards.
+  - Viewer guard: viewer reads own connected Gmail, cannot see admin's.
+  - Empty state: a fixture that matches nothing renders the muted
+    `EmptyState`, never a spinner or error message.
+- Manual smoke (not CI, operator-run after staging deploy):
+  - Cross-midnight test — send a self-test email near 00:00 Africa/Maputo
+    local time, verify it appears in Today after midnight and not
+    before.
+  - Promotions exclusion — send a promotional-style email, verify it is
+    absent from Today.
+  - Muted-thread exclusion — mute a thread in Gmail, verify subsequent
+    replies stay out of Today.
+
+### Acceptance criteria
+- Dashboard renders both `IMPORTANT` and `TODAY` cards on a connected
+  admin account, populated within 5 s of route load on a warm cache.
+- Inbox `Today's emails` chip is mutually exclusive with the other
+  source chips and renders two section headers in the order
+  `Important & unread` → `From today`.
+- A message that satisfies both queries appears in both sections in
+  the Inbox view, but only once across the two Dashboard cards.
+- Promotions / social / forums / muted threads never appear in Today,
+  regardless of importance status.
+- Email metadata (subject, from, snippet, dates) is **not** persisted
+  to `localStorage` — verified by inspecting the
+  `rabih-ops-query-cache` key after the cards load and seeing no
+  `gmail` entries.
+- Gmail OAuth scopes are unchanged at the Google end (still
+  `gmail.readonly` + `userinfo.email` + `openid`). No new consent
+  prompt for existing users.
+- The 50-message tail label appears when and only when the cap is
+  reached.
+- All new Vitest tests pass; Playwright extensions green; existing
+  `gmail.spec.ts` cases continue to pass unchanged.
+- CI green at the head of the commit that closes the phase.
+
+### Chunk breakdown
+- **G.1** `src/lib/timezone.ts` exporting `PROJECT_TZ = 'Africa/Maputo'`
+  and `localMidnightUnix(date, tz)` helper. Vitest. Touches nothing
+  else. Push.
+- **G.2** Edge Function `gmail-list-today` deployed to staging. No
+  client wiring. Manual smoke against the operator's JWT to verify
+  payload shape and query correctness. Push (deploy is via
+  `supabase functions deploy`, not in the repo build).
+- **G.3** Client lib (`gmail-query.ts`, `gmail-compose.ts`) + hook
+  `useGmailToday` + persister opt-out for **both** Gmail queries
+  (`meta.persist=false`) + Vitest for compose/dedupe. No UI wiring
+  yet. Push.
+- **G.4** Dashboard "From today" card. Screenshots (dark/light ×
+  desktop/mobile) for `dashboard-*` updated. Push.
+- **G.5** Inbox `Today's emails` chip + section headers. Playwright
+  extension. Screenshots for the populated inbox view. Push.
+
+### Operator pre-flight (one-time, before G.2 deploy)
+- Confirm the operator's Gmail account is currently connected; if not,
+  reconnect via Settings before chunk G.2 is smoke-tested.
+- No Google Cloud Console change required — scope set is unchanged.
+- No new Edge Function secret required — `gmail-list-today` reuses the
+  secrets that `gmail-list-important` already consumes.
 
 ---
 
