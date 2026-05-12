@@ -2,12 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   linkRecordExternal,
   linkRecordInternal,
+  listRecordRelations,
   unlinkRecord,
   type LinkExternalInput,
   type LinkInternalInput,
   type RecordLinkEntityType,
 } from '@/lib/record-links';
-import { listRecordRelations } from '@/lib/record-relations';
 
 const KEY = ['record-relations'] as const;
 

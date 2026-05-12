@@ -1,4 +1,5 @@
 import { callRpc } from './rpc';
+import type { RecordRelation } from './record-relations';
 
 // =========================================================
 // Types (mirrors the H2.3 + H3.3 widened whitelists)
@@ -121,4 +122,26 @@ export async function unlinkRecord(linkId: number): Promise<RecordLinkRow> {
   return callRpc<RecordLinkRow>('rpc_record_link_remove', {
     p_link_id: linkId,
   });
+}
+
+// =========================================================
+// Read RPC (rpc_record_relations) — lives here so the pure types +
+// grouping helpers in ./record-relations.ts can be imported from
+// vitest without dragging the Supabase client in.
+// =========================================================
+
+export async function listRecordRelations(
+  entityType: RecordLinkEntityType,
+  entityId: string,
+  limitPerSource = 30,
+): Promise<RecordRelation[]> {
+  const result = await callRpc<RecordRelation[] | null>(
+    'rpc_record_relations',
+    {
+      p_entity_type: entityType,
+      p_entity_id: entityId,
+      p_limit_per_source: limitPerSource,
+    },
+  );
+  return result ?? [];
 }

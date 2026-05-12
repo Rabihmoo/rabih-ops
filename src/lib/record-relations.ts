@@ -12,12 +12,19 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import {
-  type RecordLinkEntityType,
-  type RecordLinkExternalApp,
-  type RecordLinkRelationship,
+// This module is intentionally PURE — it does not import the Supabase
+// client. That keeps it usable from vitest without the runtime env
+// vars required by src/lib/supabase.ts. The matching RPC wrapper
+// (listRecordRelations) lives in src/lib/record-links.ts. We use
+// `import type` (statement form, not inline) so vitest's transformer
+// fully erases the import at runtime — `import { type X } from ...`
+// only erases at TS-compile time and rollup/vitest can still load
+// the source module for its side-effects.
+import type {
+  RecordLinkEntityType,
+  RecordLinkExternalApp,
+  RecordLinkRelationship,
 } from './record-links';
-import { callRpc } from './rpc';
 
 // =========================================================
 // Wire shape — rpc_record_relations row
@@ -59,26 +66,6 @@ export interface RecordRelation {
   external_snapshot: Record<string, unknown>;
   created_at: string;
   created_by: string;
-}
-
-// =========================================================
-// RPC wrapper
-// =========================================================
-
-export async function listRecordRelations(
-  entityType: RecordLinkEntityType,
-  entityId: string,
-  limitPerSource = 30,
-): Promise<RecordRelation[]> {
-  const result = await callRpc<RecordRelation[] | null>(
-    'rpc_record_relations',
-    {
-      p_entity_type: entityType,
-      p_entity_id: entityId,
-      p_limit_per_source: limitPerSource,
-    },
-  );
-  return result ?? [];
 }
 
 // =========================================================
