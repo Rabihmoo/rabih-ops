@@ -11,6 +11,7 @@ import {
   type GmailActionLinkInput,
   type LinkEmailInput,
 } from '@/lib/gmail';
+import { listGmailToday } from '@/lib/gmail-today';
 
 const KEY = ['gmail'] as const;
 
@@ -44,6 +45,32 @@ export function useGmailImportant(enabled: boolean) {
     queryFn: () => listGmailImportant(),
     enabled,
     staleTime: 5 * 60 * 1000,
+    // Email metadata (subject, from, snippet) must not be persisted to
+    // localStorage. The persister in main.tsx filters by meta.persist.
+    meta: { persist: false },
+    refetchOnWindowFocus: true,
+  });
+}
+
+/**
+ * Phase 0.5 G.3: companion to useGmailImportant.
+ *
+ * Returns both `important` (sticky importance signal — may be older
+ * than today) and `today` (since local midnight in PROJECT_TZ, minus
+ * promotions / social / forums / muted threads) in one call.
+ *
+ * Same persistence policy as useGmailImportant — meta.persist=false so
+ * email metadata never sits in localStorage.
+ */
+export function useGmailToday(enabled: boolean) {
+  return useQuery({
+    queryKey: [...KEY, 'today'],
+    queryFn: () => listGmailToday(),
+    enabled,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    meta: { persist: false },
   });
 }
 

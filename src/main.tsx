@@ -27,6 +27,13 @@ persistQueryClient({
   queryClient,
   persister,
   maxAge: 1000 * 60 * 60 * 24 * 7,
+  // Queries can opt out of localStorage persistence via meta.persist=false.
+  // Used by useGmailImportant / useGmailToday so email metadata (subject,
+  // from, snippet) never lives in the browser's persistent cache.
+  dehydrateOptions: {
+    shouldDehydrateQuery: (q) =>
+      q.state.status === 'success' && q.meta?.persist !== false,
+  },
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
