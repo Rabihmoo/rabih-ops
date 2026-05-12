@@ -196,18 +196,18 @@ export function FixedTaskDetailPage() {
         <Card>
           <CardContent className="space-y-3 p-5">
             <div className="text-section-label">Schedule</div>
-            <div className="text-foreground/90 text-sm">
+            <div className="text-foreground-72 text-sm">
               <Repeat className="text-muted-foreground mr-2 inline h-4 w-4 -translate-y-px" />
               {cadenceLabel(template)}
             </div>
-            <div className="text-foreground/90 text-sm">
+            <div className="text-foreground-72 text-sm">
               <Calendar className="text-muted-foreground mr-2 inline h-4 w-4 -translate-y-px" />
               Next instance: {archived ? '— (archived)' : nextSpawnLabel(template.next_spawn_at)}
             </div>
             {template.description && (
               <div className="space-y-1 pt-2">
                 <div className="text-section-label">Description</div>
-                <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
+                <p className="text-foreground-72 text-sm leading-relaxed whitespace-pre-wrap">
                   {template.description}
                 </p>
               </div>

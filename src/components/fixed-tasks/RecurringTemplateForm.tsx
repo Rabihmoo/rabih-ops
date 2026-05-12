@@ -372,7 +372,7 @@ export function RecurringTemplateForm({
                     className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
                       checked
                         ? 'border-primary bg-primary-soft text-primary-ink'
-                        : 'border-border text-foreground/85 hover:bg-surface-1'
+                        : 'border-border text-foreground-72 hover:bg-surface-1'
                     }`}
                   >
                     {d.label}

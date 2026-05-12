@@ -90,7 +90,7 @@ export function LinkedEmailsCard({
           <div className="text-section-label flex items-center gap-2">
             <Mail className="h-3.5 w-3.5" /> Linked emails
             {existing.length > 0 && (
-              <span className="text-foreground/85 normal-case tracking-normal">
+              <span className="text-foreground-72 normal-case tracking-normal">
                 ({existing.length})
               </span>
             )}
@@ -125,7 +125,7 @@ export function LinkedEmailsCard({
                     {l.subject ?? '(no subject)'}
                   </div>
                   <div className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
-                    <span className="text-foreground/85">
+                    <span className="text-foreground-72">
                       {l.from_name ?? l.from_address ?? 'Unknown sender'}
                     </span>
                     {l.internal_date && (
@@ -210,7 +210,7 @@ export function LinkedEmailsCard({
                             {m.subject ?? '(no subject)'}
                           </div>
                           <div className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
-                            <span className="text-foreground/85">
+                            <span className="text-foreground-72">
                               {m.from_name ?? m.from_address ?? 'Unknown sender'}
                             </span>
                             {m.snippet && (

@@ -192,7 +192,7 @@ const TONE_CLASS: Record<
     bar: 'bg-primary',
   },
   muted: {
-    number: 'text-foreground/85',
+    number: 'text-foreground-72',
     label: 'text-muted-foreground',
     icon: 'text-muted-foreground',
     bar: 'bg-border',
@@ -232,7 +232,7 @@ function BranchTag({ branch }: { branch: string | null }) {
     return <span className="text-subtle-foreground">{branch}</span>;
   }
   return (
-    <span className="text-foreground/85 inline-flex items-center gap-1.5">
+    <span className="text-foreground-72 inline-flex items-center gap-1.5">
       <span
         aria-hidden
         className="h-1.5 w-1.5 rounded-full"
@@ -772,7 +772,7 @@ function BranchInline({ branch }: { branch: string | null }) {
   )[branch as BranchCode];
   if (!meta) return null;
   return (
-    <span className="text-foreground/85 inline-flex items-center gap-1.5">
+    <span className="text-foreground-72 inline-flex items-center gap-1.5">
       <span
         aria-hidden
         className="h-1.5 w-1.5 rounded-full"
@@ -923,7 +923,7 @@ function DashboardReminderRow({
           {branchMeta && (
             <>
               <span className="text-subtle-foreground">·</span>
-              <span className="text-foreground/85 inline-flex items-center gap-1.5">
+              <span className="text-foreground-72 inline-flex items-center gap-1.5">
                 <span
                   aria-hidden
                   className="h-1.5 w-1.5 rounded-full"
@@ -967,7 +967,7 @@ function DashboardCriticalFindingRow({ finding }: { finding: CriticalFinding }) 
         </div>
         <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
           {branchMeta && (
-            <span className="text-foreground/85 inline-flex items-center gap-1.5">
+            <span className="text-foreground-72 inline-flex items-center gap-1.5">
               <span
                 aria-hidden
                 className="h-1.5 w-1.5 rounded-full"

@@ -161,7 +161,7 @@ export function TaskActions({ task }: { task: TaskRow }) {
                   'rounded-md border px-3 py-1.5 text-xs font-medium transition-colors',
                   status === qs.id
                     ? 'border-primary bg-primary-soft text-primary-ink cursor-default'
-                    : 'border-border text-foreground/85 hover:bg-surface-1',
+                    : 'border-border text-foreground-72 hover:bg-surface-1',
                 )}
               >
                 {qs.label}

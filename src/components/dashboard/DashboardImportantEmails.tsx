@@ -71,7 +71,7 @@ export function DashboardImportantEmails() {
                     {m.subject ?? '(no subject)'}
                   </div>
                   <div className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
-                    <span className="text-foreground/85">
+                    <span className="text-foreground-72">
                       {m.from_name ?? m.from_address ?? 'Unknown sender'}
                     </span>
                     {m.snippet && (

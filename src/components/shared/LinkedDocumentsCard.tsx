@@ -90,7 +90,7 @@ export function LinkedDocumentsCard({
           <div className="text-section-label flex items-center gap-2">
             <FileText className="h-3.5 w-3.5" /> Linked documents
             {existing.length > 0 && (
-              <span className="text-foreground/85 normal-case tracking-normal">
+              <span className="text-foreground-72 normal-case tracking-normal">
                 ({existing.length})
               </span>
             )}

@@ -41,7 +41,7 @@ export function TemplateListItem({ template }: { template: TaskRow }) {
               <span className="line-clamp-1">{cadenceLabel(template)}</span>
             </div>
           </div>
-          <div className="text-foreground/85 shrink-0 text-xs tabular-nums">
+          <div className="text-foreground-72 shrink-0 text-xs tabular-nums">
             {archived ? (
               <span className="text-subtle-foreground">archived</span>
             ) : (

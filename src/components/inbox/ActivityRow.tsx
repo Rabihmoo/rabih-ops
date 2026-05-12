@@ -99,7 +99,7 @@ function BranchTag({ branch }: { branch: string | null }) {
     return <span className="text-subtle-foreground">{branch}</span>;
   }
   return (
-    <span className="text-foreground/85 inline-flex items-center gap-1.5">
+    <span className="text-foreground-72 inline-flex items-center gap-1.5">
       <span
         aria-hidden
         className="h-1.5 w-1.5 rounded-full"

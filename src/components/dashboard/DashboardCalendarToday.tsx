@@ -72,7 +72,7 @@ export function DashboardCalendarToday() {
                 key={e.id}
                 className="hover:bg-surface-1 -mx-2 flex items-start gap-3 rounded-md px-2 py-2.5 transition-colors"
               >
-                <span className="text-foreground/85 w-24 shrink-0 text-xs tabular-nums">
+                <span className="text-foreground-72 w-24 shrink-0 text-xs tabular-nums">
                   {formatRange(e.start, e.end, e.all_day)}
                 </span>
                 <div className="min-w-0 flex-1">
