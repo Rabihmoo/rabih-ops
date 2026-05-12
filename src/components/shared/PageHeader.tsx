@@ -3,7 +3,12 @@ import { cn } from '@/lib/utils';
 
 // Shared list-page header: section label / hero title / subtitle row +
 // trailing action slot, then a hairline separator. Used by Tasks,
-// Follow-ups, Inspections.
+// Follow-ups, Inspections, Companies, Contacts, Documents.
+//
+// Phase 2.2 — spacing polish: pb-5 → pb-6 for breathing room under the
+// title block, eyebrow tracking tightened slightly, headline letter-
+// spacing matches the new tabular helper. No prop changes; existing
+// callers pick up the polish automatically.
 export function PageHeader({
   eyebrow,
   title,
@@ -20,16 +25,16 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        'border-border space-y-2 border-b pb-5',
+        'border-border space-y-3 border-b pb-6',
         className,
       )}
     >
       <div className="flex items-end justify-between gap-4">
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="min-w-0 flex-1 space-y-1.5">
           {eyebrow && (
             <div className="text-section-label text-primary-ink/80">{eyebrow}</div>
           )}
-          <h1 className="text-foreground text-3xl font-semibold tracking-tight">
+          <h1 className="text-foreground text-3xl font-semibold tracking-tight leading-tight">
             {title}
           </h1>
         </div>
