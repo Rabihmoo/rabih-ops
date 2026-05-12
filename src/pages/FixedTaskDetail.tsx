@@ -12,6 +12,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { StatusChip } from '@/components/ui/status-chip';
 import { toast } from '@/components/ui/toaster';
 import { RecurringTemplateForm } from '@/components/fixed-tasks/RecurringTemplateForm';
 import { BranchBadge, PriorityBadge } from '@/components/tasks/badges';
@@ -129,18 +130,14 @@ export function FixedTaskDetailPage() {
             {template.title}
           </h1>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <span className="bg-primary-soft text-primary-ink inline-flex items-center gap-1 rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-              <Repeat className="h-3 w-3" /> Template
-            </span>
+            <StatusChip tone="info" size="xs" icon={Repeat}>Template</StatusChip>
             <BranchBadge branch={template.branch} />
             {priority !== 'normal' && <PriorityBadge priority={priority} />}
-            <span className="text-muted-foreground text-xs capitalize">
+            <span className="text-foreground-72 text-xs capitalize">
               {template.category.replace('_', ' ')}
             </span>
             {archived && (
-              <span className="bg-muted text-subtle-foreground rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-                archived
-              </span>
+              <StatusChip tone="muted" size="xs">archived</StatusChip>
             )}
           </div>
         </div>
