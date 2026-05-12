@@ -4,8 +4,34 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" content="#000000" />
     <title>Rabih Ops</title>
+    <script>
+      // Pre-mount theme bootstrap. Runs before React so there is no flash
+      // of the wrong palette when a light-mode user reloads. Reads an
+      // explicit choice from localStorage; falls back to the OS prefers-
+      // color-scheme; final fallback is dark (matches the class on <html>).
+      (function () {
+        try {
+          var stored = localStorage.getItem('rabih-ops:theme');
+          var theme =
+            stored === 'light' || stored === 'dark'
+              ? stored
+              : window.matchMedia &&
+                  window.matchMedia('(prefers-color-scheme: light)').matches
+                ? 'light'
+                : 'dark';
+          var root = document.documentElement;
+          if (theme === 'light') root.classList.remove('dark');
+          else root.classList.add('dark');
+          root.setAttribute('data-theme', theme);
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', theme === 'light' ? '#FAFAF7' : '#000000');
+        } catch (e) {
+          // localStorage / matchMedia blocked — leave the static `dark` class on <html>.
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
