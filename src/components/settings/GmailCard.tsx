@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { StatusChip } from '@/components/ui/status-chip';
 import { toast } from '@/components/ui/toaster';
 import { ExternalLink, Loader2, Mail } from 'lucide-react';
 import {
@@ -103,10 +104,10 @@ export function GmailCard() {
 
         {!status.isLoading && linked && (
           <>
-            <div className="text-foreground">
-              ✅ Connected
+            <div className="flex items-center gap-2">
+              <StatusChip tone="success" size="xs" dot>Connected</StatusChip>
               {status.data?.email && (
-                <span className="text-muted-foreground"> as {status.data.email}</span>
+                <span className="text-foreground-72 text-xs">as {status.data.email}</span>
               )}
             </div>
             {status.data?.connected_at && (
@@ -135,7 +136,10 @@ export function GmailCard() {
 
         {!status.isLoading && !linked && (
           <>
-            <p className="text-muted-foreground">
+            <div>
+              <StatusChip tone="muted" size="xs" dot>Not connected</StatusChip>
+            </div>
+            <p className="text-foreground-72">
               Connect Gmail so RabihOS can surface your important unread emails on
               the dashboard and let you attach them to tasks or follow-ups. We use
               read-only scope only — RabihOS never sends, deletes, marks-read or
@@ -143,6 +147,7 @@ export function GmailCard() {
             </p>
             <Button
               size="sm"
+              variant="gradient"
               onClick={handleConnect}
               disabled={request.isPending}
               data-testid="gmail-connect-button"

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { StatusChip } from '@/components/ui/status-chip';
 import { toast } from '@/components/ui/toaster';
 import { Calendar, ExternalLink, Loader2 } from 'lucide-react';
 import {
@@ -106,10 +107,10 @@ export function GoogleCalendarCard() {
 
         {!status.isLoading && linked && (
           <>
-            <div className="text-foreground">
-              ✅ Connected
+            <div className="flex items-center gap-2">
+              <StatusChip tone="success" size="xs" dot>Connected</StatusChip>
               {status.data?.email && (
-                <span className="text-muted-foreground"> as {status.data.email}</span>
+                <span className="text-foreground-72 text-xs">as {status.data.email}</span>
               )}
             </div>
             {status.data?.connected_at && (
@@ -138,13 +139,17 @@ export function GoogleCalendarCard() {
 
         {!status.isLoading && !linked && (
           <>
-            <p className="text-muted-foreground">
+            <div>
+              <StatusChip tone="muted" size="xs" dot>Not connected</StatusChip>
+            </div>
+            <p className="text-foreground-72">
               Connect your Google account to see today's events on the dashboard
               and add tasks straight to your calendar. Tokens stay server-side; the
               app never sees them.
             </p>
             <Button
               size="sm"
+              variant="gradient"
               onClick={handleConnect}
               disabled={request.isPending}
               data-testid="calendar-connect-button"

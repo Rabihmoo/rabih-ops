@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { StatusChip } from '@/components/ui/status-chip';
 import { toast } from '@/components/ui/toaster';
 import { Loader2, ExternalLink, Send } from 'lucide-react';
 import {
@@ -78,10 +79,12 @@ export function TelegramCard() {
 
         {!status.isLoading && linked && (
           <>
-            <div className="text-foreground">
-              ✅ Linked
+            <div className="flex items-center gap-2">
+              <StatusChip tone="success" size="xs" dot>Linked</StatusChip>
               {status.data?.tg_username && (
-                <span className="text-muted-foreground"> as @{status.data.tg_username}</span>
+                <span className="text-foreground-72 text-xs">
+                  as @{status.data.tg_username}
+                </span>
               )}
             </div>
             {status.data?.linked_at && (
@@ -110,12 +113,16 @@ export function TelegramCard() {
 
         {!status.isLoading && !linked && (
           <>
-            <p className="text-muted-foreground">
+            <div>
+              <StatusChip tone="muted" size="xs" dot>Not linked</StatusChip>
+            </div>
+            <p className="text-foreground-72">
               Link your Telegram account to receive daily summaries, task reminders,
               and to drive RabihOS by chat.
             </p>
             <Button
               size="sm"
+              variant="gradient"
               onClick={handleRequest}
               disabled={request.isPending}
               data-testid="telegram-link-button"
