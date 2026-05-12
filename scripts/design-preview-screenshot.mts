@@ -29,8 +29,12 @@ if (!entry) {
 }
 
 const browser = await chromium.launch();
+// AppLayout uses an inner scrollable container (h-full overflow-auto),
+// so the document height equals the viewport height — Playwright's
+// `fullPage: true` would only capture one screen. We give the viewport
+// enough vertical space for the whole preview to render in-frame.
 const ctx = await browser.newContext({
-  viewport: { width: 1440, height: 2400 },
+  viewport: { width: 1440, height: 4800 },
   deviceScaleFactor: 2,
 });
 await ctx.addInitScript(
