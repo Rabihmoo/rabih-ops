@@ -30,8 +30,10 @@ import { Avatar, AvatarGroup } from '@/components/ui/avatar';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { DashboardTile } from '@/components/ui/dashboard-tile';
 import { AmbientBackground } from '@/components/ui/ambient-background';
+import { SearchInput } from '@/components/ui/search-input';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { PageHeader, HeaderStat } from '@/components/shared/PageHeader';
+import { ThemeToggle } from '@/components/layout/ThemeToggle';
 
 // -------------------------------------------------------------------
 // Local theme override. The app forces .dark on <html>; this toggle
@@ -396,6 +398,59 @@ export function DesignPreviewPage() {
             <div className="flex-1">
               <ProgressBar value={64} tone="primary" size="sm" />
             </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* Phase 3 shell elements. The full app shell — sidebar, topbar,
+          mobile bottom nav, drawer — wraps this page; these previews are
+          the constituent UI primitives in isolation for visual QA. */}
+      <Section
+        title="Shell elements"
+        description="Phase 3 shell primitives. The live shell wraps this page."
+      >
+        <div className="space-y-5">
+          <div>
+            <div className="text-section-label mb-2">SearchInput</div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <SearchInput
+                aria-label="Search demo"
+                placeholder="Search tasks, contacts, documents…"
+              />
+              <SearchInput
+                aria-label="Search demo with kbd"
+                placeholder="With keyboard hint"
+                kbdHint="⌘K"
+              />
+            </div>
+            <p className="text-muted-foreground mt-2 text-xs">
+              Cosmetic in Phase 3 — readOnly in the topbar until the command
+              palette lands in Phase 4. The ⌘K hint is decorative for now.
+            </p>
+          </div>
+
+          <div>
+            <div className="text-section-label mb-2">ThemeToggle</div>
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <span className="text-muted-foreground text-sm">
+                Persists to <code className="text-xs">localStorage</code>; the
+                in-page toggle above this section is dev-only and does not
+                persist.
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-section-label mb-2">Mobile shell</div>
+            <p className="text-muted-foreground text-sm">
+              The mobile bottom nav (Home / Inbox / Tasks / Follow-ups / More)
+              and the secondary drawer are visible at the <code>md</code> breakpoint
+              and below — resize the viewport to see them. Drawer holds
+              Fixed tasks, Inspections, Purchasing, Documents, Directory,
+              Settings, the user identity strip, the theme toggle, branches
+              legend, and Sign out.
+            </p>
           </div>
         </div>
       </Section>
