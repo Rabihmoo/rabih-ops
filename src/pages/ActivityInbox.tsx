@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Loader2, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { PageHeader, HeaderStat } from '@/components/shared/PageHeader';
 import { useActivityInbox } from '@/hooks/useActivityInbox';
 import {
   ActivityFilterChips,
@@ -131,11 +131,10 @@ export function ActivityInboxPage() {
 
   return (
     <div className="space-y-5">
-      <header className="space-y-1.5">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="text-foreground text-3xl font-semibold tracking-tight">
-            Activity inbox
-          </h1>
+      <PageHeader
+        eyebrow="Triage"
+        title="Activity inbox"
+        actions={
           <Button
             size="sm"
             variant="outline"
@@ -151,26 +150,27 @@ export function ActivityInboxPage() {
             )}
             {isRefreshing ? 'Refreshing…' : 'Refresh'}
           </Button>
-        </div>
-        <p className="text-muted-foreground text-sm">
-          {inbox.isLoading ? (
-            'Loading…'
+        }
+        stats={
+          inbox.isLoading ? (
+            <span className="text-muted-foreground">Loading…</span>
           ) : (
             <>
-              <CountChip n={critical} label="critical" tone="destructive" />
-              <CountChip n={overdue} label="overdue" tone="destructive" />
-              <CountChip n={today} label="due today" tone="warning" />
-              <CountChip n={incoming} label="incoming" tone="muted" />
+              <HeaderStat count={critical} label="critical" tone="destructive" />
+              <HeaderStat count={overdue} label="overdue" tone="destructive" />
+              <HeaderStat count={today} label="due today" tone="warning" />
+              <HeaderStat count={incoming} label="incoming" tone="muted" />
             </>
-          )}
-        </p>
-      </header>
+          )
+        }
+      />
 
       {warnings.length > 0 && (
         <div
-          className="border-border bg-warning-soft text-warning-ink flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
+          className="border-border bg-warning-soft text-warning-ink relative flex items-start gap-2 overflow-hidden rounded-lg border px-3 py-2.5 pl-4 text-xs"
           data-testid="inbox-warning-banner"
         >
+          <span aria-hidden className="bg-warning absolute left-0 top-0 bottom-0 w-1" />
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <div className="space-y-0.5">
             <div className="font-medium">Some sources are degraded.</div>
@@ -202,7 +202,7 @@ export function ActivityInboxPage() {
           filterLabel={FILTER_LABEL[filter]}
         />
       ) : (
-        <ul className="space-y-1.5" data-testid="inbox-list">
+        <ul className="space-y-2" data-testid="inbox-list">
           {filtered.map((item) => (
             <li key={item.id}>
               <ActivityRow
@@ -215,31 +215,5 @@ export function ActivityInboxPage() {
         </ul>
       )}
     </div>
-  );
-}
-
-function CountChip({
-  n,
-  label,
-  tone,
-}: {
-  n: number;
-  label: string;
-  tone: 'destructive' | 'warning' | 'muted';
-}) {
-  const empty = n === 0;
-  return (
-    <span
-      className={cn(
-        'mr-3 inline-flex items-baseline gap-1 text-xs',
-        empty && 'text-subtle-foreground',
-        !empty && tone === 'destructive' && 'text-destructive-ink',
-        !empty && tone === 'warning' && 'text-warning-ink',
-        !empty && tone === 'muted' && 'text-muted-foreground',
-      )}
-    >
-      <span className="font-semibold tabular-nums">{n}</span>
-      <span>{label}</span>
-    </span>
   );
 }

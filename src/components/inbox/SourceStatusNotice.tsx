@@ -25,7 +25,7 @@ export function SourceStatusNotice({ statuses }: { statuses: SourceStatus[] }) {
   return (
     <div
       className={cn(
-        'border-border bg-surface-1 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border px-3 py-1.5 text-xs',
+        'border-border bg-surface-1 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border px-3 py-2 text-xs',
       )}
       data-testid="inbox-source-status"
     >

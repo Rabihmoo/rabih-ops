@@ -74,9 +74,9 @@ export function ActivityFilterChips({
             data-testid={`inbox-filter-${key}`}
             data-active={isActive ? 'true' : 'false'}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors',
+              'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-all duration-150',
               isActive
-                ? 'border-primary bg-primary-soft text-primary-ink'
+                ? 'border-primary bg-primary-soft text-primary-ink shadow-glow-blue'
                 : 'border-border bg-card text-muted-foreground hover:bg-surface-1 hover:text-foreground',
               isEmpty && !isActive && 'opacity-60',
             )}
