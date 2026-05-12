@@ -1,6 +1,7 @@
 import { AlertTriangle, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BranchBadge, TONE_BAR } from '@/components/tasks/badges';
+import { StatusChip } from '@/components/ui/status-chip';
 import {
   formatCurrency,
   formatQty,
@@ -133,9 +134,7 @@ export function PurchaseListItem({
             </span>
           )}
           {purchase.priority === 'urgent' && (
-            <span className="bg-destructive-soft text-destructive-ink rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-              urgent
-            </span>
+            <StatusChip tone="critical" size="xs">urgent</StatusChip>
           )}
           <span className="text-subtle-foreground text-xs">
             by {purchase.requested_by_name}

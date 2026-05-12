@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { StatusChip } from '@/components/ui/status-chip';
 import { toast } from '@/components/ui/toaster';
 import { PurchaseForm } from '@/components/purchases/PurchaseForm';
 import { PurchaseActions } from '@/components/purchases/PurchaseActions';
@@ -166,9 +167,7 @@ export function PurchaseDetailPage() {
               </>
             )}
             {row.is_overdue && (
-              <span className="bg-destructive-soft text-destructive-ink ml-1 inline-flex items-center rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-                overdue
-              </span>
+              <StatusChip tone="critical" size="xs" className="ml-1">overdue</StatusChip>
             )}
           </div>
         </div>
@@ -294,7 +293,7 @@ export function PurchaseDetailPage() {
         <Card>
           <CardContent className="space-y-2 p-5">
             <div className="text-section-label">Notes</div>
-            <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
+            <p className="text-foreground-72 text-sm leading-relaxed whitespace-pre-wrap">
               {row.notes}
             </p>
           </CardContent>
@@ -310,7 +309,7 @@ export function PurchaseDetailPage() {
           <div className="text-section-label flex items-center gap-2">
             Comments
             {comments.length > 0 && (
-              <span className="text-foreground/85 normal-case tracking-normal">
+              <span className="text-foreground-72 normal-case tracking-normal">
                 ({comments.length})
               </span>
             )}
@@ -333,7 +332,7 @@ export function PurchaseDetailPage() {
           <div className="text-section-label flex items-center gap-2">
             Attachments
             {attachments.length > 0 && (
-              <span className="text-foreground/85 normal-case tracking-normal">
+              <span className="text-foreground-72 normal-case tracking-normal">
                 ({attachments.length})
               </span>
             )}

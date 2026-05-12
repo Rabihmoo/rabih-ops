@@ -133,14 +133,17 @@ function PurchasesEmpty() {
     },
   };
 
+  // True all-clear: the unfiltered "all" bucket is empty. Anything else
+  // is a filter result, so it gets the muted treatment per Phase 4.2/4.4.
+  const isAllClear = bucket === 'all';
   const c = COPY[bucket];
-  const isCleanState = bucket === 'unpaid';
   return (
     <EmptyState
-      icon={isCleanState ? ShieldCheck : Receipt}
+      icon={isAllClear ? ShieldCheck : Receipt}
       title={c.title}
       description={c.description}
-      tone={isCleanState ? 'success' : 'muted'}
+      tone={isAllClear ? 'hero' : 'muted'}
+      size={isAllClear ? 'tall' : 'default'}
       action={
         canMutate && bucket !== 'unpaid' ? (
           <Button size="sm" asChild>

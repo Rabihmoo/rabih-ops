@@ -1,12 +1,15 @@
 import { cn } from '@/lib/utils';
+import { StatusChip, type StatusTone } from '@/components/ui/status-chip';
 import type {
   PaymentMethod,
   PaymentStatus,
   PurchaseStatus,
 } from '@/types/database';
 
-const PILL_BASE =
-  'inline-flex items-center rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider';
+// Phase 4.4 — both PurchaseStatusBadge and PaymentStatusBadge graduate to
+// the shared StatusChip primitive (rounded-pill, tracking-wide, premium
+// tone tinting). Tone tables below map enums → StatusTone. PaymentMethod
+// stays plain informational text since it isn't a status.
 
 // =========================================================
 // Purchase status (lifecycle)
@@ -21,13 +24,13 @@ const STATUS_LABEL: Record<PurchaseStatus, string> = {
   cancelled: 'Cancelled',
 };
 
-const STATUS_CLASSES: Record<PurchaseStatus, string> = {
-  draft: 'bg-muted text-muted-foreground',
-  submitted: 'bg-primary-soft text-primary-ink',
-  ordered: 'bg-warning-soft text-warning-ink',
-  partially_received: 'bg-warning-soft text-warning-ink',
-  fully_received: 'bg-success-soft text-success-ink',
-  cancelled: 'bg-muted text-subtle-foreground line-through',
+const STATUS_TONE: Record<PurchaseStatus, StatusTone> = {
+  draft:              'muted',
+  submitted:          'info',
+  ordered:            'warning',
+  partially_received: 'warning',
+  fully_received:     'success',
+  cancelled:          'muted',
 };
 
 export function PurchaseStatusBadge({
@@ -38,9 +41,9 @@ export function PurchaseStatusBadge({
   className?: string;
 }) {
   return (
-    <span className={cn(PILL_BASE, STATUS_CLASSES[status], className)}>
+    <StatusChip tone={STATUS_TONE[status]} size="xs" className={className}>
       {STATUS_LABEL[status]}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -54,10 +57,10 @@ const PAYMENT_LABEL: Record<PaymentStatus, string> = {
   paid: 'Paid',
 };
 
-const PAYMENT_CLASSES: Record<PaymentStatus, string> = {
-  unpaid: 'bg-destructive-soft text-destructive-ink',
-  partial: 'bg-warning-soft text-warning-ink',
-  paid: 'bg-success-soft text-success-ink',
+const PAYMENT_TONE: Record<PaymentStatus, StatusTone> = {
+  unpaid:  'critical',
+  partial: 'warning',
+  paid:    'success',
 };
 
 export function PaymentStatusBadge({
@@ -68,9 +71,9 @@ export function PaymentStatusBadge({
   className?: string;
 }) {
   return (
-    <span className={cn(PILL_BASE, PAYMENT_CLASSES[status], className)}>
+    <StatusChip tone={PAYMENT_TONE[status]} size="xs" className={className}>
       {PAYMENT_LABEL[status]}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -97,7 +100,7 @@ export function PaymentMethodTag({
   return (
     <span
       className={cn(
-        'text-muted-foreground inline-flex items-center text-xs',
+        'text-foreground-72 inline-flex items-center text-xs',
         className,
       )}
     >
