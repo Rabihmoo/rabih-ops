@@ -138,4 +138,106 @@ const browser = await chromium.launch();
   await ctx.close();
 }
 
+// -------------------------------------------------------------------
+// 5. Phase 4.1 page captures — Dashboard + Activity Inbox.
+// Goto the live route, wait for known DOM to settle, then shoot at
+// each viewport × theme. We use `domcontentloaded` instead of
+// `networkidle` because TanStack Query keeps a few connections warm
+// for refetch — networkidle never settles on these pages.
+// -------------------------------------------------------------------
+async function gotoRoute(page: Page, route: string, settleSelector: string) {
+  await page.goto(BASE + route, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector(settleSelector, { timeout: 8000 });
+  // Give the data hooks one frame to populate.
+  await page.waitForTimeout(800);
+}
+
+interface PageCapture {
+  slug: string;
+  route: string;
+  settle: string;
+}
+
+const PHASE_4_PAGES: PageCapture[] = [
+  { slug: 'dashboard',  route: '/',           settle: 'h1' },
+  { slug: 'inbox',      route: '/inbox',      settle: 'h1' },
+  { slug: 'tasks',      route: '/tasks',      settle: 'h1' },
+  { slug: 'follow-ups', route: '/follow-ups', settle: 'h1' },
+];
+
+// Desktop captures.
+{
+  const ctx = await makeContext({ width: 1440, height: 900 });
+  const page = await ctx.newPage();
+  for (const p of PHASE_4_PAGES) {
+    for (const theme of ['dark', 'light'] as const) {
+      await gotoRoute(page, p.route, p.settle);
+      await applyTheme(page, theme);
+      const out = path.join(OUT_DIR, `${p.slug}-${theme}.png`);
+      await page.screenshot({ path: out, fullPage: false });
+      console.log(`✓ ${out}`);
+    }
+  }
+  await ctx.close();
+}
+
+// Mobile captures.
+{
+  const ctx = await makeContext({ width: 390, height: 844 });
+  const page = await ctx.newPage();
+  for (const p of PHASE_4_PAGES) {
+    for (const theme of ['dark', 'light'] as const) {
+      await gotoRoute(page, p.route, p.settle);
+      await applyTheme(page, theme);
+      const out = path.join(OUT_DIR, `${p.slug}-mobile-${theme}.png`);
+      await page.screenshot({ path: out, fullPage: false });
+      console.log(`✓ ${out}`);
+    }
+  }
+  await ctx.close();
+}
+
+// -------------------------------------------------------------------
+// 6. Detail-page captures — click the first row in /tasks and
+// /follow-ups, then shoot the detail page. Skips gracefully if the
+// list is empty (no seeded data).
+// -------------------------------------------------------------------
+interface DetailCapture {
+  slug: string;
+  listRoute: string;
+  rowSelector: string;
+}
+
+const DETAIL_PAGES: DetailCapture[] = [
+  { slug: 'task-detail',      listRoute: '/tasks',      rowSelector: 'ul li button' },
+  { slug: 'follow-up-detail', listRoute: '/follow-ups', rowSelector: 'ul li button' },
+];
+
+{
+  const ctx = await makeContext({ width: 1440, height: 900 });
+  const page = await ctx.newPage();
+  for (const d of DETAIL_PAGES) {
+    for (const theme of ['dark', 'light'] as const) {
+      await gotoRoute(page, d.listRoute, 'h1');
+      await applyTheme(page, theme);
+      const row = page.locator(d.rowSelector).first();
+      const rowCount = await page.locator(d.rowSelector).count();
+      if (rowCount === 0) {
+        console.log(`⚠ ${d.slug}-${theme}: list is empty, skipping`);
+        continue;
+      }
+      await row.click();
+      // Wait for the detail H1 to settle (router push + data load).
+      await page.waitForSelector('h1', { timeout: 8000 });
+      await page.waitForTimeout(800);
+      // Re-apply theme since the route change can re-mount the body.
+      await applyTheme(page, theme);
+      const out = path.join(OUT_DIR, `${d.slug}-${theme}.png`);
+      await page.screenshot({ path: out, fullPage: false });
+      console.log(`✓ ${out}`);
+    }
+  }
+  await ctx.close();
+}
+
 await browser.close();
