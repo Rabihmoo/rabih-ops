@@ -159,16 +159,16 @@ try {
 } catch (e) { selfRejected = /cannot link an entity to itself/.test(e.message); }
 check('self-link rejected', selfRejected);
 
-// Invalid entity_type is rejected. 'contact' is allowed as of H2.3, so
-// we use a value that's still not in the whitelist — 'note' lands with
-// Phase H3.
+// Invalid entity_type is rejected. 'contact' is allowed as of H2.3,
+// 'note' lands with H3.3 — both whitelisted now. We use a value that's
+// still not in the whitelist as the negative-case probe.
 let invalidRejected = false;
 try {
   await asRabih(`
-    select rpc_record_link_internal('note','${taskAId}'::uuid,'task','${taskBId}'::uuid,'relates_to')
+    select rpc_record_link_internal('inspection_finding','${taskAId}'::uuid,'task','${taskBId}'::uuid,'relates_to')
   `);
 } catch (e) { invalidRejected = /invalid from_entity_type/.test(e.message); }
-check('unknown entity_type rejected (note not yet allowed; H3)', invalidRejected);
+check('unknown entity_type rejected (inspection_finding intentionally out of scope)', invalidRejected);
 
 // =====================================================================
 // External CRUD
@@ -355,6 +355,147 @@ check('relations on company shows outbound link to contact',
     && x.to_entity_type === 'contact' && x.to_entity_id === ctSaltId));
 
 // =====================================================================
+// H3.3 widening — note as a link endpoint
+// =====================================================================
+console.log('\nH3.3 — note links');
+
+// Salt-tagged work note (visible to viewer).
+const noteSaltRow = await asRabih(`
+  select rpc_create_note('RL note salt body ${ts}', 'RL note salt ${ts}',
+    'decision','operations','work','salt',
+    'because we needed to', 'will reduce stockouts', null, 'accepted') as r
+`);
+const noteSaltId = noteSaltRow.find(x => x.r)?.r?.id;
+check('rabih creates salt-tagged work decision note', !!noteSaltId);
+
+// Branchless work note (admin-only).
+const noteCrossRow = await asRabih(`
+  select rpc_create_note('RL note cross body ${ts}', 'RL note cross ${ts}',
+    'lesson','knowledge','work',null) as r
+`);
+const noteCrossId = noteCrossRow.find(x => x.r)?.r?.id;
+check('rabih creates branchless work note (admin/CEO only)', !!noteCrossId);
+
+// Personal note (creator-only — admin/CEO do NOT bypass).
+const notePersRow = await asRabih(`
+  select rpc_create_note('RL note pers body ${ts}', 'RL note pers ${ts}',
+    'note','personal','personal',null) as r
+`);
+const notePersId = notePersRow.find(x => x.r)?.r?.id;
+check('rabih creates personal note', !!notePersId);
+
+// Link task A → salt work note (note_for).
+const taskToNote = await asRabih(`
+  select rpc_record_link_internal('task','${taskAId}'::uuid,
+    'note','${noteSaltId}'::uuid,'note_for') as r
+`);
+const taskToNoteId = taskToNote.find(x => x.r)?.r?.id;
+check('link task → salt note (note_for) succeeds', !!taskToNoteId);
+
+// Note → company (decision_for) — internal-to-internal across the widened types.
+const noteToCo = await asRabih(`
+  select rpc_record_link_internal('note','${noteSaltId}'::uuid,
+    'company','${coSaltId}'::uuid,'decision_for') as r
+`);
+const noteToCoId = noteToCo.find(x => x.r)?.r?.id;
+check('link note → company (decision_for) succeeds', !!noteToCoId);
+
+// Self-link rejection on the new type.
+let noteSelfRejected = false;
+try {
+  await asRabih(`
+    select rpc_record_link_internal('note','${noteSaltId}'::uuid,
+      'note','${noteSaltId}'::uuid,'relates_to')
+  `);
+} catch (e) { noteSelfRejected = /cannot link an entity to itself/.test(e.message); }
+check('note → same note rejected (self-link)', noteSelfRejected);
+
+// Idempotency on the new endpoint.
+const taskToNoteDup = await asRabih(`
+  select rpc_record_link_internal('task','${taskAId}'::uuid,
+    'note','${noteSaltId}'::uuid,'note_for') as r
+`);
+check('idempotent re-link task → note returns same id',
+  taskToNoteDup.find(x => x.r)?.r?.id === taskToNoteId);
+
+// rpc_record_relations on task A should show the new outbound note link.
+const relTaskANote = await asRabih(`select rpc_record_relations('task','${taskAId}'::uuid, 50) as r`);
+const relTaskANoteRows = relTaskANote.find(x => x.r)?.r ?? [];
+check('relations on task A shows outbound → note',
+  relTaskANoteRows.some((x) => x.direction === 'outbound'
+    && x.to_entity_type === 'note' && x.to_entity_id === noteSaltId));
+
+// rpc_record_relations on the note should show task A inbound + company outbound.
+const relNote = await asRabih(`select rpc_record_relations('note','${noteSaltId}'::uuid, 50) as r`);
+const relNoteRows = relNote.find(x => x.r)?.r ?? [];
+check('relations on note shows inbound link from task',
+  relNoteRows.some((x) => x.direction === 'inbound'
+    && x.to_entity_type === 'task' && x.to_entity_id === taskAId));
+check('relations on note shows outbound link to company',
+  relNoteRows.some((x) => x.direction === 'outbound'
+    && x.to_entity_type === 'company' && x.to_entity_id === coSaltId));
+
+// =====================================================================
+// Privacy probe — personal note target (load-bearing)
+// =====================================================================
+console.log('\nPrivacy: personal note target');
+
+const taskToNotePers = await asRabih(`
+  select rpc_record_link_internal('task','${taskAId}'::uuid,
+    'note','${notePersId}'::uuid,'note_for') as r
+`);
+const taskToNotePersId = taskToNotePers.find(x => x.r)?.r?.id;
+check('rabih can link task A → his personal note', !!taskToNotePersId);
+
+// As rabih, the link is visible (he can access both endpoints).
+const rabihPersRel = await asRabih(`select rpc_record_relations('task','${taskAId}'::uuid, 50) as r`);
+check('rabih sees the personal-note link in his own relations',
+  (rabihPersRel.find(x => x.r)?.r ?? []).some((x) => x.link_id === taskToNotePersId));
+
+// As e2e admin: STRICT-personal means admin/CEO does NOT bypass.
+// _can_access_entity('note', personalNote) returns false for non-creators,
+// so the link row is invisible in rpc_record_relations.
+const e2eNoteRel = await asE2e(`select rpc_record_relations('task','${taskAId}'::uuid, 50) as r`);
+const e2eNoteRows = e2eNoteRel.find(x => x.r)?.r ?? [];
+check('e2e admin does NOT see the personal-note link (strict-personal)',
+  !e2eNoteRows.some((x) => x.link_id === taskToNotePersId));
+
+// =====================================================================
+// Privacy probe — branchless work note target
+// =====================================================================
+console.log('\nPrivacy: branchless work-note target');
+
+const taskToNoteCross = await asRabih(`
+  select rpc_record_link_internal('task','${taskAId}'::uuid,
+    'note','${noteCrossId}'::uuid,'note_for') as r
+`);
+const taskToNoteCrossId = taskToNoteCross.find(x => x.r)?.r?.id;
+check('rabih links task → branchless work note', !!taskToNoteCrossId);
+
+// Viewer (branches=['salt']) — can see task A (salt branch) but the note
+// has branch=null which is admin/CEO only. _can_access_entity('note', cross)
+// returns false for the viewer, so the link is invisible.
+const viewerNoteRel = await asViewer(`select rpc_record_relations('task','${taskAId}'::uuid, 50) as r`);
+const viewerNoteRows = viewerNoteRel.find(x => x.r)?.r ?? [];
+check('viewer does NOT see the branchless-work-note link',
+  !viewerNoteRows.some((x) => x.link_id === taskToNoteCrossId));
+check('viewer DOES see the salt-tagged note link (counter-case)',
+  viewerNoteRows.some((x) => x.link_id === taskToNoteId));
+
+// Cross-user link attempt: simulate another user trying to link a foreign
+// personal note. As e2e admin (different uid), attempting the link should
+// raise 'to entity not accessible' because _can_access_entity('note', rabih's
+// personal) is false for e2e.
+let crossUserPersRejected = false;
+try {
+  await asE2e(`
+    select rpc_record_link_internal('task','${taskAId}'::uuid,
+      'note','${notePersId}'::uuid,'note_for')
+  `);
+} catch (e) { crossUserPersRejected = /not accessible/.test(e.message); }
+check('e2e cannot link to another user\'s personal note', crossUserPersRejected);
+
+// =====================================================================
 // Privacy probe — zero-branch company target
 // =====================================================================
 console.log('\nPrivacy: zero-branch company target');
@@ -403,11 +544,13 @@ console.log('\nCleanup');
 await sql(`delete from record_links where created_by = '${RABIH}' and (
   to_entity_id in (
     '${taskAId}'::uuid,'${taskBId}'::uuid,'${persDocId}'::uuid,
-    '${coSaltId}'::uuid,'${coZeroId}'::uuid,'${ctSaltId}'::uuid
+    '${coSaltId}'::uuid,'${coZeroId}'::uuid,'${ctSaltId}'::uuid,
+    '${noteSaltId}'::uuid,'${noteCrossId}'::uuid,'${notePersId}'::uuid
   )
   or from_entity_id in (
     '${taskAId}'::uuid,'${taskBId}'::uuid,
-    '${coSaltId}'::uuid,'${coZeroId}'::uuid,'${ctSaltId}'::uuid
+    '${coSaltId}'::uuid,'${coZeroId}'::uuid,'${ctSaltId}'::uuid,
+    '${noteSaltId}'::uuid,'${noteCrossId}'::uuid,'${notePersId}'::uuid
   )
   or external_record_id like 'smoke-drive-%'
 )`);
@@ -416,6 +559,7 @@ await sql(`delete from contacts where id = '${ctSaltId}'`);
 await sql(`delete from company_branches where company_id in ('${coSaltId}','${coZeroId}')`);
 await sql(`delete from companies where id in ('${coSaltId}','${coZeroId}')`);
 await sql(`delete from documents where id = '${persDocId}'`);
+await sql(`delete from notes where id in ('${noteSaltId}','${noteCrossId}','${notePersId}')`);
 await sql(`update tasks set deleted_at = now() where id in ('${taskAId}','${taskBId}')`);
 
 console.log(`\n${pass} passed · ${fail} failed`);
