@@ -31,6 +31,9 @@ import { CompanyDetailPage } from './pages/CompanyDetail';
 import { ContactsPage } from './pages/Contacts';
 import { ContactNewPage } from './pages/ContactNew';
 import { ContactDetailPage } from './pages/ContactDetail';
+import { NotesPage } from './pages/Notes';
+import { NoteNewPage } from './pages/NoteNew';
+import { NoteDetailPage } from './pages/NoteDetail';
 import { AuthCallbackPage } from './pages/AuthCallback';
 import { Toaster } from './components/ui/toaster';
 
@@ -87,6 +90,9 @@ export default function App() {
           <Route path="/contacts" element={<ContactsPage />} />
           <Route path="/contacts/new" element={<ContactNewPage />} />
           <Route path="/contacts/:id" element={<ContactDetailPage />} />
+          <Route path="/notes" element={<NotesPage />} />
+          <Route path="/notes/new" element={<NoteNewPage />} />
+          <Route path="/notes/:id" element={<NoteDetailPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           {DesignPreviewPage && (
             <Route

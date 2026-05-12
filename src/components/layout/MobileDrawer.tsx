@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   FileText,
   LogOut,
+  NotebookPen,
   Receipt,
   Repeat,
   Settings,
@@ -43,6 +44,7 @@ const DRAWER_NAV: DrawerNavItem[] = [
   { to: '/inspections', label: 'Inspections', icon: ClipboardCheck },
   { to: '/purchases', label: 'Purchasing', icon: Receipt },
   { to: '/documents', label: 'Documents', icon: FileText },
+  { to: '/notes', label: 'Notes', icon: NotebookPen },
   {
     to: '/directory',
     label: 'Directory',

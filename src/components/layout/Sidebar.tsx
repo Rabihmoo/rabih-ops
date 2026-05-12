@@ -8,6 +8,7 @@ import {
   Receipt,
   Repeat,
   FileText,
+  NotebookPen,
   Settings,
   Users,
   type LucideIcon,
@@ -59,6 +60,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Knowledge',
     items: [
       { to: '/documents', label: 'Documents', icon: FileText },
+      { to: '/notes', label: 'Notes', icon: NotebookPen },
       {
         to: '/directory',
         label: 'Directory',
