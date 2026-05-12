@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { StatusChip } from '@/components/ui/status-chip';
 import { toast } from '@/components/ui/toaster';
 import { InspectionForm } from '@/components/inspections/InspectionForm';
 import { FindingsList } from '@/components/inspections/FindingsList';
@@ -132,9 +133,9 @@ export function InspectionDetailPage() {
               by {inspection.inspector_name}
             </span>
             {openCriticalCount > 0 && (
-              <span className="bg-destructive-soft text-destructive-ink ml-1 inline-flex items-center rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+              <StatusChip tone="critical" size="xs" className="ml-1">
                 {openCriticalCount} open critical
-              </span>
+              </StatusChip>
             )}
           </div>
         </div>
@@ -200,7 +201,7 @@ export function InspectionDetailPage() {
           <Card>
             <CardContent className="space-y-2 p-5">
               <div className="text-section-label">General notes</div>
-              <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
+              <p className="text-foreground-72 text-sm leading-relaxed whitespace-pre-wrap">
                 {inspection.general_notes}
               </p>
             </CardContent>
@@ -213,7 +214,7 @@ export function InspectionDetailPage() {
           <div className="text-section-label flex items-center gap-2">
             Findings
             {findings.length > 0 && (
-              <span className="text-foreground/85 normal-case tracking-normal">
+              <span className="text-foreground-72 normal-case tracking-normal">
                 ({findings.length})
               </span>
             )}
@@ -227,7 +228,7 @@ export function InspectionDetailPage() {
           <div className="text-section-label flex items-center gap-2">
             Comments
             {comments.length > 0 && (
-              <span className="text-foreground/85 normal-case tracking-normal">
+              <span className="text-foreground-72 normal-case tracking-normal">
                 ({comments.length})
               </span>
             )}
@@ -249,7 +250,7 @@ export function InspectionDetailPage() {
           <div className="text-section-label flex items-center gap-2">
             Attachments
             {attachments.length > 0 && (
-              <span className="text-foreground/85 normal-case tracking-normal">
+              <span className="text-foreground-72 normal-case tracking-normal">
                 ({attachments.length})
               </span>
             )}

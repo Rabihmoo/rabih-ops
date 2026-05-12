@@ -128,14 +128,17 @@ function InspectionsEmpty() {
     },
   };
 
+  // True all-clear: no inspections at all under the default "recent"
+  // bucket. Anything else is a filter result — muted per Phase 4.4.
+  const isAllClear = bucket === 'recent';
   const c = COPY[bucket];
-  const isCleanState = bucket === 'failed' || bucket === 'pending';
   return (
     <EmptyState
-      icon={isCleanState ? ShieldCheck : ClipboardCheck}
+      icon={isAllClear ? ShieldCheck : ClipboardCheck}
       title={c.title}
       description={c.description}
-      tone={isCleanState ? 'success' : 'muted'}
+      tone={isAllClear ? 'hero' : 'muted'}
+      size={isAllClear ? 'tall' : 'default'}
       action={
         canAdmin && bucket === 'recent' ? (
           <Button size="sm" asChild>

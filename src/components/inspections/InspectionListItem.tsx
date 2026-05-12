@@ -1,6 +1,7 @@
 import { AlertTriangle, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BranchBadge, TONE_BAR } from '@/components/tasks/badges';
+import { StatusChip } from '@/components/ui/status-chip';
 import type { InspectionResult } from '@/types/database';
 import type { InspectionListItem as InspectionListItemType } from '@/lib/inspections';
 import { ResultBadge } from './badges';
@@ -75,17 +76,16 @@ export function InspectionListItem({
           <ResultBadge result={result} />
           <BranchBadge branch={inspection.branch} />
           {inspection.open_critical_count > 0 && (
-            <span className="bg-destructive-soft text-destructive-ink inline-flex items-center gap-1 rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-              <AlertTriangle className="h-3 w-3" />
+            <StatusChip tone="critical" size="xs" icon={AlertTriangle}>
               {inspection.open_critical_count} critical
-            </span>
+            </StatusChip>
           )}
           {inspection.open_finding_count > inspection.open_critical_count && (
-            <span className="text-muted-foreground text-[10px] font-medium uppercase tracking-wider">
+            <span className="text-foreground-72 text-[10px] font-medium uppercase tracking-wider">
               {inspection.open_finding_count - inspection.open_critical_count} open
             </span>
           )}
-          <span className="text-subtle-foreground text-xs">
+          <span className="text-foreground-56 text-xs">
             by {inspection.inspector_name}
           </span>
         </div>

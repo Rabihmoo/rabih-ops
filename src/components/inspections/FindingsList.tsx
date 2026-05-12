@@ -172,7 +172,7 @@ export function FindingsList({
                 {isResolving && (
                   <div className="border-border mt-2 space-y-2 border-t pt-3">
                     <label
-                      className="text-foreground/90 text-xs font-medium"
+                      className="text-foreground-72 text-xs font-medium"
                       htmlFor={`resolution-${f.id}`}
                     >
                       Resolution note (optional)

@@ -1,12 +1,14 @@
 import { cn } from '@/lib/utils';
+import { StatusChip, type StatusTone } from '@/components/ui/status-chip';
 import type {
   FindingSeverity,
   FindingStatus,
   InspectionResult,
 } from '@/types/database';
 
-const PILL_BASE =
-  'inline-flex items-center rounded-xs px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider';
+// Phase 4.4 — ResultBadge, SeverityBadge, FindingStatusBadge graduate to
+// the shared StatusChip primitive. AreaBadge stays plain informational
+// text since it's not a status — only its token shifts to foreground-72.
 
 // =========================================================
 // Inspection result
@@ -19,11 +21,11 @@ const RESULT_LABEL: Record<InspectionResult, string> = {
   failed: 'Failed',
 };
 
-const RESULT_CLASSES: Record<InspectionResult, string> = {
-  pending: 'bg-muted text-muted-foreground',
-  pass: 'bg-success-soft text-success-ink',
-  issues_found: 'bg-warning-soft text-warning-ink',
-  failed: 'bg-destructive-soft text-destructive-ink',
+const RESULT_TONE: Record<InspectionResult, StatusTone> = {
+  pending:      'muted',
+  pass:         'success',
+  issues_found: 'warning',
+  failed:       'critical',
 };
 
 export function ResultBadge({
@@ -34,9 +36,9 @@ export function ResultBadge({
   className?: string;
 }) {
   return (
-    <span className={cn(PILL_BASE, RESULT_CLASSES[result], className)}>
+    <StatusChip tone={RESULT_TONE[result]} size="xs" className={className}>
       {RESULT_LABEL[result]}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -50,10 +52,10 @@ const SEVERITY_LABEL: Record<FindingSeverity, string> = {
   critical: 'Critical',
 };
 
-const SEVERITY_CLASSES: Record<FindingSeverity, string> = {
-  minor: 'bg-muted text-muted-foreground',
-  major: 'bg-warning-soft text-warning-ink',
-  critical: 'bg-destructive-soft text-destructive-ink',
+const SEVERITY_TONE: Record<FindingSeverity, StatusTone> = {
+  minor:    'muted',
+  major:    'warning',
+  critical: 'critical',
 };
 
 export function SeverityBadge({
@@ -64,9 +66,9 @@ export function SeverityBadge({
   className?: string;
 }) {
   return (
-    <span className={cn(PILL_BASE, SEVERITY_CLASSES[severity], className)}>
+    <StatusChip tone={SEVERITY_TONE[severity]} size="xs" className={className}>
       {SEVERITY_LABEL[severity]}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -81,11 +83,11 @@ const FINDING_STATUS_LABEL: Record<FindingStatus, string> = {
   escalated: 'Escalated',
 };
 
-const FINDING_STATUS_CLASSES: Record<FindingStatus, string> = {
-  open: 'bg-muted text-muted-foreground',
-  in_progress: 'bg-primary-soft text-primary-ink',
-  resolved: 'bg-success-soft text-success-ink',
-  escalated: 'bg-destructive-soft text-destructive-ink',
+const FINDING_STATUS_TONE: Record<FindingStatus, StatusTone> = {
+  open:        'muted',
+  in_progress: 'info',
+  resolved:    'success',
+  escalated:   'critical',
 };
 
 export function FindingStatusBadge({
@@ -96,9 +98,9 @@ export function FindingStatusBadge({
   className?: string;
 }) {
   return (
-    <span className={cn(PILL_BASE, FINDING_STATUS_CLASSES[status], className)}>
+    <StatusChip tone={FINDING_STATUS_TONE[status]} size="xs" className={className}>
       {FINDING_STATUS_LABEL[status]}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -120,7 +122,7 @@ export function AreaBadge({ area, className }: { area: string; className?: strin
   return (
     <span
       className={cn(
-        'text-foreground/85 inline-flex items-center text-xs font-medium',
+        'text-foreground-72 inline-flex items-center text-xs font-medium',
         className,
       )}
     >
