@@ -163,6 +163,10 @@ const PHASE_4_PAGES: PageCapture[] = [
   { slug: 'inbox',      route: '/inbox',      settle: 'h1' },
   { slug: 'tasks',      route: '/tasks',      settle: 'h1' },
   { slug: 'follow-ups', route: '/follow-ups', settle: 'h1' },
+  { slug: 'settings',   route: '/settings',   settle: 'h1' },
+  { slug: 'directory',  route: '/directory',  settle: 'h1' },
+  { slug: 'companies',  route: '/companies',  settle: 'h1' },
+  { slug: 'contacts',   route: '/contacts',   settle: 'h1' },
 ];
 
 // Desktop captures.
@@ -206,11 +210,15 @@ interface DetailCapture {
   slug: string;
   listRoute: string;
   rowSelector: string;
+  /** Filter chip text to click before looking for rows. */
+  broadFilter: string;
 }
 
 const DETAIL_PAGES: DetailCapture[] = [
-  { slug: 'task-detail',      listRoute: '/tasks',      rowSelector: 'ul li button' },
-  { slug: 'follow-up-detail', listRoute: '/follow-ups', rowSelector: 'ul li button' },
+  // Both list pages default to the "Today" bucket which can legitimately be
+  // empty in staging. Click the broadest filter so the row selector matches.
+  { slug: 'task-detail',      listRoute: '/tasks',      rowSelector: 'ul li button', broadFilter: 'Active' },
+  { slug: 'follow-up-detail', listRoute: '/follow-ups', rowSelector: 'ul li button', broadFilter: 'All' },
 ];
 
 {
@@ -220,12 +228,16 @@ const DETAIL_PAGES: DetailCapture[] = [
     for (const theme of ['dark', 'light'] as const) {
       await gotoRoute(page, d.listRoute, 'h1');
       await applyTheme(page, theme);
-      const row = page.locator(d.rowSelector).first();
-      const rowCount = await page.locator(d.rowSelector).count();
-      if (rowCount === 0) {
-        console.log(`⚠ ${d.slug}-${theme}: list is empty, skipping`);
+      // Switch to the broad bucket so we have something to click.
+      await page.getByRole('button', { name: d.broadFilter, exact: true }).first().click();
+      // Wait for the row list to render after the filter change.
+      try {
+        await page.waitForSelector(d.rowSelector, { timeout: 5000 });
+      } catch {
+        console.log(`⚠ ${d.slug}-${theme}: no rows under ${d.broadFilter}, skipping`);
         continue;
       }
+      const row = page.locator(d.rowSelector).first();
       await row.click();
       // Wait for the detail H1 to settle (router push + data load).
       await page.waitForSelector('h1', { timeout: 8000 });
