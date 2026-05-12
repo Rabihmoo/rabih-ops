@@ -229,7 +229,10 @@ const DETAIL_PAGES: DetailCapture[] = [
       await gotoRoute(page, d.listRoute, 'h1');
       await applyTheme(page, theme);
       // Switch to the broad bucket so we have something to click.
-      await page.getByRole('button', { name: d.broadFilter, exact: true }).first().click();
+      // Bucket buttons carry role="tab" (Phase 5 polish) — fall back to
+      // text matching if no tablist is present.
+      const filter = page.getByRole('tab', { name: d.broadFilter, exact: true }).first();
+      await filter.click();
       // Wait for the row list to render after the filter change.
       try {
         await page.waitForSelector(d.rowSelector, { timeout: 5000 });
@@ -250,6 +253,41 @@ const DETAIL_PAGES: DetailCapture[] = [
     }
   }
   await ctx.close();
+}
+
+// -------------------------------------------------------------------
+// 7. Login captures — unauthenticated. We skip the admin session
+// localStorage injection so /login renders instead of redirecting
+// to the dashboard. Desktop + mobile × dark + light = 4 captures.
+// -------------------------------------------------------------------
+async function loginContext(viewport: Viewport): Promise<BrowserContext> {
+  return browser.newContext({ viewport, deviceScaleFactor: 2 });
+}
+
+{
+  const desktop = await loginContext({ width: 1440, height: 900 });
+  const dpage = await desktop.newPage();
+  for (const theme of ['dark', 'light'] as const) {
+    await dpage.goto(BASE + '/login', { waitUntil: 'domcontentloaded' });
+    await dpage.waitForSelector('h2, h3, [role="heading"], main', { timeout: 5000 });
+    await applyTheme(dpage, theme);
+    const out = path.join(OUT_DIR, `login-${theme}.png`);
+    await dpage.screenshot({ path: out, fullPage: false });
+    console.log(`✓ ${out}`);
+  }
+  await desktop.close();
+
+  const mobile = await loginContext({ width: 390, height: 844 });
+  const mpage = await mobile.newPage();
+  for (const theme of ['dark', 'light'] as const) {
+    await mpage.goto(BASE + '/login', { waitUntil: 'domcontentloaded' });
+    await mpage.waitForSelector('h2, h3, [role="heading"], main', { timeout: 5000 });
+    await applyTheme(mpage, theme);
+    const out = path.join(OUT_DIR, `login-mobile-${theme}.png`);
+    await mpage.screenshot({ path: out, fullPage: false });
+    console.log(`✓ ${out}`);
+  }
+  await mobile.close();
 }
 
 await browser.close();
