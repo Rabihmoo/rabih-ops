@@ -168,6 +168,7 @@ const PHASE_4_PAGES: PageCapture[] = [
   { slug: 'companies',   route: '/companies',   settle: 'h1' },
   { slug: 'contacts',    route: '/contacts',    settle: 'h1' },
   { slug: 'documents',   route: '/documents',   settle: 'h1' },
+  { slug: 'notes',       route: '/notes',       settle: 'h1' },
   { slug: 'purchases',   route: '/purchases',   settle: 'h1' },
   { slug: 'inspections', route: '/inspections', settle: 'h1' },
   { slug: 'fixed-tasks', route: '/fixed-tasks', settle: 'h1' },
@@ -227,6 +228,7 @@ const DETAIL_PAGES: DetailCapture[] = [
   // Scope row selectors to `main` so the sidebar NavLinks don't get
   // matched first when a page uses <Link> (anchor) for its rows.
   { slug: 'document-detail',   listRoute: '/documents',   rowSelector: 'main ul li a',      broadFilter: ''       },
+  { slug: 'note-detail',       listRoute: '/notes',       rowSelector: 'main ul li a',      broadFilter: ''       },
   { slug: 'purchase-detail',   listRoute: '/purchases',   rowSelector: 'main ul li button', broadFilter: 'All'    },
   { slug: 'inspection-detail', listRoute: '/inspections', rowSelector: 'main ul li button', broadFilter: 'All'    },
   { slug: 'fixed-task-detail', listRoute: '/fixed-tasks', rowSelector: 'main ul li a',      broadFilter: ''       },
