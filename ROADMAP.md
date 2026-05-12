@@ -48,10 +48,10 @@ relaxed by the operator (Rabih) in a written instruction.
 
 | #    | Phase                                                      | Status      |
 |------|------------------------------------------------------------|-------------|
-| 0    | Finish Current Work                                        | next        |
-| 0.5  | Gmail Today View                                           | queued      |
-| 1    | Business Memory — Notes UI                                 | queued      |
-| 2  | Relationship Graph — `record_links` notes + Universal Panel  | queued      |
+| 0    | Finish Current Work                                        | in progress |
+| 0.5  | Gmail Today View                                           | in progress |
+| 1    | Business Memory — Notes UI                                 | shipped     |
+| 2  | Relationship Graph — `record_links` notes + Universal Panel  | in progress |
 | 3  | Find Anything Fast — global search + Cmd-K                   | queued      |
 | 4  | Full Visual Consistency — maintenance / audit                | continuous  |
 | 5  | Supplier / Company Intelligence                              | queued      |
