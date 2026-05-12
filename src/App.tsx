@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
@@ -32,6 +33,19 @@ import { ContactNewPage } from './pages/ContactNew';
 import { ContactDetailPage } from './pages/ContactDetail';
 import { AuthCallbackPage } from './pages/AuthCallback';
 import { Toaster } from './components/ui/toaster';
+
+// Dev-only design preview. Vite tree-shakes the lazy import in
+// production builds (import.meta.env.DEV === false), so the page never
+// ships to the Cloudflare bundle. The `<Route>` below is conditional;
+// in production, hitting /design-preview falls through to the
+// `path="*"` catch-all and redirects to /.
+const DesignPreviewPage = import.meta.env.DEV
+  ? lazy(() =>
+      import('./pages/DesignPreview').then((m) => ({
+        default: m.DesignPreviewPage,
+      })),
+    )
+  : null;
 
 export default function App() {
   return (
@@ -74,6 +88,16 @@ export default function App() {
           <Route path="/contacts/new" element={<ContactNewPage />} />
           <Route path="/contacts/:id" element={<ContactDetailPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          {DesignPreviewPage && (
+            <Route
+              path="/design-preview"
+              element={
+                <Suspense fallback={<div className="text-muted-foreground p-6 text-sm">Loading preview…</div>}>
+                  <DesignPreviewPage />
+                </Suspense>
+              }
+            />
+          )}
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
