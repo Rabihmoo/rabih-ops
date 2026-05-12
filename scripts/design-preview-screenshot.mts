@@ -224,10 +224,12 @@ const DETAIL_PAGES: DetailCapture[] = [
   // for pages that don't have a default filter that excludes rows.
   { slug: 'task-detail',       listRoute: '/tasks',       rowSelector: 'ul li button', broadFilter: 'Active' },
   { slug: 'follow-up-detail',  listRoute: '/follow-ups',  rowSelector: 'ul li button', broadFilter: 'All'    },
-  { slug: 'document-detail',   listRoute: '/documents',   rowSelector: 'ul li a',      broadFilter: ''       },
-  { slug: 'purchase-detail',   listRoute: '/purchases',   rowSelector: 'ul li button', broadFilter: 'All'    },
-  { slug: 'inspection-detail', listRoute: '/inspections', rowSelector: 'ul li button', broadFilter: 'All'    },
-  { slug: 'fixed-task-detail', listRoute: '/fixed-tasks', rowSelector: 'ul li a',      broadFilter: ''       },
+  // Scope row selectors to `main` so the sidebar NavLinks don't get
+  // matched first when a page uses <Link> (anchor) for its rows.
+  { slug: 'document-detail',   listRoute: '/documents',   rowSelector: 'main ul li a',      broadFilter: ''       },
+  { slug: 'purchase-detail',   listRoute: '/purchases',   rowSelector: 'main ul li button', broadFilter: 'All'    },
+  { slug: 'inspection-detail', listRoute: '/inspections', rowSelector: 'main ul li button', broadFilter: 'All'    },
+  { slug: 'fixed-task-detail', listRoute: '/fixed-tasks', rowSelector: 'main ul li a',      broadFilter: ''       },
 ];
 
 {
