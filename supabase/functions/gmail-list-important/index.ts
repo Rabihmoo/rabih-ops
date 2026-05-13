@@ -1,8 +1,13 @@
 // gmail-list-important — returns the caller's important + unread Gmail
-// messages. Used by the Dashboard "Important emails" section.
+// messages from the last 7 days. Used by the Dashboard "Important this
+// week" section.
 //
-// Query: `is:important is:unread` (Gmail's own importance signal +
-// unread). Narrow field list — no body, no attachments, no contents.
+// Query: `is:important is:unread newer_than:7d` (Gmail's own importance
+// signal + unread + recency cap). Without the recency cap, the function
+// surfaces important+unread messages of any age — which on a real
+// mailbox includes things that have been unread for months. The 7-day
+// cap keeps the Dashboard surface relevant to current work.
+// Narrow field list — no body, no attachments, no contents.
 //
 // Auth: user JWT (verify_jwt = true).
 
@@ -22,7 +27,7 @@ const GOOGLE_OAUTH_CLIENT_SECRET = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET')!;
 const rpc = makeRpc(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const MAX_RESULTS = 15;
-const GMAIL_QUERY = 'is:important is:unread';
+const GMAIL_QUERY = 'is:important is:unread newer_than:7d';
 
 interface GmailHeader {
   name: string;
