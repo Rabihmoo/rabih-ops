@@ -522,6 +522,125 @@ check('viewer DOES see the salt-tagged company link (counter-case)',
   viewerRows.some((x) => x.link_id === taskToCoId));
 
 // =====================================================================
+// 20260531 — to_entity_title widening
+// =====================================================================
+// Probes the new top-level to_entity_title field on rpc_record_relations.
+// Positive cases: task, contact, note titles render correctly. Negative
+// case (deleted target): _can_access_entity filters the row out, so the
+// link is invisible — no title-null leak. Fallback case: note with null
+// title renders the first 80 chars of body_md line 1.
+console.log('\nto_entity_title widening (H4.2 fix #1)');
+
+// Re-query relations on the note so the new outbound links are included
+// (taskToCoZero / taskToNotePers / taskToNoteCross were added after the
+// earlier read).
+const relTitlesNote = await asRabih(`select rpc_record_relations('note','${noteSaltId}'::uuid, 50) as r`);
+const relTitlesNoteRows = relTitlesNote.find((x) => x.r)?.r ?? [];
+
+// Positive 1: outbound link note → company surfaces the company NAME.
+const noteToCoTitle = relTitlesNoteRows.find((x) => x.link_id === noteToCoId);
+check('note→company link projects to_entity_title = company.name',
+  noteToCoTitle?.to_entity_title === `RL smoke Co Salt ${ts}`,
+  `got '${noteToCoTitle?.to_entity_title}'`);
+
+// Positive 2: inbound from task A surfaces the task TITLE.
+const taskToNoteRowOnNote = relTitlesNoteRows.find((x) => x.link_id === taskToNoteId);
+check('task→note link (read from note side, inbound) projects task.title',
+  taskToNoteRowOnNote?.to_entity_title === `RL smoke A ${ts}`,
+  `got '${taskToNoteRowOnNote?.to_entity_title}'`);
+
+// Positive 3: contact title from task A relations. The contact endpoint
+// uses full_name.
+const relTitlesTaskA = await asRabih(`select rpc_record_relations('task','${taskAId}'::uuid, 50) as r`);
+const relTitlesTaskARows = relTitlesTaskA.find((x) => x.r)?.r ?? [];
+const taskToCtRowOnA = relTitlesTaskARows.find((x) => x.link_id === taskToCtId);
+check('task→contact link projects to_entity_title = contact.full_name',
+  taskToCtRowOnA?.to_entity_title === `RL smoke Contact ${ts}`,
+  `got '${taskToCtRowOnA?.to_entity_title}'`);
+
+// External rows: to_entity_title is intentionally NULL. UI falls back to
+// external_label (we keep one source of truth for external labels).
+const driveRowOnA = relTitlesTaskARows.find((x) => x.external_record_id === `smoke-drive-${ts}`);
+check('external (drive) row leaves to_entity_title = null',
+  driveRowOnA?.to_entity_title === null,
+  `got '${driveRowOnA?.to_entity_title}'`);
+
+// Fallback probe: note with NULL title — title resolution falls back to
+// first 80 chars of body_md line 1 (after btrim).
+//
+// The SQL uses an E-string so \n is treated as an actual newline rather
+// than two literal characters. The first body line includes leading
+// whitespace to exercise the btrim() inside the COALESCE.
+const fallbackFirstLine = '  This is the first body line and should become the title — second line ignored';
+const fallbackRest      = 'second body line that must not bleed into the title';
+const expectedTitleFallback = fallbackFirstLine.trim().slice(0, 80);
+const fallbackNoteRow = await asRabih(`
+  select rpc_create_note(
+    E'${fallbackFirstLine.replace(/'/g, "''")}\\n\\n${fallbackRest.replace(/'/g, "''")}',
+    null,
+    'note','operations','work','salt'
+  ) as r
+`);
+const fallbackNoteId = fallbackNoteRow.find((x) => x.r)?.r?.id;
+check('created a note with NULL title for fallback probe', !!fallbackNoteId);
+
+const linkToFallback = await asRabih(`
+  select rpc_record_link_internal('task','${taskAId}'::uuid,
+    'note','${fallbackNoteId}'::uuid,'note_for') as r
+`);
+const linkToFallbackId = linkToFallback.find((x) => x.r)?.r?.id;
+check('linked task → null-title note', !!linkToFallbackId);
+
+const relAfterFallback = await asRabih(`select rpc_record_relations('task','${taskAId}'::uuid, 50) as r`);
+const fallbackRow = (relAfterFallback.find((x) => x.r)?.r ?? [])
+  .find((x) => x.link_id === linkToFallbackId);
+check('null-title note: to_entity_title falls back to first-80 of body_md line 1',
+  fallbackRow?.to_entity_title === expectedTitleFallback,
+  `expected '${expectedTitleFallback}', got '${fallbackRow?.to_entity_title}'`);
+
+// Empty-body fallback (the third tier — 'Untitled note'). This can only
+// be reached if a note somehow has body_md that trims to empty on line 1.
+// rpc_create_note rejects empty bodies, so we exercise the COALESCE
+// third tier by creating a note whose body_md starts with a blank line.
+const blankFirstLineRow = await asRabih(`
+  select rpc_create_note(
+    E'   \\n\\nactual body on line 3 — line 1 is whitespace, so to_entity_title should be ''Untitled note''',
+    null,
+    'note','operations','work','salt'
+  ) as r
+`);
+const blankFirstLineId = blankFirstLineRow.find((x) => x.r)?.r?.id;
+check('created a note with blank line-1 for COALESCE-tier-3 probe', !!blankFirstLineId);
+
+const linkToBlank = await asRabih(`
+  select rpc_record_link_internal('task','${taskAId}'::uuid,
+    'note','${blankFirstLineId}'::uuid,'note_for') as r
+`);
+const linkToBlankId = linkToBlank.find((x) => x.r)?.r?.id;
+const relAfterBlank = await asRabih(`select rpc_record_relations('task','${taskAId}'::uuid, 50) as r`);
+const blankRow = (relAfterBlank.find((x) => x.r)?.r ?? [])
+  .find((x) => x.link_id === linkToBlankId);
+check("blank-line-1 note: to_entity_title falls back to 'Untitled note'",
+  blankRow?.to_entity_title === 'Untitled note',
+  `got '${blankRow?.to_entity_title}'`);
+
+// Deleted-target probe: soft-delete task B and re-read relations on task
+// A. The link is filtered out by _can_access_entity (which requires
+// deleted_at IS NULL) — we should see the link DISAPPEAR rather than
+// stay with a null title. This is the privacy-preserving behaviour.
+await sql(`update tasks set deleted_at = now() where id = '${taskBId}'`);
+const relAfterDelete = await asRabih(`select rpc_record_relations('task','${taskAId}'::uuid, 50) as r`);
+const afterDeleteRows = relAfterDelete.find((x) => x.r)?.r ?? [];
+// The internal A→B link was removed earlier in the Unlink section if that
+// already ran — but this section comes BEFORE Unlink, so the row should
+// have been present (link id captured in `link.id`) and now must be gone.
+check('deleted target: link to task B no longer appears in task A relations',
+  !afterDeleteRows.some((x) => x.link_id === link.id),
+  `${afterDeleteRows.length} rows after delete; link.id=${link.id}`);
+// Restore task B so the existing Unlink section can still find the link.
+await sql(`update tasks set deleted_at = null where id = '${taskBId}'`);
+
+// =====================================================================
 // Remove
 // =====================================================================
 console.log('\nUnlink');
@@ -545,12 +664,14 @@ await sql(`delete from record_links where created_by = '${RABIH}' and (
   to_entity_id in (
     '${taskAId}'::uuid,'${taskBId}'::uuid,'${persDocId}'::uuid,
     '${coSaltId}'::uuid,'${coZeroId}'::uuid,'${ctSaltId}'::uuid,
-    '${noteSaltId}'::uuid,'${noteCrossId}'::uuid,'${notePersId}'::uuid
+    '${noteSaltId}'::uuid,'${noteCrossId}'::uuid,'${notePersId}'::uuid,
+    '${fallbackNoteId}'::uuid,'${blankFirstLineId}'::uuid
   )
   or from_entity_id in (
     '${taskAId}'::uuid,'${taskBId}'::uuid,
     '${coSaltId}'::uuid,'${coZeroId}'::uuid,'${ctSaltId}'::uuid,
-    '${noteSaltId}'::uuid,'${noteCrossId}'::uuid,'${notePersId}'::uuid
+    '${noteSaltId}'::uuid,'${noteCrossId}'::uuid,'${notePersId}'::uuid,
+    '${fallbackNoteId}'::uuid,'${blankFirstLineId}'::uuid
   )
   or external_record_id like 'smoke-drive-%'
 )`);
@@ -559,7 +680,10 @@ await sql(`delete from contacts where id = '${ctSaltId}'`);
 await sql(`delete from company_branches where company_id in ('${coSaltId}','${coZeroId}')`);
 await sql(`delete from companies where id in ('${coSaltId}','${coZeroId}')`);
 await sql(`delete from documents where id = '${persDocId}'`);
-await sql(`delete from notes where id in ('${noteSaltId}','${noteCrossId}','${notePersId}')`);
+await sql(`delete from notes where id in (
+  '${noteSaltId}','${noteCrossId}','${notePersId}',
+  '${fallbackNoteId}','${blankFirstLineId}'
+)`);
 await sql(`update tasks set deleted_at = now() where id in ('${taskAId}','${taskBId}')`);
 
 console.log(`\n${pass} passed · ${fail} failed`);
