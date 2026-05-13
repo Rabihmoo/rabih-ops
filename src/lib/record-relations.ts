@@ -58,6 +58,22 @@ export interface RecordRelation {
   relationship: RecordLinkRelationship;
   to_entity_type: RecordLinkEntityType | null;
   to_entity_id: string | null;
+  // Title of the OTHER side resolved by the SQL projection. Populated
+  // for INTERNAL record_link arms (outbound + inbound — server swaps
+  // from↔to before projecting). External + email_link + document_link
+  // + calendar_event_link rows leave this NULL because their authoritative
+  // label already lives in external_label (subject / event title / doc
+  // title) — see rpc_record_relations comment for the rationale.
+  //
+  // Naming convention by entity table:
+  //   * task / follow_up / purchase_request / document → title
+  //   * inspection (no title column)                  → area + ' · ' + date
+  //   * company                                       → name
+  //   * contact                                       → full_name
+  //   * note                                          → coalesce(title,
+  //                                                     first-80-of-body,
+  //                                                     'Untitled note')
+  to_entity_title: string | null;
   external_app: RecordLinkExternalApp | null;
   external_record_type: string | null;
   external_record_id: string | null;

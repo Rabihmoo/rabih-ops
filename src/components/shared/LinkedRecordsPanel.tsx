@@ -23,9 +23,10 @@ import type {
 // Phase H4.2 — read-only universal panel. Mounted on NoteDetail first
 // (no existing LinkedDocumentsCard / LinkedEmailsCard there to coexist
 // with). Add/link/unlink affordances land in H4.4–H4.6. Title resolution
-// for internal record_links is intentionally V1: entity_type + short id.
-// Backed snapshots arrive in H4.3+ once we either widen the SQL projection
-// or per-row fetch.
+// for internal record_links comes through rpc_record_relations.to_entity_title
+// (widened by migration 20260531). The "Entity · short-id" fallback below
+// only triggers if the title is unexpectedly null (e.g. a hard-deleted
+// target row that still passed _can_access_entity).
 
 const RELATIONSHIP_TONE: Record<RecordLinkRelationship, StatusTone> = {
   relates_to:     'muted',
@@ -62,10 +63,14 @@ function relationshipLabel(verb: RecordLinkRelationship): string {
   return human.charAt(0).toUpperCase() + human.slice(1);
 }
 
-// Internal record_links don't ship target titles in rpc_record_relations
-// today. Fall back to a stable "Entity · short-id" string so the row is
-// still navigable and visually anchored.
+// Internal record_links: prefer the server-resolved to_entity_title.
+// Fall back to a stable "Entity · short-id" string if it's null (e.g.
+// the target was hard-deleted between link creation and the read but
+// somehow still passed _can_access_entity).
 function internalTargetLabel(row: RecordRelation): string {
+  if (row.to_entity_title && row.to_entity_title.trim()) {
+    return row.to_entity_title;
+  }
   const type = row.to_entity_type;
   const id = row.to_entity_id;
   if (!type || !id) return '(missing)';
@@ -170,39 +175,74 @@ function RelationRow({ row }: { row: RecordRelation }) {
   const external = isExternal(row);
   const label = rowLabel(row);
 
+  const directionIcon =
+    row.direction === 'inbound' ? (
+      <ArrowDownLeft
+        aria-label="Inbound link"
+        className="text-subtle-foreground h-3.5 w-3.5 shrink-0"
+      />
+    ) : (
+      <ArrowUpRight
+        aria-label="Outbound link"
+        className="text-subtle-foreground h-3.5 w-3.5 shrink-0"
+      />
+    );
+
+  const dateStr = new Date(row.created_at).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+
+  // Mobile (< sm): three stacked lines so a long label can wrap to two
+  // lines instead of getting truncated at 390px.
+  //   Line 1: chip + direction icon (compact pair)
+  //   Line 2: label (no line-clamp; can wrap)
+  //   Line 3: date right-aligned + external-link icon
+  // Desktop (sm:): single row, layout pixel-equivalent to the pre-fix
+  // version — chip · label (line-clamp-1, flex-1) · direction · date · ext-icon.
   const inner = (
-    <span className="flex w-full items-center gap-3 py-2">
-      <StatusChip tone={tone} size="xs">
-        {relationshipLabel(verb)}
-      </StatusChip>
-      <span className="text-foreground line-clamp-1 flex-1 text-sm">
+    <span className="flex w-full flex-col gap-1.5 py-2 sm:flex-row sm:items-center sm:gap-3">
+      {/* Mobile line 1: chip + direction. Hidden on sm — desktop puts both
+          back in the main row below. */}
+      <span className="flex items-center gap-2 sm:hidden">
+        <StatusChip tone={tone} size="xs">
+          {relationshipLabel(verb)}
+        </StatusChip>
+        {directionIcon}
+      </span>
+
+      {/* Desktop-only chip. Mobile renders it above. */}
+      <span className="hidden sm:inline-flex">
+        <StatusChip tone={tone} size="xs">
+          {relationshipLabel(verb)}
+        </StatusChip>
+      </span>
+
+      {/* Label — full width and wrappable on mobile; truncated single-line
+          on desktop to keep the row a fixed visual height. */}
+      <span className="text-foreground break-words text-sm sm:line-clamp-1 sm:flex-1 sm:break-normal">
         {label}
       </span>
-      {row.direction === 'inbound' ? (
-        <ArrowDownLeft
-          aria-label="Inbound link"
-          className="text-subtle-foreground h-3.5 w-3.5 shrink-0"
-        />
-      ) : (
-        <ArrowUpRight
-          aria-label="Outbound link"
-          className="text-subtle-foreground h-3.5 w-3.5 shrink-0"
-        />
-      )}
-      <span className="text-subtle-foreground w-16 shrink-0 text-right text-xs tabular-nums">
-        {new Date(row.created_at).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-        })}
+
+      {/* Desktop-only direction icon. */}
+      <span className="hidden sm:inline-flex">{directionIcon}</span>
+
+      {/* Mobile line 3 = desktop trailing pair: date + external icon. On
+          mobile the date is right-aligned via justify-end so the cluster
+          hugs the right edge. */}
+      <span className="flex items-center justify-end gap-2 sm:contents">
+        <span className="text-subtle-foreground text-xs tabular-nums sm:w-16 sm:shrink-0 sm:text-right">
+          {dateStr}
+        </span>
+        {external ? (
+          <ExternalLink
+            aria-hidden
+            className="text-muted-foreground h-3.5 w-3.5 shrink-0"
+          />
+        ) : (
+          <span aria-hidden className="hidden w-3.5 shrink-0 sm:inline" />
+        )}
       </span>
-      {external ? (
-        <ExternalLink
-          aria-hidden
-          className="text-muted-foreground h-3.5 w-3.5 shrink-0"
-        />
-      ) : (
-        <span aria-hidden className="w-3.5 shrink-0" />
-      )}
     </span>
   );
 
@@ -210,7 +250,7 @@ function RelationRow({ row }: { row: RecordRelation }) {
     return (
       <li
         data-testid="relation-row"
-        className="hover:bg-surface-1 -mx-2 flex items-center gap-3 rounded-md px-2 transition-colors"
+        className="hover:bg-surface-1 -mx-2 flex items-stretch rounded-md px-2 transition-colors sm:items-center sm:gap-3"
       >
         {inner}
       </li>
@@ -228,14 +268,14 @@ function RelationRow({ row }: { row: RecordRelation }) {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="hover:bg-surface-1 -mx-2 flex items-center gap-3 rounded-md px-2 transition-colors"
+          className="hover:bg-surface-1 -mx-2 flex items-stretch rounded-md px-2 transition-colors sm:items-center sm:gap-3"
         >
           {inner}
         </a>
       ) : (
         <Link
           to={href}
-          className="hover:bg-surface-1 -mx-2 flex items-center gap-3 rounded-md px-2 transition-colors"
+          className="hover:bg-surface-1 -mx-2 flex items-stretch rounded-md px-2 transition-colors sm:items-center sm:gap-3"
         >
           {inner}
         </Link>
