@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
 
-// Phase F — Gmail. The Settings card, Dashboard "Important emails"
-// section, and the LinkedEmailsCard on task/follow-up detail must render
-// correctly without a real Google OAuth session; the full handshake is
-// exercised manually after the operator wires up Google Cloud credentials.
+// Phase F — Gmail. The Settings card, Dashboard "Today's emails" +
+// "Important this week" sections, and the LinkedEmailsCard on task /
+// follow-up detail must render correctly without a real Google OAuth
+// session; the full handshake is exercised manually after the operator
+// wires up Google Cloud credentials.
 
 test.describe('Gmail — Settings card', () => {
   test.use({ storageState: 'tests/fixtures/.auth/admin.json' });
@@ -44,18 +45,18 @@ test.describe('Gmail — Settings card', () => {
 test.describe('Gmail — dashboard surface', () => {
   test.use({ storageState: 'tests/fixtures/.auth/admin.json' });
 
-  test('Important emails section is hidden when Gmail is not connected', async ({ page }) => {
-    await page.goto('/');
+  test('Today + Important sections hidden when Gmail is not connected', async ({ page }) => {
     // Only assert this if Gmail isn't linked on staging — otherwise the
-    // section would correctly be visible and the assertion would fail.
+    // sections would correctly be visible and the assertion would fail.
     await page.goto('/settings');
     const linked = await page
       .getByTestId('gmail-disconnect-button')
       .isVisible()
       .catch(() => false);
-    test.skip(linked, 'Gmail is linked on staging; the section is expected to render.');
+    test.skip(linked, 'Gmail is linked on staging; the sections are expected to render.');
     await page.goto('/');
-    await expect(page.getByText('Important emails')).toHaveCount(0);
+    await expect(page.getByText("Today's emails")).toHaveCount(0);
+    await expect(page.getByText('Important this week')).toHaveCount(0);
   });
 });
 

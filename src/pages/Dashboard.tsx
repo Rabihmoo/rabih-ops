@@ -40,6 +40,7 @@ import { BRANCHES, type BranchCode } from '@/lib/branches';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { DashboardCalendarToday } from '@/components/dashboard/DashboardCalendarToday';
 import { DashboardImportantEmails } from '@/components/dashboard/DashboardImportantEmails';
+import { DashboardTodayEmails } from '@/components/dashboard/DashboardTodayEmails';
 import { useDismissReminder, useMyReminders } from '@/hooks/useReminders';
 import {
   REMINDER_KIND_LABEL,
@@ -549,7 +550,12 @@ export function DashboardPage() {
           actionable lists. Renders nothing when not connected. */}
       <DashboardCalendarToday />
 
-      {/* Important unread Gmail messages. Renders nothing when not connected. */}
+      {/* Today's Gmail messages (since local midnight in PROJECT_TZ).
+          Renders nothing when not connected. */}
+      <DashboardTodayEmails />
+
+      {/* Important unread Gmail messages from the last 7 days.
+          Renders nothing when not connected. */}
       <DashboardImportantEmails />
 
       {allClear ? (

@@ -1,7 +1,7 @@
 import { ExternalLink, Loader2, Mail } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { useGmailImportant, useGmailLinkStatus } from '@/hooks/useGmail';
-import type { GmailImportantMessage } from '@/lib/gmail';
+import { useGmailLinkStatus, useGmailToday } from '@/hooks/useGmail';
+import type { GmailTodayMessage } from '@/lib/gmail-today';
 
 function whenLabel(iso: string | null): string {
   if (!iso) return '';
@@ -16,13 +16,13 @@ function whenLabel(iso: string | null): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export function DashboardImportantEmails() {
+export function DashboardTodayEmails() {
   const status = useGmailLinkStatus();
-  const emails = useGmailImportant(status.data?.connected === true);
+  const emails = useGmailToday(status.data?.connected === true);
 
   if (!status.data?.connected) return null;
 
-  const messages = emails.data?.messages ?? [];
+  const messages: GmailTodayMessage[] = emails.data?.today ?? [];
 
   return (
     <Card>
@@ -30,7 +30,7 @@ export function DashboardImportantEmails() {
         <div className="border-border mb-1 flex items-baseline justify-between border-b pb-3">
           <div className="flex items-baseline gap-2">
             <span className="text-section-label text-primary-ink/80 inline-flex items-center gap-1.5">
-              <Mail className="h-3.5 w-3.5" /> Important this week
+              <Mail className="h-3.5 w-3.5" /> Today's emails
             </span>
             <span className="text-muted-foreground text-xs tabular-nums">
               {messages.length}
@@ -55,13 +55,13 @@ export function DashboardImportantEmails() {
 
         {!emails.isLoading && !emails.data?.error && messages.length === 0 && (
           <div className="text-muted-foreground py-2 text-sm">
-            No important unread emails from the last 7 days.
+            No emails today.
           </div>
         )}
 
         {!emails.isLoading && messages.length > 0 && (
           <ul className="divide-border divide-y">
-            {messages.map((m: GmailImportantMessage) => (
+            {messages.map((m) => (
               <li
                 key={m.id}
                 className="hover:bg-surface-1 -mx-2 flex items-start gap-3 rounded-md px-2 py-2.5 transition-colors"
