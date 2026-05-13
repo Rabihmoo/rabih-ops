@@ -57,6 +57,9 @@ test.describe('Gmail — dashboard surface', () => {
     await page.goto('/');
     await expect(page.getByText("Today's emails")).toHaveCount(0);
     await expect(page.getByText('Important this week')).toHaveCount(0);
+    // Pending card also self-hides when not connected (V1 — survives-
+    // disconnect rendering is a TODO in DashboardPendingEmails).
+    await expect(page.getByText('Pending emails')).toHaveCount(0);
     // G2.3: row-action ⋮ triggers are children of EmailRow which only
     // mounts inside the cards. Cards hidden → triggers absent.
     // Asserted defensively in case a future change accidentally leaks

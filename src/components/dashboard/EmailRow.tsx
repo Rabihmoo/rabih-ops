@@ -1,8 +1,17 @@
 import { ExternalLink } from 'lucide-react';
 import { StatusChip } from '@/components/ui/status-chip';
 import { useCanMutate } from '@/hooks/usePermissions';
-import { composeEmailStatusPill, type EmailStateRow } from '@/lib/email-status';
+import {
+  composeEmailStatusPill,
+  type DashboardEmailRowMessage,
+  type EmailStateRow,
+} from '@/lib/email-status';
 import { EmailRowActionMenu } from './EmailRowActionMenu';
+
+// Re-export so V1 consumers that imported the type from EmailRow keep
+// working unchanged. The canonical definition lives in email-status.ts
+// to keep the lib usable without pulling in React.
+export type { DashboardEmailRowMessage };
 
 // Phase G2.3 wire-up — shared row used by DashboardTodayEmails AND
 // DashboardImportantEmails. Visual identical to the V1 inline rows
@@ -23,23 +32,6 @@ function whenLabel(iso: string | null): string {
   const diffH = Math.round(diffMin / 60);
   if (diffH < 24) return `${diffH}h ago`;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-// Minimal shape both GmailImportantMessage and GmailTodayMessage satisfy.
-// Kept here (vs. importing both unions) so the row doesn't pull V1 +
-// today types into every consumer.
-export interface DashboardEmailRowMessage {
-  id: string;
-  thread_id: string;
-  subject: string | null;
-  from_address: string | null;
-  from_name: string | null;
-  snippet: string;
-  internal_date: string | null;
-  // V1 GmailImportantMessage allows null (degenerate case where Gmail
-  // didn't surface a link); GmailTodayMessage always populates it.
-  // Row renders nothing for the external-link icon when null.
-  html_link: string | null;
 }
 
 interface Props {

@@ -40,6 +40,7 @@ import { BRANCHES, type BranchCode } from '@/lib/branches';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { DashboardCalendarToday } from '@/components/dashboard/DashboardCalendarToday';
 import { DashboardImportantEmails } from '@/components/dashboard/DashboardImportantEmails';
+import { DashboardPendingEmails } from '@/components/dashboard/DashboardPendingEmails';
 import { DashboardTodayEmails } from '@/components/dashboard/DashboardTodayEmails';
 import { useDismissReminder, useMyReminders } from '@/hooks/useReminders';
 import {
@@ -549,6 +550,10 @@ export function DashboardPage() {
       {/* Today's Google Calendar — under the stat tiles, above the
           actionable lists. Renders nothing when not connected. */}
       <DashboardCalendarToday />
+
+      {/* RabihOS-pending emails (DB-only — survives Gmail age-out).
+          Self-hides when 0 pending or Gmail not connected. */}
+      <DashboardPendingEmails />
 
       {/* Today's Gmail messages (since local midnight in PROJECT_TZ).
           Renders nothing when not connected. */}

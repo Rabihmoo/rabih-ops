@@ -190,3 +190,74 @@ export function emailActionToStatus(
     case 'clear':            return null;
   }
 }
+
+// =====================================================================
+// Dashboard email-row shape + adapter
+// =====================================================================
+// The DashboardEmailRowMessage type lives here (not in EmailRow.tsx)
+// so the lib stays self-contained and pure — no React / Supabase
+// imports needed. EmailRow.tsx re-imports this type. Keeps adapters
+// (below) vitest-clean and avoids a lib ↔ component circular dep.
+
+/**
+ * Minimal shape both GmailImportantMessage, GmailTodayMessage, and
+ * adapter-wrapped email_state rows satisfy. EmailRow.tsx renders
+ * from this shape.
+ */
+export interface DashboardEmailRowMessage {
+  id: string;
+  thread_id: string;
+  subject: string | null;
+  from_address: string | null;
+  from_name: string | null;
+  snippet: string;
+  internal_date: string | null;
+  // V1 GmailImportantMessage allows null (degenerate case where Gmail
+  // didn't surface a link); GmailTodayMessage always populates it;
+  // the email_state adapter always populates it.
+  html_link: string | null;
+}
+
+/**
+ * Standard Gmail web URL for a message. The optional accountEmail
+ * appends `?authuser=<email>` so a browser signed into multiple
+ * Google accounts opens the right mailbox. Harmless in single-
+ * account mode (Gmail ignores when only one account is signed in).
+ */
+export function gmailMessageLink(
+  messageId: string,
+  accountEmail?: string | null,
+): string {
+  const params = accountEmail
+    ? `?authuser=${encodeURIComponent(accountEmail)}`
+    : '';
+  return `https://mail.google.com/mail/u/0/${params}#inbox/${messageId}`;
+}
+
+/**
+ * Wrap an email_state snapshot in the shape EmailRow expects. Lets
+ * DB-only surfaces (Pending card, future Done/Followed-up tabs)
+ * reuse the same row component the Gmail-fed cards use.
+ *
+ * Falls back when fields the snapshot didn't capture:
+ *   - thread_id null  → use message_id (single-message thread is
+ *     a safe default; the row's "Open in Gmail" link uses the
+ *     message id anyway)
+ *   - snippet null    → empty string (EmailRow renders snippet only
+ *     when truthy, so empty string suppresses the " — snippet" tail)
+ */
+export function emailStateRowToDashboardMessage(
+  state: EmailStateRow,
+  accountEmail?: string | null,
+): DashboardEmailRowMessage {
+  return {
+    id: state.gmail_message_id,
+    thread_id: state.gmail_thread_id ?? state.gmail_message_id,
+    subject: state.subject,
+    from_address: state.from_address,
+    from_name: state.from_name,
+    snippet: state.snippet ?? '',
+    internal_date: state.internal_date,
+    html_link: gmailMessageLink(state.gmail_message_id, accountEmail),
+  };
+}

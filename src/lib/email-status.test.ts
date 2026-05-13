@@ -4,8 +4,10 @@ import {
   composeEmailStatusPill,
   availableEmailActions,
   emailActionToStatus,
+  emailStateRowToDashboardMessage,
   emailStatusLabel,
   emailStatusTone,
+  gmailMessageLink,
   EMAIL_ACTION_LABEL,
   type EmailStateRow,
   type EmailStatus,
@@ -192,5 +194,92 @@ describe('EMAIL_ACTION_LABEL', () => {
       expect(EMAIL_ACTION_LABEL[a]).toBeTruthy();
       expect(EMAIL_ACTION_LABEL[a].length).toBeGreaterThan(0);
     }
+  });
+});
+
+// ---------------------------------------------------------------------
+// gmailMessageLink — URL construction
+// ---------------------------------------------------------------------
+
+describe('gmailMessageLink', () => {
+  it('builds a Gmail URL without authuser when no email is given', () => {
+    expect(gmailMessageLink('m1')).toBe(
+      'https://mail.google.com/mail/u/0/#inbox/m1',
+    );
+  });
+
+  it('builds a Gmail URL without authuser when accountEmail is null', () => {
+    expect(gmailMessageLink('m1', null)).toBe(
+      'https://mail.google.com/mail/u/0/#inbox/m1',
+    );
+  });
+
+  it('appends ?authuser= when accountEmail is given', () => {
+    expect(gmailMessageLink('m1', 'rabih@example.com')).toBe(
+      'https://mail.google.com/mail/u/0/?authuser=rabih%40example.com#inbox/m1',
+    );
+  });
+
+  it('encodes special characters in accountEmail', () => {
+    // '+' and '&' are common in test/business aliases; both need encoding
+    expect(gmailMessageLink('m1', 'rabih+work@bbq.house')).toContain(
+      'authuser=rabih%2Bwork%40bbq.house',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------
+// emailStateRowToDashboardMessage — adapter from email_states to row shape
+// ---------------------------------------------------------------------
+
+describe('emailStateRowToDashboardMessage', () => {
+  it('produces the DashboardEmailRowMessage shape', () => {
+    const r = emailStateRowToDashboardMessage(
+      stateRow('pending', {
+        gmail_message_id: 'msg-abc',
+        gmail_thread_id: 'thr-xyz',
+        subject: 'Hi',
+        from_address: 'a@b.c',
+        from_name: 'Alice',
+        snippet: 'snip',
+        internal_date: '2026-05-13T10:00:00Z',
+      }),
+      'rabih@example.com',
+    );
+    expect(r).toEqual({
+      id: 'msg-abc',
+      thread_id: 'thr-xyz',
+      subject: 'Hi',
+      from_address: 'a@b.c',
+      from_name: 'Alice',
+      snippet: 'snip',
+      internal_date: '2026-05-13T10:00:00Z',
+      html_link:
+        'https://mail.google.com/mail/u/0/?authuser=rabih%40example.com#inbox/msg-abc',
+    });
+  });
+
+  it('falls back thread_id to message_id when snapshot has null thread', () => {
+    const r = emailStateRowToDashboardMessage(
+      stateRow('pending', {
+        gmail_message_id: 'msg-1',
+        gmail_thread_id: null,
+      }),
+    );
+    expect(r.thread_id).toBe('msg-1');
+  });
+
+  it('coerces null snippet to empty string', () => {
+    const r = emailStateRowToDashboardMessage(
+      stateRow('done', { snippet: null }),
+    );
+    expect(r.snippet).toBe('');
+  });
+
+  it('omits authuser when accountEmail is null/undefined', () => {
+    const r1 = emailStateRowToDashboardMessage(stateRow('pending'));
+    const r2 = emailStateRowToDashboardMessage(stateRow('pending'), null);
+    expect(r1.html_link).not.toContain('authuser=');
+    expect(r2.html_link).not.toContain('authuser=');
   });
 });
