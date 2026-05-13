@@ -139,6 +139,59 @@ test.describe('Linked records — internal link creation', () => {
     await expect(notesGroup).toContainText('Blocks');
   });
 
+  test('unlink: row disappears + empty state returns', async ({ page }) => {
+    const ts = Date.now();
+    const noteTitle = `H4.5 unlink note ${ts}`;
+    const taskTitle = `H4.5 unlink task ${ts}`;
+
+    const taskId = await createTask(page, taskTitle);
+    await createNote(page, noteTitle);
+
+    // Link first (via the empty-state CTA).
+    await page.getByTestId('linked-records-empty-add-button').click();
+    await page.getByTestId('record-link-search').fill(taskTitle);
+    const targetRow = page.locator(
+      `[data-testid="record-link-result"][data-id="${taskId}"]`,
+    );
+    await expect(targetRow).toBeVisible({ timeout: 10_000 });
+    await targetRow.locator('button').click();
+    await page.getByTestId('record-link-confirm').click();
+    await expect(page.getByTestId('record-link-dialog')).toHaveCount(0);
+
+    const tasksGroup = page.getByTestId('relation-group-tasks');
+    await expect(tasksGroup).toBeVisible();
+    await expect(
+      tasksGroup.locator('[data-testid="relation-row"]'),
+    ).toHaveCount(1);
+
+    // Hover the row so the trash button transitions in on desktop
+    // (it's `sm:opacity-0 sm:group-hover:opacity-100`). Mobile is a
+    // no-op — the button is always visible there.
+    await page.getByTestId('relation-row').first().hover();
+
+    // Diagnostic: confirm the unlink button is actually in the DOM.
+    await expect(
+      page.getByTestId('record-link-unlink-button'),
+    ).toHaveCount(1, { timeout: 5_000 });
+
+    // Unlink. window.confirm() drives the native dialog; accept on
+    // every prompt to be defensive (one-time listeners can get
+    // consumed by stray dialogs).
+    page.on('dialog', (d) => d.accept());
+    const unlinkResp = page.waitForResponse((r) =>
+      r.url().includes('rpc_record_link_remove'),
+    );
+    await page.getByTestId('record-link-unlink-button').click();
+    expect((await unlinkResp).status()).toBe(200);
+
+    // Row disappears, group disappears, empty-state returns. Cache
+    // invalidation in useUnlinkRecord drives the panel re-fetch.
+    await expect(page.getByTestId('relation-group-tasks')).toHaveCount(0, {
+      timeout: 10_000,
+    });
+    await expect(page.getByTestId('linked-records-empty')).toBeVisible();
+  });
+
   test('duplicate link is idempotent: panel does not gain a second row', async ({
     page,
   }) => {
@@ -195,7 +248,9 @@ test.describe('Linked records — internal link creation', () => {
 test.describe('Linked records — viewer guard', () => {
   test.use({ storageState: 'tests/fixtures/.auth/viewer.json' });
 
-  test('viewer sees no +Link button on a task detail', async ({ page }) => {
+  test('viewer sees no +Link or unlink actions on a task detail', async ({
+    page,
+  }) => {
     // Tasks are seeded broadly on the SALT branch (the viewer's only
     // branch) by other admin specs, so a viewer-visible row is
     // reliably present. Skip if not — same defensive pattern other
@@ -209,5 +264,9 @@ test.describe('Linked records — viewer guard', () => {
     await expect(page.getByTestId('linked-records-panel')).toBeVisible();
     await expect(page.getByTestId('linked-records-add-button')).toHaveCount(0);
     await expect(page.getByTestId('linked-records-empty-add-button')).toHaveCount(0);
+    // Unlink trash buttons hang off each record_link row when canMutate.
+    // Viewer should never see one, regardless of whether the task has
+    // existing record_link rows attached (we don't depend on that).
+    await expect(page.getByTestId('record-link-unlink-button')).toHaveCount(0);
   });
 });

@@ -7,12 +7,14 @@ import {
   Link2,
   Loader2,
   Plus,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusChip, type StatusTone } from '@/components/ui/status-chip';
+import { toast } from '@/components/ui/toast';
 import { RecordLinkDialog } from './RecordLinkDialog';
-import { useRecordRelations } from '@/hooks/useRecordLinks';
+import { useRecordRelations, useUnlinkRecord } from '@/hooks/useRecordLinks';
 import { useCanMutate } from '@/hooks/usePermissions';
 import {
   groupRelations,
@@ -180,7 +182,12 @@ export function LinkedRecordsPanel({
                   </div>
                   <ul className="divide-border divide-y">
                     {group.rows.map((row) => (
-                      <RelationRow key={`${row.source_table}-${row.link_id}`} row={row} />
+                      <RelationRow
+                        key={`${row.source_table}-${row.link_id}`}
+                        row={row}
+                        entityType={entityType}
+                        entityId={entityId}
+                      />
                     ))}
                   </ul>
                 </li>
@@ -201,12 +208,57 @@ export function LinkedRecordsPanel({
   );
 }
 
-function RelationRow({ row }: { row: RecordRelation }) {
+function RelationRow({
+  row,
+  entityType,
+  entityId,
+}: {
+  row: RecordRelation;
+  entityType: RecordLinkEntityType;
+  entityId: string;
+}) {
   const verb = row.relationship as RecordLinkRelationship;
   const tone = RELATIONSHIP_TONE[verb] ?? 'muted';
   const href = relationHref(row);
   const external = isExternal(row);
   const label = rowLabel(row);
+  const canMutate = useCanMutate();
+  const unlink = useUnlinkRecord();
+
+  // Unlink only applies to rows from record_links (the universal
+  // table H4.4 writes to). Typed-link rows — email/document/calendar —
+  // have their own removal UI in their respective cards and would
+  // need different RPCs; out of H4.5 scope per the user instruction.
+  const showUnlink = canMutate && row.source_table === 'record_link';
+
+  async function handleUnlink(e: React.MouseEvent) {
+    // The button sits inside the row's <Link>/<a>. Stop the click
+    // from bubbling so it doesn't navigate to the target.
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('Remove this link?')) return;
+    try {
+      await unlink.mutateAsync({
+        linkId: row.link_id,
+        // The current entity is one endpoint regardless of direction;
+        // the row's to_entity_* always carries the OTHER endpoint
+        // (rpc_record_relations projects inbound from-side into the
+        // to-slot). So invalidating both keys here always hits both
+        // ends of the link.
+        fromType: entityType,
+        fromId: entityId,
+        toType: row.to_entity_type,
+        toId: row.to_entity_id,
+      });
+      toast({ title: 'Unlinked' });
+    } catch (err) {
+      toast({
+        title: 'Could not unlink',
+        description: (err as Error).message,
+        variant: 'destructive',
+      });
+    }
+  }
 
   const directionIcon =
     row.direction === 'inbound' ? (
@@ -225,6 +277,21 @@ function RelationRow({ row }: { row: RecordRelation }) {
     month: 'short',
     day: 'numeric',
   });
+
+  const unlinkButton = (
+    <button
+      type="button"
+      onClick={handleUnlink}
+      disabled={unlink.isPending}
+      aria-label="Remove this link"
+      data-testid="record-link-unlink-button"
+      // Always visible on mobile (no hover affordance); hover/focus
+      // only on sm+ so quiet rows don't accumulate trailing icons.
+      className="text-muted-foreground hover:text-destructive-ink focus-visible:text-destructive-ink focus-visible:ring-ring inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-opacity focus-visible:outline-none focus-visible:ring-2 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+    >
+      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+    </button>
+  );
 
   // Mobile (< sm): three stacked lines so a long label can wrap to two
   // lines instead of getting truncated at 390px.
@@ -272,9 +339,10 @@ function RelationRow({ row }: { row: RecordRelation }) {
             aria-hidden
             className="text-muted-foreground h-3.5 w-3.5 shrink-0"
           />
-        ) : (
+        ) : showUnlink ? null : (
           <span aria-hidden className="hidden w-3.5 shrink-0 sm:inline" />
         )}
+        {showUnlink && unlinkButton}
       </span>
     </span>
   );
@@ -283,7 +351,7 @@ function RelationRow({ row }: { row: RecordRelation }) {
     return (
       <li
         data-testid="relation-row"
-        className="hover:bg-surface-1 -mx-2 flex items-stretch rounded-md px-2 transition-colors sm:items-center sm:gap-3"
+        className="group hover:bg-surface-1 -mx-2 flex items-stretch rounded-md px-2 transition-colors sm:items-center sm:gap-3"
       >
         {inner}
       </li>
@@ -294,7 +362,7 @@ function RelationRow({ row }: { row: RecordRelation }) {
   return (
     <li
       data-testid="relation-row"
-      className="last:[&>*]:border-b-0"
+      className="group last:[&>*]:border-b-0"
     >
       {external ? (
         <a
