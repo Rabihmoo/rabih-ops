@@ -289,11 +289,6 @@ export function NoteDetailPage() {
         </Card>
       )}
 
-      {/* Phase H4.2 — read-only universal Linked Records panel.
-          Mounted on NoteDetail only for now (Notes has no legacy
-          LinkedDocumentsCard/LinkedEmailsCard to coexist with).
-          Adding to other detail pages lands in H4.7 after the
-          add/link/unlink chunks. */}
       {!editing && (
         <LinkedRecordsPanel entityType="note" entityId={noteId} />
       )}

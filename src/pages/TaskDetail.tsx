@@ -237,8 +237,6 @@ export function TaskDetailPage() {
       {/* Linked Gmail messages */}
       {!editing && <LinkedEmailsCard entityType="task" entityId={taskId} />}
 
-      {/* Phase H4.3: universal linked-records panel rendered in parallel with the
-          typed cards above. Legacy cards stay until H4.8. */}
       {!editing && <LinkedRecordsPanel entityType="task" entityId={taskId} />}
 
       {/* Reminders summary (Phase B will fire them; Phase A just stores) */}

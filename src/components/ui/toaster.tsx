@@ -22,7 +22,7 @@ export function Toaster() {
         <ToastPrimitive.Root
           key={m.id}
           className={cn(
-            'bg-card text-card-foreground border-border data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full data-[state=closed]:slide-out-to-right-full grid grid-cols-[auto,1fr] items-center gap-2 rounded-md border p-3 shadow-lg',
+            'bg-card text-card-foreground border-border pointer-events-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full data-[state=closed]:slide-out-to-right-full grid grid-cols-[auto,1fr] items-center gap-2 rounded-md border p-3 shadow-lg',
             m.variant === 'destructive' && 'bg-destructive text-destructive-foreground border-destructive',
           )}
         >
@@ -36,7 +36,10 @@ export function Toaster() {
           </div>
         </ToastPrimitive.Root>
       ))}
-      <ToastPrimitive.Viewport className="fixed bottom-0 right-0 z-[60] m-4 flex w-[360px] max-w-[calc(100vw-2rem)] flex-col gap-2" />
+      {/* pointer-events-none so toasts don't block clicks on overlapping
+          UI (e.g. RecordLinkDialog's bottom-right action bar on mobile).
+          Individual toasts re-enable pointer-events via the Root class. */}
+      <ToastPrimitive.Viewport className="pointer-events-none fixed bottom-0 right-0 z-[60] m-4 flex w-[360px] max-w-[calc(100vw-2rem)] flex-col gap-2" />
     </ToastPrimitive.Provider>
   );
 }

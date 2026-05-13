@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowDownLeft,
@@ -5,10 +6,14 @@ import {
   ExternalLink,
   Link2,
   Loader2,
+  Plus,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusChip, type StatusTone } from '@/components/ui/status-chip';
+import { RecordLinkDialog } from './RecordLinkDialog';
 import { useRecordRelations } from '@/hooks/useRecordLinks';
+import { useCanMutate } from '@/hooks/usePermissions';
 import {
   groupRelations,
   relationHref,
@@ -20,13 +25,12 @@ import type {
   RecordLinkRelationship,
 } from '@/lib/record-links';
 
-// Phase H4.2 — read-only universal panel. Mounted on NoteDetail first
-// (no existing LinkedDocumentsCard / LinkedEmailsCard there to coexist
-// with). Add/link/unlink affordances land in H4.4–H4.6. Title resolution
-// for internal record_links comes through rpc_record_relations.to_entity_title
-// (widened by migration 20260531). The "Entity · short-id" fallback below
-// only triggers if the title is unexpectedly null (e.g. a hard-deleted
-// target row that still passed _can_access_entity).
+// Universal linked-records panel. Reads relations via rpc_record_relations
+// (which projects record_links + email_links + document_links +
+// calendar_event_links into one shape). Linking surfaces an internal-only
+// picker (H4.4); the "Entity · short-id" fallback below only triggers if
+// to_entity_title is unexpectedly null (e.g. a hard-deleted target row that
+// still passed _can_access_entity).
 
 const RELATIONSHIP_TONE: Record<RecordLinkRelationship, StatusTone> = {
   relates_to:     'muted',
@@ -97,6 +101,8 @@ export function LinkedRecordsPanel({
   entityId: string;
 }) {
   const { data, isLoading, error } = useRecordRelations(entityType, entityId);
+  const canMutate = useCanMutate();
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const rows = data ?? [];
   const groups = groupRelations(rows);
@@ -105,7 +111,7 @@ export function LinkedRecordsPanel({
   return (
     <Card data-testid="linked-records-panel">
       <CardContent className="space-y-4 p-5">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div className="text-section-label flex items-center gap-2">
             <Link2 className="h-3.5 w-3.5" />
             Linked records
@@ -115,6 +121,16 @@ export function LinkedRecordsPanel({
               </span>
             )}
           </div>
+          {canMutate && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setDialogOpen(true)}
+              data-testid="linked-records-add-button"
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" /> Link
+            </Button>
+          )}
         </div>
 
         {isLoading && (
@@ -132,11 +148,20 @@ export function LinkedRecordsPanel({
 
         {!isLoading && !error && total === 0 && (
           <div
-            className="text-muted-foreground py-1 text-xs"
+            className="text-muted-foreground space-y-2 py-1 text-xs"
             data-testid="linked-records-empty"
           >
-            No linked records yet. Linking will arrive in a future update —
-            this panel reads everything the entity is connected to.
+            <p>No linked records yet.</p>
+            {canMutate && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setDialogOpen(true)}
+                data-testid="linked-records-empty-add-button"
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" /> Link a record
+              </Button>
+            )}
           </div>
         )}
 
@@ -164,6 +189,14 @@ export function LinkedRecordsPanel({
           </ul>
         )}
       </CardContent>
+      {canMutate && (
+        <RecordLinkDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          fromType={entityType}
+          fromId={entityId}
+        />
+      )}
     </Card>
   );
 }
