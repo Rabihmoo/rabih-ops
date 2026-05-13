@@ -57,6 +57,11 @@ test.describe('Gmail — dashboard surface', () => {
     await page.goto('/');
     await expect(page.getByText("Today's emails")).toHaveCount(0);
     await expect(page.getByText('Important this week')).toHaveCount(0);
+    // G2.3: row-action ⋮ triggers are children of EmailRow which only
+    // mounts inside the cards. Cards hidden → triggers absent.
+    // Asserted defensively in case a future change accidentally leaks
+    // the row outside its card.
+    await expect(page.getByTestId('email-row-actions-trigger')).toHaveCount(0);
   });
 });
 

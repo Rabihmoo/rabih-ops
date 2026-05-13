@@ -1,28 +1,34 @@
-import { ExternalLink, Loader2, Mail } from 'lucide-react';
+import { useMemo } from 'react';
+import { Loader2, Mail } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useGmailImportant, useGmailLinkStatus } from '@/hooks/useGmail';
+import { useEmailStatesForUser } from '@/hooks/useEmailStates';
+import type { EmailStateRow } from '@/lib/email-status';
 import type { GmailImportantMessage } from '@/lib/gmail';
-
-function whenLabel(iso: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMin = Math.round(diffMs / 60000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffH = Math.round(diffMin / 60);
-  if (diffH < 24) return `${diffH}h ago`;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
+import { EmailRow } from './EmailRow';
 
 export function DashboardImportantEmails() {
   const status = useGmailLinkStatus();
   const emails = useGmailImportant(status.data?.connected === true);
+  const accountId = status.data?.google_account_id ?? null;
+  // Same parent-level state fetch as DashboardTodayEmails — single
+  // DB roundtrip per dashboard load, looked up per row by message_id.
+  const states = useEmailStatesForUser({
+    googleAccountId: accountId,
+    limit: 200,
+  });
+
+  const statesByMessageId = useMemo(() => {
+    const map = new Map<string, EmailStateRow>();
+    for (const s of states.data ?? []) {
+      map.set(s.gmail_message_id, s);
+    }
+    return map;
+  }, [states.data]);
 
   if (!status.data?.connected) return null;
 
-  const messages = emails.data?.messages ?? [];
+  const messages: GmailImportantMessage[] = emails.data?.messages ?? [];
 
   return (
     <Card>
@@ -61,42 +67,13 @@ export function DashboardImportantEmails() {
 
         {!emails.isLoading && messages.length > 0 && (
           <ul className="divide-border divide-y">
-            {messages.map((m: GmailImportantMessage) => (
-              <li
+            {messages.map((m) => (
+              <EmailRow
                 key={m.id}
-                className="hover:bg-surface-1 -mx-2 flex items-start gap-3 rounded-md px-2 py-2.5 transition-colors"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="text-foreground line-clamp-1 text-sm font-medium">
-                    {m.subject ?? '(no subject)'}
-                  </div>
-                  <div className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
-                    <span className="text-foreground-72">
-                      {m.from_name ?? m.from_address ?? 'Unknown sender'}
-                    </span>
-                    {m.snippet && (
-                      <>
-                        <span className="text-subtle-foreground"> — </span>
-                        <span>{m.snippet}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <span className="text-subtle-foreground w-16 shrink-0 text-right text-xs tabular-nums">
-                  {whenLabel(m.internal_date)}
-                </span>
-                {m.html_link && (
-                  <a
-                    href={m.html_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Open in Gmail"
-                    className="text-muted-foreground hover:text-foreground shrink-0 self-center"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                )}
-              </li>
+                message={{ ...m, snippet: m.snippet ?? '' }}
+                googleAccountId={accountId}
+                currentState={statesByMessageId.get(m.id) ?? null}
+              />
             ))}
           </ul>
         )}
