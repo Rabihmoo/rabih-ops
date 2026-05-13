@@ -7,6 +7,14 @@ import { callRpc } from './rpc';
 export interface GmailLinkStatus {
   connected: boolean;
   email?: string;
+  // Added by migration 20260603_rpc_gmail_link_status_account_id.sql.
+  // Frontend mutations on email_states (G2.1 RPCs) require the Gmail
+  // account id, and this is the cheapest path to surface it — the
+  // status query already runs on every page that touches Gmail.
+  // Optional in TS so the type is correct against any DB that hasn't
+  // applied the migration yet (defensive, no-op once the migration
+  // is universal).
+  google_account_id?: string;
   connected_at?: string;
   last_used_at?: string | null;
   scope?: string;
