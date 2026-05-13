@@ -164,6 +164,48 @@ test.describe('Tasks — admin happy path', () => {
 });
 
 // =========================================================
+// Tasks — Linked Records panel (Phase H4.3 parallel render)
+// =========================================================
+
+test.describe('Tasks — Linked Records panel (Phase H4.3 parallel render)', () => {
+  test.use({ storageState: 'tests/fixtures/.auth/admin.json' });
+
+  test('panel mounts alongside LinkedDocumentsCard + LinkedEmailsCard', async ({
+    page,
+  }) => {
+    await page.goto('/tasks');
+    // Switch to a broad bucket so the first row is reliably present.
+    await page.getByRole('tab', { name: 'Active', exact: true }).first().click();
+    await page.locator('main ul li button').first().click();
+    await page.waitForURL(/\/tasks\/[0-9a-f-]+$/, { timeout: 10_000 });
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    // Panel renders + coexists with LinkedDocumentsCard (unconditional).
+    // LinkedEmailsCard hides itself when Gmail isn't connected AND there are
+    // no existing email links, so it's not asserted here — covered by gmail.spec.
+    await expect(page.getByText('Linked documents', { exact: false })).toBeVisible();
+    await expect(page.getByTestId('linked-records-panel')).toBeVisible();
+    await expect(
+      page.getByText('Linked records', { exact: true }).first(),
+    ).toBeVisible();
+  });
+
+  test('panel hides in edit mode and returns on cancel', async ({ page }) => {
+    await page.goto('/tasks');
+    await page.getByRole('tab', { name: 'Active', exact: true }).first().click();
+    await page.locator('main ul li button').first().click();
+    await page.waitForURL(/\/tasks\/[0-9a-f-]+$/, { timeout: 10_000 });
+    await expect(page.getByTestId('linked-records-panel')).toBeVisible();
+
+    await page.getByTestId('task-edit-button').click();
+    await expect(page.getByTestId('linked-records-panel')).toHaveCount(0);
+
+    await page.getByRole('button', { name: /^Cancel$/ }).click();
+    await expect(page.getByTestId('linked-records-panel')).toBeVisible();
+  });
+});
+
+// =========================================================
 // Viewer guard — seeded by auth.setup.ts
 // =========================================================
 
