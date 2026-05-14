@@ -1,8 +1,16 @@
+import { useMemo } from 'react';
 import { Inbox, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { useGmailLinkStatus } from '@/hooks/useGmail';
+import {
+  useEmailLinkPresence,
+  useGmailLinkStatus,
+} from '@/hooks/useGmail';
 import { useEmailStatesForUser } from '@/hooks/useEmailStates';
-import { emailStateRowToDashboardMessage } from '@/lib/email-status';
+import {
+  emailStateRowToDashboardMessage,
+  type EmailLinkPresence,
+  type EmailStateRow,
+} from '@/lib/email-status';
 import { EmailRow } from './EmailRow';
 
 /**
@@ -42,6 +50,48 @@ export function DashboardPendingEmails() {
   if (!pending.isLoading && rows.length === 0) return null;
 
   return (
+    <PendingBody
+      accountId={accountId}
+      accountEmail={accountEmail}
+      rows={rows}
+      isLoading={pending.isLoading}
+      error={pending.error as Error | null}
+    />
+  );
+}
+
+interface BodyProps {
+  accountId: string | null;
+  accountEmail: string | null;
+  rows: EmailStateRow[];
+  isLoading: boolean;
+  error: Error | null;
+}
+
+function PendingBody({
+  accountId,
+  accountEmail,
+  rows,
+  isLoading,
+  error,
+}: BodyProps) {
+  const messageIds = useMemo(
+    () => rows.map((s) => s.gmail_message_id),
+    [rows],
+  );
+  const presence = useEmailLinkPresence(accountId, messageIds);
+  const linksByMessageId = useMemo(() => {
+    const map = new Map<string, EmailLinkPresence>();
+    for (const row of presence.data ?? []) {
+      map.set(row.gmail_message_id, {
+        hasTaskLink: row.has_task_link,
+        hasFollowUpLink: row.has_follow_up_link,
+      });
+    }
+    return map;
+  }, [presence.data]);
+
+  return (
     <Card>
       <CardContent className="space-y-3 p-5">
         <div className="border-border mb-1 flex items-baseline justify-between border-b pb-3">
@@ -54,23 +104,23 @@ export function DashboardPendingEmails() {
             </span>
           </div>
           <span className="text-subtle-foreground text-xs">
-            {status.data?.email}
+            {accountEmail}
           </span>
         </div>
 
-        {pending.isLoading && (
+        {isLoading && (
           <div className="text-muted-foreground py-3 text-sm">
             <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> Loading…
           </div>
         )}
 
-        {!pending.isLoading && pending.error && (
+        {!isLoading && error && (
           <div className="text-destructive-ink text-xs">
-            Could not load pending emails: {(pending.error as Error).message}
+            Could not load pending emails: {error.message}
           </div>
         )}
 
-        {!pending.isLoading && !pending.error && rows.length > 0 && (
+        {!isLoading && !error && rows.length > 0 && (
           <ul className="divide-border divide-y">
             {rows.map((state) => (
               <EmailRow
@@ -78,6 +128,7 @@ export function DashboardPendingEmails() {
                 message={emailStateRowToDashboardMessage(state, accountEmail)}
                 googleAccountId={accountId}
                 currentState={state}
+                linkPresence={linksByMessageId.get(state.gmail_message_id)}
               />
             ))}
           </ul>

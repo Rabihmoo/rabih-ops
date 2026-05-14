@@ -209,6 +209,35 @@ export async function unlinkEmail(linkId: number): Promise<EmailLinkSnapshot> {
   });
 }
 
+// =========================================================
+// Email link presence — batch lookup for Dashboard pills
+// =========================================================
+// Backed by rpc_email_link_presence_for_messages (G3.1 backend,
+// migration 20260605). Returns one row per gmail_message_id that
+// has at least one live email_links row owned by the caller against
+// the given Google account. Callers treat absence-from-result as
+// "no link" — there's no zero-flag row in the response.
+
+export interface EmailLinkPresenceRow {
+  gmail_message_id: string;
+  has_task_link: boolean;
+  has_follow_up_link: boolean;
+}
+
+export async function getEmailLinkPresence(
+  googleAccountId: string,
+  messageIds: string[],
+): Promise<EmailLinkPresenceRow[]> {
+  const result = await callRpc<EmailLinkPresenceRow[] | null>(
+    'rpc_email_link_presence_for_messages',
+    {
+      p_google_account_id: googleAccountId,
+      p_message_ids: messageIds,
+    },
+  );
+  return result ?? [];
+}
+
 // Edge Function helpers — gmail-action endpoint creates a link from a
 // Gmail message id alone (server-side fetches the snapshot fields).
 export interface GmailActionLinkInput {

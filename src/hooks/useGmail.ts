@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   disconnectGmail,
+  getEmailLinkPresence,
   gmailActionLink,
   getGmailLinkStatus,
   listEmailLinksForEntity,
@@ -8,6 +9,7 @@ import {
   linkEmail,
   requestGmailAuthorize,
   unlinkEmail,
+  type EmailLinkPresenceRow,
   type GmailActionLinkInput,
   type LinkEmailInput,
 } from '@/lib/gmail';
@@ -99,6 +101,10 @@ export function useLinkEmail() {
       qc.invalidateQueries({
         queryKey: [...KEY, 'links', input.entity_type, input.entity_id],
       });
+      // Dashboard pills depend on the (account, message_ids) presence
+      // cache — refresh after link/unlink so "Linked to task / follow-up"
+      // appears/disappears within one refetch cycle.
+      qc.invalidateQueries({ queryKey: [...KEY, 'link-presence'] });
     },
   });
 }
@@ -111,6 +117,7 @@ export function useGmailActionLink() {
       qc.invalidateQueries({
         queryKey: [...KEY, 'links', input.entity_type, input.entity_id],
       });
+      qc.invalidateQueries({ queryKey: [...KEY, 'link-presence'] });
     },
   });
 }
@@ -124,6 +131,36 @@ export function useUnlinkEmail(
     mutationFn: (linkId: number) => unlinkEmail(linkId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [...KEY, 'links', entityType, entityId] });
+      qc.invalidateQueries({ queryKey: [...KEY, 'link-presence'] });
     },
   });
 }
+
+/**
+ * G3.1: Batch presence lookup for the Dashboard email cards.
+ *
+ * Returns a TanStack query whose `data` is an array of rows for the
+ * supplied message ids that have at least one live email_links row
+ * owned by the caller. Absent ids = no link. Disabled until both
+ * googleAccountId and a non-empty messageIds array are present.
+ *
+ * Key sorts messageIds for deterministic cache hits across
+ * re-renders that pass the same set in different order.
+ */
+export function useEmailLinkPresence(
+  googleAccountId: string | null,
+  messageIds: string[],
+) {
+  const sorted = [...messageIds].sort();
+  return useQuery({
+    queryKey: [...KEY, 'link-presence', googleAccountId, sorted],
+    queryFn: () => getEmailLinkPresence(googleAccountId!, sorted),
+    enabled: !!googleAccountId && sorted.length > 0,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    meta: { persist: false },
+  });
+}
+
+export type { EmailLinkPresenceRow };

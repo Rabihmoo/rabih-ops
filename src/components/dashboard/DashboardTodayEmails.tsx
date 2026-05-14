@@ -2,9 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
-import { useGmailLinkStatus, useGmailToday } from '@/hooks/useGmail';
+import {
+  useEmailLinkPresence,
+  useGmailLinkStatus,
+  useGmailToday,
+} from '@/hooks/useGmail';
 import { useEmailStatesForUser } from '@/hooks/useEmailStates';
-import type { EmailStateRow } from '@/lib/email-status';
+import type { EmailLinkPresence, EmailStateRow } from '@/lib/email-status';
 import type { GmailTodayMessage, GmailTodayMode } from '@/lib/gmail-today';
 import { EmailRow } from './EmailRow';
 
@@ -63,6 +67,57 @@ export function DashboardTodayEmails() {
 
   const messages: GmailTodayMessage[] = emails.data?.today ?? [];
 
+  // G3.1: batch presence lookup for the rendered message ids. Hook
+  // disables itself until accountId + a non-empty id list are both
+  // ready, so this is a no-op for the unconnected / empty-today case.
+  return (
+    <DashboardTodayEmailsBody
+      accountId={accountId}
+      mode={mode}
+      setMode={setMode}
+      messages={messages}
+      isLoading={emails.isLoading}
+      error={emails.data?.error}
+      statusEmail={status.data?.email}
+      statesByMessageId={statesByMessageId}
+    />
+  );
+}
+
+interface BodyProps {
+  accountId: string | null;
+  mode: GmailTodayMode;
+  setMode: (m: GmailTodayMode) => void;
+  messages: GmailTodayMessage[];
+  isLoading: boolean;
+  error?: string;
+  statusEmail?: string;
+  statesByMessageId: Map<string, EmailStateRow>;
+}
+
+function DashboardTodayEmailsBody({
+  accountId,
+  mode,
+  setMode,
+  messages,
+  isLoading,
+  error,
+  statusEmail,
+  statesByMessageId,
+}: BodyProps) {
+  const messageIds = useMemo(() => messages.map((m) => m.id), [messages]);
+  const presence = useEmailLinkPresence(accountId, messageIds);
+  const linksByMessageId = useMemo(() => {
+    const map = new Map<string, EmailLinkPresence>();
+    for (const row of presence.data ?? []) {
+      map.set(row.gmail_message_id, {
+        hasTaskLink: row.has_task_link,
+        hasFollowUpLink: row.has_follow_up_link,
+      });
+    }
+    return map;
+  }, [presence.data]);
+
   return (
     <Card>
       <CardContent className="space-y-3 p-5">
@@ -76,7 +131,7 @@ export function DashboardTodayEmails() {
             </span>
           </div>
           <span className="text-subtle-foreground hidden text-xs sm:inline">
-            {status.data?.email}
+            {statusEmail}
           </span>
         </div>
 
@@ -102,19 +157,19 @@ export function DashboardTodayEmails() {
           />
         </div>
 
-        {emails.isLoading && (
+        {isLoading && (
           <div className="text-muted-foreground py-3 text-sm">
             <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> Loading…
           </div>
         )}
 
-        {!emails.isLoading && emails.data?.error && (
+        {!isLoading && error && (
           <div className="text-destructive-ink text-xs">
-            Could not load emails: {emails.data.error}
+            Could not load emails: {error}
           </div>
         )}
 
-        {!emails.isLoading && !emails.data?.error && messages.length === 0 && (
+        {!isLoading && !error && messages.length === 0 && (
           <div className="text-muted-foreground py-2 text-sm">
             {mode === 'all'
               ? 'No emails today.'
@@ -122,7 +177,7 @@ export function DashboardTodayEmails() {
           </div>
         )}
 
-        {!emails.isLoading && messages.length > 0 && (
+        {!isLoading && messages.length > 0 && (
           <ul className="divide-border divide-y">
             {messages.map((m) => (
               <EmailRow
@@ -130,6 +185,7 @@ export function DashboardTodayEmails() {
                 message={m}
                 googleAccountId={accountId}
                 currentState={statesByMessageId.get(m.id) ?? null}
+                linkPresence={linksByMessageId.get(m.id)}
               />
             ))}
           </ul>

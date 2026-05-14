@@ -1,9 +1,13 @@
 import { useMemo } from 'react';
 import { Loader2, Mail } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { useGmailImportant, useGmailLinkStatus } from '@/hooks/useGmail';
+import {
+  useEmailLinkPresence,
+  useGmailImportant,
+  useGmailLinkStatus,
+} from '@/hooks/useGmail';
 import { useEmailStatesForUser } from '@/hooks/useEmailStates';
-import type { EmailStateRow } from '@/lib/email-status';
+import type { EmailLinkPresence, EmailStateRow } from '@/lib/email-status';
 import type { GmailImportantMessage } from '@/lib/gmail';
 import { EmailRow } from './EmailRow';
 
@@ -31,6 +35,48 @@ export function DashboardImportantEmails() {
   const messages: GmailImportantMessage[] = emails.data?.messages ?? [];
 
   return (
+    <ImportantBody
+      accountId={accountId}
+      messages={messages}
+      isLoading={emails.isLoading}
+      error={emails.data?.error}
+      statusEmail={status.data?.email}
+      statesByMessageId={statesByMessageId}
+    />
+  );
+}
+
+interface BodyProps {
+  accountId: string | null;
+  messages: GmailImportantMessage[];
+  isLoading: boolean;
+  error?: string;
+  statusEmail?: string;
+  statesByMessageId: Map<string, EmailStateRow>;
+}
+
+function ImportantBody({
+  accountId,
+  messages,
+  isLoading,
+  error,
+  statusEmail,
+  statesByMessageId,
+}: BodyProps) {
+  const messageIds = useMemo(() => messages.map((m) => m.id), [messages]);
+  const presence = useEmailLinkPresence(accountId, messageIds);
+  const linksByMessageId = useMemo(() => {
+    const map = new Map<string, EmailLinkPresence>();
+    for (const row of presence.data ?? []) {
+      map.set(row.gmail_message_id, {
+        hasTaskLink: row.has_task_link,
+        hasFollowUpLink: row.has_follow_up_link,
+      });
+    }
+    return map;
+  }, [presence.data]);
+
+  return (
     <Card>
       <CardContent className="space-y-3 p-5">
         <div className="border-border mb-1 flex items-baseline justify-between border-b pb-3">
@@ -43,29 +89,29 @@ export function DashboardImportantEmails() {
             </span>
           </div>
           <span className="text-subtle-foreground text-xs">
-            {status.data?.email}
+            {statusEmail}
           </span>
         </div>
 
-        {emails.isLoading && (
+        {isLoading && (
           <div className="text-muted-foreground py-3 text-sm">
             <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> Loading…
           </div>
         )}
 
-        {!emails.isLoading && emails.data?.error && (
+        {!isLoading && error && (
           <div className="text-destructive-ink text-xs">
-            Could not load emails: {emails.data.error}
+            Could not load emails: {error}
           </div>
         )}
 
-        {!emails.isLoading && !emails.data?.error && messages.length === 0 && (
+        {!isLoading && !error && messages.length === 0 && (
           <div className="text-muted-foreground py-2 text-sm">
             No important unread emails from the last 7 days.
           </div>
         )}
 
-        {!emails.isLoading && messages.length > 0 && (
+        {!isLoading && messages.length > 0 && (
           <ul className="divide-border divide-y">
             {messages.map((m) => (
               <EmailRow
@@ -73,6 +119,7 @@ export function DashboardImportantEmails() {
                 message={{ ...m, snippet: m.snippet ?? '' }}
                 googleAccountId={accountId}
                 currentState={statesByMessageId.get(m.id) ?? null}
+                linkPresence={linksByMessageId.get(m.id)}
               />
             ))}
           </ul>

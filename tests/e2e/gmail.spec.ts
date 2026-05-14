@@ -68,6 +68,12 @@ test.describe('Gmail — dashboard surface', () => {
     // Today filter toggle is a child of the Today card; hidden too.
     await expect(page.getByTestId('today-mode-focused')).toHaveCount(0);
     await expect(page.getByTestId('today-mode-all')).toHaveCount(0);
+    // G3.1: the "Linked to task / follow-up" pills are children of
+    // EmailRow which only mounts inside the cards. Defensive check
+    // — if the link-presence hook ever leaks past the connected gate
+    // we want CI to catch it.
+    await expect(page.getByTestId('email-row-link-pill')).toHaveCount(0);
+    await expect(page.getByTestId('email-row-status-pill')).toHaveCount(0);
   });
 });
 

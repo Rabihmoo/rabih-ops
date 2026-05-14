@@ -4,6 +4,7 @@ import { useCanMutate } from '@/hooks/usePermissions';
 import {
   composeEmailStatusPill,
   type DashboardEmailRowMessage,
+  type EmailLinkPresence,
   type EmailStateRow,
 } from '@/lib/email-status';
 import { EmailRowActionMenu } from './EmailRowActionMenu';
@@ -38,12 +39,21 @@ interface Props {
   message: DashboardEmailRowMessage;
   googleAccountId: string | null;
   currentState: EmailStateRow | null;
+  linkPresence?: EmailLinkPresence;
 }
 
-export function EmailRow({ message, googleAccountId, currentState }: Props) {
+export function EmailRow({
+  message,
+  googleAccountId,
+  currentState,
+  linkPresence,
+}: Props) {
   const canMutate = useCanMutate();
-  const pill = composeEmailStatusPill(currentState);
+  const pill = composeEmailStatusPill(currentState, linkPresence);
   const showMenu = canMutate && !!googleAccountId;
+  const isLinkPill =
+    !!pill &&
+    (pill.label === 'Linked to task' || pill.label === 'Linked to follow-up');
 
   return (
     <li
@@ -68,7 +78,10 @@ export function EmailRow({ message, googleAccountId, currentState }: Props) {
       </div>
 
       {pill && (
-        <span className="self-center">
+        <span
+          className="self-center"
+          data-testid={isLinkPill ? 'email-row-link-pill' : 'email-row-status-pill'}
+        >
           <StatusChip tone={pill.tone} size="xs">
             {pill.label}
           </StatusChip>
