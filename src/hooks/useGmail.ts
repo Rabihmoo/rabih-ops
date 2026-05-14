@@ -11,7 +11,7 @@ import {
   type GmailActionLinkInput,
   type LinkEmailInput,
 } from '@/lib/gmail';
-import { listGmailToday } from '@/lib/gmail-today';
+import { listGmailToday, type GmailTodayMode } from '@/lib/gmail-today';
 
 const KEY = ['gmail'] as const;
 
@@ -62,10 +62,16 @@ export function useGmailImportant(enabled: boolean) {
  * Same persistence policy as useGmailImportant — meta.persist=false so
  * email metadata never sits in localStorage.
  */
-export function useGmailToday(enabled: boolean) {
+export function useGmailToday(
+  enabled: boolean,
+  mode: GmailTodayMode = 'focused',
+) {
   return useQuery({
-    queryKey: [...KEY, 'today'],
-    queryFn: () => listGmailToday(),
+    // Key includes mode so Focused / All cache independently and
+    // switching modes hits Gmail at most once per mode rather than
+    // invalidating each other.
+    queryKey: [...KEY, 'today', mode],
+    queryFn: () => listGmailToday(mode),
     enabled,
     staleTime: 2 * 60 * 1000,
     gcTime: 30 * 60 * 1000,

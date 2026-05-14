@@ -65,6 +65,9 @@ test.describe('Gmail — dashboard surface', () => {
     // Asserted defensively in case a future change accidentally leaks
     // the row outside its card.
     await expect(page.getByTestId('email-row-actions-trigger')).toHaveCount(0);
+    // Today filter toggle is a child of the Today card; hidden too.
+    await expect(page.getByTestId('today-mode-focused')).toHaveCount(0);
+    await expect(page.getByTestId('today-mode-all')).toHaveCount(0);
   });
 });
 

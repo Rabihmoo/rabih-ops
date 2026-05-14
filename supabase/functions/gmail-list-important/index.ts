@@ -18,6 +18,7 @@ import {
   getUserIdFromJwt,
 } from '../_shared/google.ts';
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
+import { decodeHtmlEntities } from '../_shared/html-decode.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -158,10 +159,12 @@ Deno.serve(async (req) => {
       return {
         id: m.id,
         thread_id: m.threadId,
-        subject,
+        // Decode Gmail's raw HTML entities (e.g. `can&#39;t`, `&lt;`)
+        // server-side. Preserve null for the row's fallback labels.
+        subject:      subject  != null ? decodeHtmlEntities(subject)  : null,
         from_address: fromAddress,
-        from_name: fromName,
-        snippet: m.snippet ?? '',
+        from_name:    fromName != null ? decodeHtmlEntities(fromName) : null,
+        snippet: decodeHtmlEntities(m.snippet ?? ''),
         internal_date: internalDate,
         html_link,
         is_unread: isUnread,

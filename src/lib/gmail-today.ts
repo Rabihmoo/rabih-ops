@@ -29,9 +29,14 @@ export interface GmailTodayMessage {
   is_important: boolean;
 }
 
+export type GmailTodayMode = 'focused' | 'all';
+
 export interface GmailTodayResult {
   connected: boolean;
   email?: string;
+  /** Echoed by the Edge Function so the client can sanity-check
+   *  the response matches the mode it asked for. */
+  mode?: GmailTodayMode;
   important: GmailTodayMessage[];
   today: GmailTodayMessage[];
   error?: string;
@@ -41,7 +46,9 @@ export interface GmailTodayResult {
 // Fetch
 // =====================================================================
 
-export async function listGmailToday(): Promise<GmailTodayResult> {
+export async function listGmailToday(
+  mode: GmailTodayMode = 'focused',
+): Promise<GmailTodayResult> {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
   if (!supabaseUrl) {
     return {
@@ -66,7 +73,11 @@ export async function listGmailToday(): Promise<GmailTodayResult> {
 
   const res = await fetch(`${supabaseUrl}/functions/v1/gmail-list-today`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${jwt}` },
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ mode }),
   });
   const text = await res.text();
   try {

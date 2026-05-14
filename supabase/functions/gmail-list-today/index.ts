@@ -1,8 +1,20 @@
 // gmail-list-today — returns two metadata-only arrays for the caller:
 //   - important: Gmail's `is:important is:unread` (signal stays the
 //     primary surface; can be older than today).
-//   - today: messages received since local midnight in PROJECT_TZ,
-//     excluding promotions/social/forums and explicitly muted threads.
+//   - today: messages received since local midnight in PROJECT_TZ.
+//
+// The today query has two modes selectable by the caller:
+//   - 'focused' (default): excludes promotions / social / forums /
+//     muted — the operational view.
+//   - 'all': drops the `-category:promotions` exclusion. Still
+//     excludes social / forums / muted (these are noise classes
+//     the operator never asked to see). Lets marketing emails
+//     like Luminar / Keychron through, matching Gmail's own
+//     INBOX-Primary tab roughly.
+//
+// Mode comes from the request body:
+//   POST /functions/v1/gmail-list-today
+//   body: { "mode": "focused" | "all" }  -- optional, default 'focused'
 //
 // Read-only. Scope: gmail.readonly. No body, no attachments, no writes.
 //
@@ -12,12 +24,13 @@
 //   {
 //     connected: boolean,
 //     email?: string,
+//     mode: 'focused' | 'all',     // echoed back for frontend cache key sanity
 //     important: GmailMessage[],   // <= 50, thread-collapsed
 //     today: GmailMessage[],       // <= 50, thread-collapsed
 //   }
 // GmailMessage matches the existing gmail-list-important payload one-for-
-// one, plus an `is_important` flag so the client can label "Important +
-// Unread" rows that also fall inside today's bucket.
+// one, plus an `is_important` flag. Subject / from_name / snippet are
+// HTML-entity-decoded server-side (see _shared/html-decode.ts).
 
 // deno-lint-ignore-file no-explicit-any
 import { makeRpc } from '../_shared/rpc.ts';
@@ -27,6 +40,7 @@ import {
 } from '../_shared/google.ts';
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
 import { PROJECT_TZ, localMidnightUnix } from '../_shared/timezone.ts';
+import { decodeHtmlEntities } from '../_shared/html-decode.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -131,10 +145,14 @@ async function fetchMessage(
   return {
     id: m.id,
     thread_id: m.threadId,
-    subject,
+    // Decode Gmail's raw HTML entities (e.g. `can&#39;t`, `&lt;tag&gt;`)
+    // server-side so every consumer sees clean text. Preserve null
+    // so the row's "(no subject)" / "Unknown sender" fallbacks still
+    // trigger when the header was absent.
+    subject:      subject  != null ? decodeHtmlEntities(subject)  : null,
     from_address: fromAddress,
-    from_name: fromName,
-    snippet: m.snippet ?? '',
+    from_name:    fromName != null ? decodeHtmlEntities(fromName) : null,
+    snippet: decodeHtmlEntities(m.snippet ?? ''),
     internal_date: internalDate,
     internal_date_unix: Math.floor(internalDateMs / 1000),
     html_link: `https://mail.google.com/mail/u/0/#inbox/${m.id}`,
@@ -187,6 +205,23 @@ async function listAndFetch(
   );
 }
 
+type Mode = 'focused' | 'all';
+
+async function readMode(req: Request): Promise<Mode> {
+  // Tolerant body parsing. The lib sends `{mode}` for new callers;
+  // legacy callers send no body at all (or a stale empty body). On
+  // any parse failure, fall back to the default — preserves V1
+  // behaviour for in-flight clients.
+  try {
+    const text = await req.text();
+    if (!text) return 'focused';
+    const j = JSON.parse(text);
+    return j?.mode === 'all' ? 'all' : 'focused';
+  } catch {
+    return 'focused';
+  }
+}
+
 Deno.serve(async (req) => {
   const preflight = handlePreflight(req);
   if (preflight) return preflight;
@@ -196,6 +231,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
   const jwt = auth.slice(7);
+  const mode: Mode = await readMode(req);
 
   let userId: string;
   try {
@@ -229,16 +265,18 @@ Deno.serve(async (req) => {
     );
   }
   if (!token.connected) {
-    return jsonResponse({ connected: false, important: [], today: [] });
+    return jsonResponse({ connected: false, mode, important: [], today: [] });
   }
 
-  // Build the "today" query: messages newer than local midnight in
-  // PROJECT_TZ, with promo/social/forum categories and muted threads
-  // explicitly excluded.
+  // Build the "today" query. Both modes anchor on local midnight in
+  // PROJECT_TZ and drop social / forums / muted (those classes are
+  // never useful operationally). Focused additionally drops
+  // promotions; All keeps them in.
   const startUnix = localMidnightUnix(new Date(), PROJECT_TZ);
+  const promoExclusion = mode === 'all' ? '' : '-category:promotions ';
   const todayQ =
     `after:${startUnix} ` +
-    `-category:promotions -category:social -category:forums -label:muted`;
+    `${promoExclusion}-category:social -category:forums -label:muted`;
 
   let important: NormalizedMessage[] = [];
   let today: NormalizedMessage[] = [];
@@ -252,6 +290,7 @@ Deno.serve(async (req) => {
       {
         connected: true,
         email: token.email,
+        mode,
         error: err instanceof Error ? err.message : 'gmail error',
         important: [],
         today: [],
@@ -263,6 +302,7 @@ Deno.serve(async (req) => {
   return jsonResponse({
     connected: true,
     email: token.email,
+    mode,
     important,
     today,
   });

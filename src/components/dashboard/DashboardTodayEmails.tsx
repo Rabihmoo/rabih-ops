@@ -1,15 +1,41 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Mail } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { useGmailLinkStatus, useGmailToday } from '@/hooks/useGmail';
 import { useEmailStatesForUser } from '@/hooks/useEmailStates';
 import type { EmailStateRow } from '@/lib/email-status';
-import type { GmailTodayMessage } from '@/lib/gmail-today';
+import type { GmailTodayMessage, GmailTodayMode } from '@/lib/gmail-today';
 import { EmailRow } from './EmailRow';
+
+// Per-session toggle storage. sessionStorage (not localStorage) so the
+// choice survives reload within a session but resets cleanly on a new
+// browser session — avoids stale "All" state bleeding across days.
+const MODE_STORAGE_KEY = 'rabih-ops:dashboard-today-mode';
+
+function readStoredMode(): GmailTodayMode {
+  if (typeof window === 'undefined') return 'focused';
+  try {
+    const v = window.sessionStorage.getItem(MODE_STORAGE_KEY);
+    return v === 'all' ? 'all' : 'focused';
+  } catch {
+    return 'focused';
+  }
+}
+
+function writeStoredMode(mode: GmailTodayMode): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(MODE_STORAGE_KEY, mode);
+  } catch {
+    // Quota / private-window etc. — silently fall back to in-memory state.
+  }
+}
 
 export function DashboardTodayEmails() {
   const status = useGmailLinkStatus();
-  const emails = useGmailToday(status.data?.connected === true);
+  const [mode, setMode] = useState<GmailTodayMode>(() => readStoredMode());
+  const emails = useGmailToday(status.data?.connected === true, mode);
   const accountId = status.data?.google_account_id ?? null;
   // Fetch all of the caller's email_state rows for this account once
   // at the parent level (1 DB roundtrip), then look up by message_id
@@ -28,6 +54,11 @@ export function DashboardTodayEmails() {
     return map;
   }, [states.data]);
 
+  // Persist mode whenever the user toggles.
+  useEffect(() => {
+    writeStoredMode(mode);
+  }, [mode]);
+
   if (!status.data?.connected) return null;
 
   const messages: GmailTodayMessage[] = emails.data?.today ?? [];
@@ -35,7 +66,7 @@ export function DashboardTodayEmails() {
   return (
     <Card>
       <CardContent className="space-y-3 p-5">
-        <div className="border-border mb-1 flex items-baseline justify-between border-b pb-3">
+        <div className="border-border mb-1 flex items-baseline justify-between gap-3 border-b pb-3">
           <div className="flex items-baseline gap-2">
             <span className="text-section-label text-primary-ink/80 inline-flex items-center gap-1.5">
               <Mail className="h-3.5 w-3.5" /> Today's emails
@@ -44,9 +75,31 @@ export function DashboardTodayEmails() {
               {messages.length}
             </span>
           </div>
-          <span className="text-subtle-foreground text-xs">
+          <span className="text-subtle-foreground hidden text-xs sm:inline">
             {status.data?.email}
           </span>
+        </div>
+
+        {/* Focused / All toggle. Chip-strip pattern — works at 390px
+            without wrapping. Both buttons stay clickable while the
+            opposite mode is loading. */}
+        <div
+          role="tablist"
+          aria-label="Today filter"
+          className="bg-surface-1 border-border inline-flex items-center gap-0.5 rounded-md border p-0.5 text-xs"
+        >
+          <ModeButton
+            mode="focused"
+            current={mode}
+            onClick={() => setMode('focused')}
+            label="Focused"
+          />
+          <ModeButton
+            mode="all"
+            current={mode}
+            onClick={() => setMode('all')}
+            label="All today"
+          />
         </div>
 
         {emails.isLoading && (
@@ -63,7 +116,9 @@ export function DashboardTodayEmails() {
 
         {!emails.isLoading && !emails.data?.error && messages.length === 0 && (
           <div className="text-muted-foreground py-2 text-sm">
-            No emails today.
+            {mode === 'all'
+              ? 'No emails today.'
+              : 'No emails today in Focused. Try All today.'}
           </div>
         )}
 
@@ -81,5 +136,36 @@ export function DashboardTodayEmails() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function ModeButton({
+  mode,
+  current,
+  onClick,
+  label,
+}: {
+  mode: GmailTodayMode;
+  current: GmailTodayMode;
+  onClick: () => void;
+  label: string;
+}) {
+  const active = mode === current;
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      data-testid={`today-mode-${mode}`}
+      onClick={onClick}
+      className={cn(
+        'rounded-sm px-2.5 py-1 transition-colors',
+        active
+          ? 'bg-card text-foreground font-medium shadow-sm'
+          : 'text-foreground-72 hover:text-foreground',
+      )}
+    >
+      {label}
+    </button>
   );
 }
