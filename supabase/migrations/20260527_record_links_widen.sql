@@ -17,6 +17,25 @@
 -- No new audit verbs. record_link_created / external_link_added /
 -- record_link_removed / external_link_removed already cover the wider
 -- whitelist.
+--
+-- Replay-safety note (added retroactively):
+--   The canonical H2.3 whitelist is (task, follow_up, purchase_request,
+--   inspection, document, company, contact). The next migration in
+--   chronological order (20260530_record_links_widen_note.sql) drops
+--   and re-adds the same constraint with 'note' added. After that
+--   ran on staging, real note-typed record_links rows accumulated
+--   (122 as of edit time). `npm run db:push` then re-applies every
+--   migration in order — re-running THIS migration's narrower CHECK
+--   would fail with 23514 against those existing note rows, even
+--   though the next migration immediately re-widens.
+--
+--   To make replay safe, 'note' is included in this whitelist too.
+--   The intermediate state after this migration is therefore identical
+--   to the post-20260530 state (same 8-type set). 20260530 still drops
+--   and re-adds the constraint with the same set, so the final shape
+--   on either a blank DB or a replayed DB is unchanged. This edit
+--   does not change any user-facing behavior; it only fixes db:push
+--   idempotency.
 
 begin;
 
@@ -30,7 +49,7 @@ alter table public.record_links
   add constraint record_links_from_entity_type_check
   check (from_entity_type in (
     'task','follow_up','purchase_request','inspection','document',
-    'company','contact'
+    'company','contact','note'
   ));
 
 alter table public.record_links
@@ -39,7 +58,7 @@ alter table public.record_links
   add constraint record_links_to_entity_type_check
   check (to_entity_type in (
     'task','follow_up','purchase_request','inspection','document',
-    'company','contact'
+    'company','contact','note'
   ));
 
 -- =====================================================================
