@@ -14,6 +14,7 @@ import { AuditList } from '@/components/shared/AuditList';
 import { CommentList } from '@/components/shared/CommentList';
 import { AttachmentList } from '@/components/shared/AttachmentList';
 import { LinkedDocumentsCard } from '@/components/shared/LinkedDocumentsCard';
+import { LinkedRecordsPanel } from '@/components/shared/LinkedRecordsPanel';
 import {
   useInspectionDetail,
   useUpdateInspection,
@@ -278,6 +279,8 @@ export function InspectionDetailPage() {
       </Card>
 
       {id && <LinkedDocumentsCard entityType="inspection" entityId={id} />}
+
+      {id && <LinkedRecordsPanel entityType="inspection" entityId={id} />}
 
       <Card>
         <CardContent className="space-y-4 p-5">

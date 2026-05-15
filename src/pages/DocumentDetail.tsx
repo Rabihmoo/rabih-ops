@@ -26,6 +26,7 @@ const STATUS_TONE: Record<string, StatusTone> = {
 import { AuditList } from '@/components/shared/AuditList';
 import { CommentList } from '@/components/shared/CommentList';
 import { AttachmentList } from '@/components/shared/AttachmentList';
+import { LinkedRecordsPanel } from '@/components/shared/LinkedRecordsPanel';
 import { DocumentForm } from '@/components/documents/DocumentForm';
 import {
   useAddDocumentComment,
@@ -404,6 +405,8 @@ export function DocumentDetailPage() {
           />
         </CardContent>
       </Card>
+
+      <LinkedRecordsPanel entityType="document" entityId={docId} />
 
       {/* Activity */}
       <Card>

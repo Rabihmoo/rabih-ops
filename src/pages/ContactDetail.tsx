@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/components/ui/toast';
 import { ContactForm } from '@/components/contacts/ContactForm';
 import { BranchMultiSelect } from '@/components/shared/BranchMultiSelect';
+import { LinkedRecordsPanel } from '@/components/shared/LinkedRecordsPanel';
 import {
   useArchiveContact,
   useContact,
@@ -245,6 +246,8 @@ export function ContactDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <LinkedRecordsPanel entityType="contact" entityId={id} />
 
       <button
         type="button"

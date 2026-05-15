@@ -21,6 +21,7 @@ import { CommentList } from '@/components/shared/CommentList';
 import { AttachmentList } from '@/components/shared/AttachmentList';
 import { LinkedDocumentsCard } from '@/components/shared/LinkedDocumentsCard';
 import { LinkedEmailsCard } from '@/components/shared/LinkedEmailsCard';
+import { LinkedRecordsPanel } from '@/components/shared/LinkedRecordsPanel';
 import {
   useFollowUpDetail,
   useUpdateFollowUp,
@@ -350,6 +351,8 @@ export function FollowUpDetailPage() {
 
       {/* Linked Gmail messages */}
       <LinkedEmailsCard entityType="follow_up" entityId={id!} />
+
+      <LinkedRecordsPanel entityType="follow_up" entityId={id!} />
 
       {/* Activity */}
       <Card>

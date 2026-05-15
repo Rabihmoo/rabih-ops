@@ -23,6 +23,7 @@ import { AuditList } from '@/components/shared/AuditList';
 import { CommentList } from '@/components/shared/CommentList';
 import { AttachmentList } from '@/components/shared/AttachmentList';
 import { LinkedDocumentsCard } from '@/components/shared/LinkedDocumentsCard';
+import { LinkedRecordsPanel } from '@/components/shared/LinkedRecordsPanel';
 import {
   usePurchaseDetail,
   useUpdatePurchase,
@@ -360,6 +361,8 @@ export function PurchaseDetailPage() {
       </Card>
 
       {id && <LinkedDocumentsCard entityType="purchase_request" entityId={id} />}
+
+      {id && <LinkedRecordsPanel entityType="purchase_request" entityId={id} />}
 
       {/* Activity */}
       <Card>

@@ -19,6 +19,7 @@ import { COMPANY_CATEGORY_LABEL } from '@/lib/companies';
 import { BRANCHES, type BranchCode } from '@/lib/branches';
 import type { CompanyCategory } from '@/types/database';
 import { ContactListItem } from '@/components/contacts/ContactListItem';
+import { LinkedRecordsPanel } from '@/components/shared/LinkedRecordsPanel';
 
 export function CompanyDetailPage() {
   const { id } = useParams();
@@ -272,6 +273,8 @@ export function CompanyDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <LinkedRecordsPanel entityType="company" entityId={id} />
 
       <button
         type="button"
