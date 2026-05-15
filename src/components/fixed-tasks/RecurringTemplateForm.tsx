@@ -9,6 +9,10 @@ import { toast } from '@/components/ui/toast';
 import { BRANCH_LIST } from '@/lib/branches';
 import { useAuthStore } from '@/stores/authStore';
 import { displayTime } from '@/lib/recurring-templates';
+import {
+  buildCreatePayload,
+  buildUpdatePayload,
+} from '@/lib/recurring-template-payload';
 import type {
   CreateRecurringTemplateInput,
   UpdateRecurringTemplateInput,
@@ -184,60 +188,21 @@ export function RecurringTemplateForm({
 
   const handleSubmit = form.handleSubmit(async (values) => {
     try {
-      const assigned_to =
-        values.assignment === 'me' ? (profile?.id ?? null) : null;
-      const description =
-        values.description && values.description.length > 0
-          ? values.description
-          : null;
-
-      // Cadence-specific shape
-      const recurrence_dow =
-        values.recurrence === 'weekly' ? values.recurrence_dow ?? [] : null;
-      const recurrence_dom =
-        values.recurrence === 'monthly' || values.recurrence === 'yearly'
-          ? Number(values.recurrence_dom)
-          : null;
-      const recurrence_month =
-        values.recurrence === 'yearly' ? Number(values.recurrence_month) : null;
-
-      // Pad time to HH:MM:SS for Postgres `time`.
+      // Pad time to HH:MM:SS for Postgres `time` before handing to the
+      // payload builder.
       const recurrence_time =
         values.recurrence_time.length === 5
           ? `${values.recurrence_time}:00`
           : values.recurrence_time;
 
-      if (isEdit) {
-        const payload: UpdateRecurringTemplateInput = {
-          title: values.title,
-          description,
-          branch: values.branch,
-          category: values.category,
-          priority: values.priority,
-          assigned_to,
-          recurrence: values.recurrence,
-          recurrence_time,
-          recurrence_dow,
-          recurrence_dom,
-          recurrence_month,
-        };
-        await onSubmit(payload);
-      } else {
-        const payload: CreateRecurringTemplateInput = {
-          title: values.title,
-          description,
-          branch: values.branch,
-          category: values.category,
-          priority: values.priority,
-          assigned_to,
-          recurrence: values.recurrence,
-          recurrence_time,
-          recurrence_dow,
-          recurrence_dom,
-          recurrence_month,
-        };
-        await onSubmit(payload);
-      }
+      const builderInput = { ...values, recurrence_time };
+
+      const payload: CreateRecurringTemplateInput | UpdateRecurringTemplateInput =
+        isEdit
+          ? buildUpdatePayload(builderInput, profile?.id ?? null)
+          : buildCreatePayload(builderInput, profile?.id ?? null);
+
+      await onSubmit(payload);
     } catch (err) {
       toast({
         title: isEdit ? 'Could not update template' : 'Could not create template',
