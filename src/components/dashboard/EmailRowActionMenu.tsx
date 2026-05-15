@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Check, Loader2, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/toast';
@@ -6,11 +6,14 @@ import {
   useClearEmailState,
   useSetEmailState,
 } from '@/hooks/useEmailStates';
+import { useCreateFollowUp } from '@/hooks/useFollowUps';
+import { useGmailActionLink } from '@/hooks/useGmail';
 import {
   emailStatusLabel,
   type EmailStateRow,
   type EmailStatus,
 } from '@/lib/email-status';
+import { createFollowUpFromEmailFlow } from '@/lib/email-create-follow-up';
 
 // Phase G2.3 wire-up. Tiny popover with 4-5 action buttons. ESC + click-
 // outside close. Always visible on mobile; hover/focus-revealed on
@@ -55,7 +58,13 @@ export function EmailRowActionMenu({
 
   const setMutation = useSetEmailState();
   const clearMutation = useClearEmailState();
-  const pending = setMutation.isPending || clearMutation.isPending;
+  const createFollowUpMutation = useCreateFollowUp();
+  const linkActionMutation = useGmailActionLink();
+  const pending =
+    setMutation.isPending ||
+    clearMutation.isPending ||
+    createFollowUpMutation.isPending ||
+    linkActionMutation.isPending;
 
   // Close on ESC + click-outside while open.
   useEffect(() => {
@@ -117,6 +126,41 @@ export function EmailRowActionMenu({
     await setStatus('followed_up', trimmed.length > 0 ? trimmed : null);
   }
 
+  async function handleCreateFollowUp() {
+    setOpen(false);
+    try {
+      const result = await createFollowUpFromEmailFlow({
+        message,
+        deps: {
+          createFollowUp: (input) => createFollowUpMutation.mutateAsync(input),
+          linkEmail: (input) => linkActionMutation.mutateAsync(input),
+        },
+      });
+      if (result.linked) {
+        toast({
+          title: 'Follow-up created and linked',
+          description: result.followUp.title,
+        });
+      } else {
+        // Follow-up exists; only the link step failed. Operator can
+        // retry the link from the email row or from the follow-up
+        // detail without losing the follow-up.
+        toast({
+          title: 'Follow-up created (linking failed)',
+          description:
+            result.linkError?.message ?? 'Unknown link error — try linking again from the row.',
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      toast({
+        title: 'Could not create follow-up',
+        description: (err as Error).message,
+        variant: 'destructive',
+      });
+    }
+  }
+
   async function handleClear() {
     setOpen(false);
     try {
@@ -171,24 +215,38 @@ export function EmailRowActionMenu({
           {STATUS_ORDER.map(({ status }) => {
             const isCurrent = currentState?.status === status;
             return (
-              <ActionButton
-                key={status}
-                testId={`email-row-action-${status}`}
-                isCurrent={isCurrent}
-                onClick={() => {
-                  if (status === 'followed_up') {
-                    void handleFollowedUp();
-                  } else {
-                    setOpen(false);
-                    void setStatus(status);
-                  }
-                }}
-              >
-                {status === 'pending'     && 'Mark pending'}
-                {status === 'followed_up' && 'Mark followed up'}
-                {status === 'done'        && 'Mark done'}
-                {status === 'dismissed'   && 'Dismiss'}
-              </ActionButton>
+              <Fragment key={status}>
+                <ActionButton
+                  testId={`email-row-action-${status}`}
+                  isCurrent={isCurrent}
+                  onClick={() => {
+                    if (status === 'followed_up') {
+                      void handleFollowedUp();
+                    } else {
+                      setOpen(false);
+                      void setStatus(status);
+                    }
+                  }}
+                >
+                  {status === 'pending'     && 'Mark pending'}
+                  {status === 'followed_up' && 'Mark followed up'}
+                  {status === 'done'        && 'Mark done'}
+                  {status === 'dismissed'   && 'Dismiss'}
+                </ActionButton>
+                {/* "Create follow-up from email" — sits between Mark
+                    followed up (status flag) and Mark done (workflow
+                    end). It's not a status, so isCurrent is never
+                    true; the icon column stays blank by design. */}
+                {status === 'followed_up' && (
+                  <ActionButton
+                    testId="email-row-action-create-follow-up"
+                    isCurrent={false}
+                    onClick={() => void handleCreateFollowUp()}
+                  >
+                    Create follow-up from email
+                  </ActionButton>
+                )}
+              </Fragment>
             );
           })}
 
