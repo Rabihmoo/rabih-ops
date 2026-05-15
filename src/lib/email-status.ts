@@ -216,6 +216,14 @@ export interface DashboardEmailRowMessage {
   // didn't surface a link); GmailTodayMessage always populates it;
   // the email_state adapter always populates it.
   html_link: string | null;
+  // Optional labelIds-derived flags. Populated by GmailTodayMessage and
+  // GmailImportantMessage (after the Edge Function exposes them);
+  // unpopulated by the email_state adapter (state rows don't snapshot
+  // labels at link time). Consumers treat absence as false.
+  is_unread?: boolean;
+  is_important?: boolean;
+  is_inbox?: boolean;
+  is_sent?: boolean;
 }
 
 /**

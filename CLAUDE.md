@@ -327,6 +327,20 @@ The OAuth client is shared with Calendar (same project in Google Cloud Console).
 - No nightly sync — "Important emails" is computed live from Gmail's importance signal
 - No "auto-link from inbox" — every link is a deliberate user action
 
+### Deleted-in-Gmail behaviour
+
+If the operator deletes a message in Gmail itself, the three RabihOS surfaces behave differently — all by design, since the readonly scope means we can't observe deletions without a sync job we explicitly didn't build:
+
+- **Live Gmail cards** (`gmail-list-today`, `gmail-list-important`) — the row disappears on the next fetch. Pure pull-through; nothing to clean.
+- **`email_states` rows** (Pending card, Followed-up history) — persist in our DB forever unless the operator clicks "Clear status" on the row. A deleted-in-Gmail message can therefore still appear in the Pending card via `emailStateRowToDashboardMessage`. The row's "Open in Gmail" link will land on Gmail's "Message not found" page — acceptable for V1, since the row is a memory of work the operator was tracking.
+- **`email_links` snapshots** (LinkedEmailsCard, LinkedRecordsPanel) — same. Subject / from / snippet were captured at link time, so the link row survives the Gmail-side delete. The operator can unlink via the existing UI when they want it gone.
+
+Automatic pruning would require either `gmail.modify` (to subscribe to history) or a periodic sync job comparing snapshots to live message ids — both out of V1 scope.
+
+### Today's emails — direction surfaces (Phase 0.5+)
+
+The Today card has three modes selectable via the toggle: **Focused** (operational incoming), **All today** (incoming including promotions), **Sent** (your outgoing mail since local midnight). Every mode anchors on `local-midnight in PROJECT_TZ` (`Africa/Maputo`). Focused / All scope to `in:inbox`; Sent scopes to `in:sent`. Each row carries labelIds-derived signals: `is_unread` bolds the subject, `is_important` shows a leading star, `is_sent` shows a leading "Sent" chip (always — including the rare self-sent edge case where a message is in both Inbox and Sent).
+
 ## Things to avoid
 
 - Adding libraries not already in `package.json` without reading `PLAN.md` Part 4 first.

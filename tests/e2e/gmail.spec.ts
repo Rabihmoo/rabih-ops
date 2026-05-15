@@ -68,12 +68,71 @@ test.describe('Gmail — dashboard surface', () => {
     // Today filter toggle is a child of the Today card; hidden too.
     await expect(page.getByTestId('today-mode-focused')).toHaveCount(0);
     await expect(page.getByTestId('today-mode-all')).toHaveCount(0);
+    await expect(page.getByTestId('today-mode-sent')).toHaveCount(0);
+    // Same for the labelIds-derived badges — they only ever mount
+    // inside email rows inside the card.
+    await expect(page.getByTestId('email-row-sent-badge')).toHaveCount(0);
+    await expect(page.getByTestId('email-row-important-star')).toHaveCount(0);
     // G3.1: the "Linked to task / follow-up" pills are children of
     // EmailRow which only mounts inside the cards. Defensive check
     // — if the link-presence hook ever leaks past the connected gate
     // we want CI to catch it.
     await expect(page.getByTestId('email-row-link-pill')).toHaveCount(0);
     await expect(page.getByTestId('email-row-status-pill')).toHaveCount(0);
+  });
+});
+
+// Today's Emails — Inbox / Sent direction surfaces (Focused / All / Sent
+// toggle, Sent badge, Important star, unread-bold subject). Defensive-
+// skip when Gmail isn't connected; matches the existing skip pattern.
+test.describe('Gmail — Today card direction surfaces', () => {
+  test.use({ storageState: 'tests/fixtures/.auth/admin.json' });
+
+  test('three-way toggle (Focused / All / Sent) is present when Gmail is connected', async ({
+    page,
+  }) => {
+    await page.goto('/settings');
+    const linked = await page
+      .getByTestId('gmail-disconnect-button')
+      .isVisible()
+      .catch(() => false);
+    test.skip(!linked, 'Gmail not connected — Today card is hidden.');
+
+    await page.goto('/');
+    // All three toggle buttons render on the same card; assert each by
+    // testid so layout changes don't quietly drop one.
+    await expect(page.getByTestId('today-mode-focused')).toBeVisible();
+    await expect(page.getByTestId('today-mode-all')).toBeVisible();
+    await expect(page.getByTestId('today-mode-sent')).toBeVisible();
+  });
+
+  test('switching to Sent surfaces sent-only content (or the empty state) and Sent badges when there are rows', async ({
+    page,
+  }) => {
+    await page.goto('/settings');
+    const linked = await page
+      .getByTestId('gmail-disconnect-button')
+      .isVisible()
+      .catch(() => false);
+    test.skip(!linked, 'Gmail not connected — Today card is hidden.');
+
+    await page.goto('/');
+    await page.getByTestId('today-mode-sent').click();
+
+    // Either the empty-state copy lands or rows + Sent badges do.
+    const empty = page.getByText(/haven't sent anything today/i);
+    const firstRow = page.getByTestId('dashboard-email-row').first();
+    const rowCount = await firstRow.count();
+
+    if (rowCount === 0) {
+      await expect(empty).toBeVisible({ timeout: 10_000 });
+    } else {
+      // Every row in Sent mode should carry the Sent badge.
+      const sentBadges = page.getByTestId('email-row-sent-badge');
+      await expect(sentBadges.first()).toBeVisible({ timeout: 10_000 });
+      const badgeCount = await sentBadges.count();
+      expect(badgeCount).toBeGreaterThanOrEqual(rowCount > 5 ? 5 : rowCount);
+    }
   });
 });
 

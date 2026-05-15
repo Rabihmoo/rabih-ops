@@ -27,9 +27,15 @@ export interface GmailTodayMessage {
   html_link: string;
   is_unread: boolean;
   is_important: boolean;
+  // Direction flags derived from Gmail labelIds, plumbed through from
+  // the Edge Function. Both can be true for a self-sent message.
+  // Older Edge Function deploys won't return them — types are required
+  // in TS but the runtime fallback (?? false) lives at the consumer.
+  is_inbox: boolean;
+  is_sent: boolean;
 }
 
-export type GmailTodayMode = 'focused' | 'all';
+export type GmailTodayMode = 'focused' | 'all' | 'sent';
 
 export interface GmailTodayResult {
   connected: boolean;

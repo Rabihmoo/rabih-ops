@@ -23,6 +23,8 @@ function msg(overrides: Partial<GmailTodayMessage> = {}): GmailTodayMessage {
     html_link: 'https://mail.google.com/mail/u/0/#inbox/m1',
     is_unread: true,
     is_important: false,
+    is_inbox: true,
+    is_sent: false,
     ...overrides,
   };
 }
@@ -114,5 +116,42 @@ describe('composeGmailInboxSections', () => {
     expect(result.important).toEqual([]);
     expect(result.today).toEqual([]);
     expect(result.overlap_count).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------
+// is_inbox / is_sent pass-through
+// ---------------------------------------------------------------------
+// The compose helpers don't read either flag, but should not strip
+// them either. These guard against an accidental projection regression.
+
+describe('is_inbox / is_sent pass-through', () => {
+  it('dedupedTodayForDashboard preserves both flags on surviving rows', () => {
+    const today = [
+      msg({ id: 'inbound', thread_id: 't1', is_inbox: true, is_sent: false }),
+      msg({ id: 'self',    thread_id: 't2', is_inbox: true, is_sent: true }),
+      msg({ id: 'sent',    thread_id: 't3', is_inbox: false, is_sent: true }),
+    ];
+    const result = dedupedTodayForDashboard([], today);
+    expect(result).toEqual(today);
+    expect(result.map((m) => [m.id, m.is_inbox, m.is_sent])).toEqual([
+      ['inbound', true, false],
+      ['self',    true, true],
+      ['sent',    false, true],
+    ]);
+  });
+
+  it('composeGmailInboxSections preserves both flags on each array', () => {
+    const important = [
+      msg({ id: 'i', thread_id: 't1', is_inbox: true, is_sent: false }),
+    ];
+    const today = [
+      msg({ id: 's', thread_id: 't2', is_inbox: false, is_sent: true }),
+    ];
+    const result = composeGmailInboxSections(important, today);
+    expect(result.important[0].is_inbox).toBe(true);
+    expect(result.important[0].is_sent).toBe(false);
+    expect(result.today[0].is_inbox).toBe(false);
+    expect(result.today[0].is_sent).toBe(true);
   });
 });

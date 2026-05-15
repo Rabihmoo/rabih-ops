@@ -3,18 +3,19 @@
 //     primary surface; can be older than today).
 //   - today: messages received since local midnight in PROJECT_TZ.
 //
-// The today query has two modes selectable by the caller:
-//   - 'focused' (default): excludes promotions / social / forums /
-//     muted — the operational view.
-//   - 'all': drops the `-category:promotions` exclusion. Still
-//     excludes social / forums / muted (these are noise classes
-//     the operator never asked to see). Lets marketing emails
-//     like Luminar / Keychron through, matching Gmail's own
-//     INBOX-Primary tab roughly.
+// The today query has three modes selectable by the caller:
+//   - 'focused' (default): in:inbox + excludes promotions / social /
+//     forums / muted — the operational incoming view.
+//   - 'all': in:inbox, drops the `-category:promotions` exclusion.
+//     Still excludes social / forums / muted (these are noise classes
+//     the operator never asked to see). Lets marketing emails through,
+//     matching Gmail's own INBOX-Primary tab roughly.
+//   - 'sent': in:sent for messages sent today. Lets the operator see
+//     what they fired off without leaving the dashboard.
 //
 // Mode comes from the request body:
 //   POST /functions/v1/gmail-list-today
-//   body: { "mode": "focused" | "all" }  -- optional, default 'focused'
+//   body: { "mode": "focused" | "all" | "sent" }  -- optional, default 'focused'
 //
 // Read-only. Scope: gmail.readonly. No body, no attachments, no writes.
 //
@@ -78,6 +79,11 @@ interface NormalizedMessage {
   html_link: string;
   is_unread: boolean;
   is_important: boolean;
+  // Direction flags derived from labelIds. A self-sent email can carry
+  // both INBOX and SENT — both flags fire in that case so the row can
+  // badge whichever the active view demands.
+  is_inbox: boolean;
+  is_sent: boolean;
 }
 
 function header(
@@ -158,6 +164,8 @@ async function fetchMessage(
     html_link: `https://mail.google.com/mail/u/0/#inbox/${m.id}`,
     is_unread: labels.includes('UNREAD'),
     is_important: labels.includes('IMPORTANT'),
+    is_inbox: labels.includes('INBOX'),
+    is_sent: labels.includes('SENT'),
   };
 }
 
@@ -205,18 +213,21 @@ async function listAndFetch(
   );
 }
 
-type Mode = 'focused' | 'all';
+type Mode = 'focused' | 'all' | 'sent';
 
 async function readMode(req: Request): Promise<Mode> {
   // Tolerant body parsing. The lib sends `{mode}` for new callers;
   // legacy callers send no body at all (or a stale empty body). On
   // any parse failure, fall back to the default — preserves V1
-  // behaviour for in-flight clients.
+  // behaviour for in-flight clients. Unknown modes also fall back so
+  // a typo doesn't surprise the operator with a 400.
   try {
     const text = await req.text();
     if (!text) return 'focused';
     const j = JSON.parse(text);
-    return j?.mode === 'all' ? 'all' : 'focused';
+    if (j?.mode === 'all') return 'all';
+    if (j?.mode === 'sent') return 'sent';
+    return 'focused';
   } catch {
     return 'focused';
   }
@@ -268,15 +279,31 @@ Deno.serve(async (req) => {
     return jsonResponse({ connected: false, mode, important: [], today: [] });
   }
 
-  // Build the "today" query. Both modes anchor on local midnight in
-  // PROJECT_TZ and drop social / forums / muted (those classes are
-  // never useful operationally). Focused additionally drops
-  // promotions; All keeps them in.
+  // Build the "today" query. Anchors on local midnight in PROJECT_TZ.
+  // Three modes:
+  //   - focused: in:inbox, drop promotions/social/forums/muted
+  //   - all:     in:inbox, drop social/forums/muted (keep promos)
+  //   - sent:    in:sent only, no category filters (promos in Sent
+  //              are vanishingly rare and the operator explicitly
+  //              opted into "what did I send today")
+  //
+  // Pre-fix: `after:` alone matched messages by internalDate across
+  // EVERY label, which silently surfaced self-sent items in the
+  // Focused / All views. The explicit in:inbox / in:sent scoping
+  // closes that hole.
   const startUnix = localMidnightUnix(new Date(), PROJECT_TZ);
-  const promoExclusion = mode === 'all' ? '' : '-category:promotions ';
-  const todayQ =
-    `after:${startUnix} ` +
-    `${promoExclusion}-category:social -category:forums -label:muted`;
+  let todayQ: string;
+  if (mode === 'sent') {
+    todayQ = `in:sent after:${startUnix}`;
+  } else if (mode === 'all') {
+    todayQ =
+      `in:inbox after:${startUnix} ` +
+      `-category:social -category:forums -label:muted`;
+  } else {
+    todayQ =
+      `in:inbox after:${startUnix} ` +
+      `-category:promotions -category:social -category:forums -label:muted`;
+  }
 
   let important: NormalizedMessage[] = [];
   let today: NormalizedMessage[] = [];

@@ -21,7 +21,9 @@ function readStoredMode(): GmailTodayMode {
   if (typeof window === 'undefined') return 'focused';
   try {
     const v = window.sessionStorage.getItem(MODE_STORAGE_KEY);
-    return v === 'all' ? 'all' : 'focused';
+    if (v === 'all') return 'all';
+    if (v === 'sent') return 'sent';
+    return 'focused';
   } catch {
     return 'focused';
   }
@@ -155,6 +157,12 @@ function DashboardTodayEmailsBody({
             onClick={() => setMode('all')}
             label="All today"
           />
+          <ModeButton
+            mode="sent"
+            current={mode}
+            onClick={() => setMode('sent')}
+            label="Sent"
+          />
         </div>
 
         {isLoading && (
@@ -171,9 +179,11 @@ function DashboardTodayEmailsBody({
 
         {!isLoading && !error && messages.length === 0 && (
           <div className="text-muted-foreground py-2 text-sm">
-            {mode === 'all'
-              ? 'No emails today.'
-              : 'No emails today in Focused. Try All today.'}
+            {mode === 'sent'
+              ? "You haven't sent anything today."
+              : mode === 'all'
+                ? 'No emails today.'
+                : 'No emails today in Focused. Try All today.'}
           </div>
         )}
 
