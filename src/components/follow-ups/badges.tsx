@@ -6,36 +6,32 @@ import {
   HandshakeIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { StatusChip, type StatusTone } from '@/components/ui/status-chip';
+import { StatusChip } from '@/components/ui/status-chip';
+import {
+  followUpStatusLabel,
+  followUpStatusTone,
+} from '@/lib/follow-up-status';
 import type { FollowUpCategory, FollowUpStatus } from '@/types/database';
 
-const STATUS_LABEL: Record<FollowUpStatus, string> = {
-  pending: 'Pending',
-  done: 'Done',
-  snoozed: 'Snoozed',
-  cancelled: 'Cancelled',
-};
-
-// Map FollowUpStatus to a StatusChip tone. Cancelled stays muted (no
-// strikethrough — StatusChip doesn't carry one) because the closed
-// state already line-throughs the title at the row + detail level.
-const STATUS_TONE: Record<FollowUpStatus, StatusTone> = {
-  pending:   'muted',
-  done:      'success',
-  snoozed:   'warning',
-  cancelled: 'muted',
-};
-
+// F1.1: label + tone tables moved into src/lib/follow-up-status.ts so
+// the helper is testable + reusable. The badge accepts a string so
+// any future status that lands in DB before the bundle updates renders
+// with a defensive fallback ("Snoozed" → "Snoozed", muted tone) instead
+// of crashing the row.
 export function FollowUpStatusBadge({
   status,
   className,
 }: {
-  status: FollowUpStatus;
+  status: FollowUpStatus | string;
   className?: string;
 }) {
   return (
-    <StatusChip tone={STATUS_TONE[status]} size="xs" className={className}>
-      {STATUS_LABEL[status]}
+    <StatusChip
+      tone={followUpStatusTone(status)}
+      size="xs"
+      className={className}
+    >
+      {followUpStatusLabel(status)}
     </StatusChip>
   );
 }

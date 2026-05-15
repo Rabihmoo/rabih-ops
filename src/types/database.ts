@@ -2668,7 +2668,40 @@ export type TaskCategory =
   | 'follow_up'
   | 'other';
 
-export type FollowUpStatus = 'pending' | 'done' | 'snoozed' | 'cancelled';
+// F1.1: widened to 7 values. 'snoozed' was migrated to 'postponed' at the
+// DB level — same semantics, distinct kept only in the snoozed_until column.
+export type FollowUpStatus =
+  | 'pending'
+  | 'working'
+  | 'waiting'
+  | 'no_answer'
+  | 'postponed'
+  | 'done'
+  | 'cancelled';
+
+// F1.1: append-only history log on follow_up_events. UI feed lands in F1.2.
+export type FollowUpEventKind =
+  | 'note'
+  | 'status_change'
+  | 'reminder_set'
+  | 'reminder_cleared'
+  | 'calendar_added'
+  | 'calendar_removed'
+  | 'invitee_added'
+  | 'postponed'
+  | 'snoozed';
+
+export interface FollowUpEvent {
+  id: number;
+  follow_up_id: string;
+  kind: FollowUpEventKind;
+  from_status: FollowUpStatus | null;
+  to_status: FollowUpStatus | null;
+  body: string | null;
+  payload: Record<string, unknown> | null;
+  created_by: string;
+  created_at: string;
+}
 export type FollowUpCategory = 'call' | 'whatsapp' | 'email' | 'meeting' | 'check_in_person';
 
 export type InspectionArea =

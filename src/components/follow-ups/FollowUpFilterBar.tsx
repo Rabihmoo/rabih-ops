@@ -9,6 +9,10 @@ import {
   FilterPanel,
   SearchField,
 } from '@/components/shared/FilterPanel';
+import {
+  FOLLOW_UP_STATUSES,
+  followUpStatusLabel,
+} from '@/lib/follow-up-status';
 import type {
   FollowUpCategory,
   FollowUpStatus,
@@ -23,7 +27,9 @@ const BUCKETS: { id: FollowUpBucket; label: string }[] = [
   { id: 'all', label: 'All' },
 ];
 
-const STATUSES: FollowUpStatus[] = ['pending', 'done', 'snoozed', 'cancelled'];
+// F1.1: status set widened to match the user-approved taxonomy. Labels
+// come from the shared helper so the filter dropdown matches the badge.
+const STATUSES: FollowUpStatus[] = FOLLOW_UP_STATUSES;
 const CATEGORIES: FollowUpCategory[] = [
   'call',
   'whatsapp',
@@ -84,7 +90,7 @@ export function FollowUpFilterBar() {
             <option value="">Any status</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {followUpStatusLabel(s)}
               </option>
             ))}
           </select>

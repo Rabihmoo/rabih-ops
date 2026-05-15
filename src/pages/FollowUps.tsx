@@ -25,8 +25,10 @@ export function FollowUpsPage() {
       const due = effectiveDueDate(r);
       return due < todayIso;
     }).length ?? 0;
-  const snoozedCount =
-    data?.filter((r) => (r.status as FollowUpStatus) === 'snoozed').length ?? 0;
+  // F1.1: DB-level 'snoozed' migrated to 'postponed'. Snooze action still
+  // sets snoozed_until; the user-visible header stat reads 'postponed'.
+  const postponedCount =
+    data?.filter((r) => (r.status as FollowUpStatus) === 'postponed').length ?? 0;
 
   return (
     <div className="space-y-5">
@@ -52,8 +54,8 @@ export function FollowUpsPage() {
               {overdueCount > 0 && (
                 <HeaderStat count={overdueCount} label="overdue" tone="destructive" />
               )}
-              {snoozedCount > 0 && (
-                <HeaderStat count={snoozedCount} label="snoozed" tone="warning" />
+              {postponedCount > 0 && (
+                <HeaderStat count={postponedCount} label="postponed" tone="warning" />
               )}
             </>
           ) : (

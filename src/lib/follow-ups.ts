@@ -5,6 +5,8 @@ import type {
   AttachmentRow,
   FollowUpStatus,
   FollowUpCategory,
+  FollowUpEvent,
+  FollowUpEventKind,
   TaskPriority,
 } from '@/types/database';
 
@@ -191,4 +193,66 @@ export async function removeFollowUpAttachment(
 // when set; otherwise due_date.
 export function effectiveDueDate(row: FollowUpRow): string {
   return row.snoozed_until ?? row.due_date;
+}
+
+// =========================================================
+// F1.1 — new RPC wrappers (UI consumers land in F1.2 / F1.3 / F1.5)
+// =========================================================
+
+export async function addFollowUpEvent(input: {
+  followUpId: string;
+  kind: FollowUpEventKind;
+  body?: string | null;
+  payload?: Record<string, unknown> | null;
+}): Promise<FollowUpEvent> {
+  return callRpc<FollowUpEvent>('rpc_add_follow_up_event', {
+    p_follow_up_id: input.followUpId,
+    p_kind:         input.kind,
+    p_body:         input.body ?? null,
+    p_payload:      input.payload ?? null,
+  });
+}
+
+export async function setFollowUpStatus(input: {
+  followUpId: string;
+  status: FollowUpStatus;
+  note?: string | null;
+}): Promise<FollowUpRow> {
+  return callRpc<FollowUpRow>('rpc_set_follow_up_status', {
+    p_follow_up_id: input.followUpId,
+    p_status:       input.status,
+    p_note:         input.note ?? null,
+  });
+}
+
+export async function setFollowUpReminder(input: {
+  followUpId: string;
+  reminderAt: string | null;     // ISO timestamp or null to clear
+  channels?: string[];           // defaults to ['in_app'] on the server
+}): Promise<FollowUpRow> {
+  return callRpc<FollowUpRow>('rpc_set_follow_up_reminder', {
+    p_follow_up_id: input.followUpId,
+    p_reminder_at:  input.reminderAt,
+    p_channels:     input.channels ?? null,
+  });
+}
+
+export async function attachCalendarToFollowUp(input: {
+  followUpId: string;
+  eventId: string;
+  htmlLink: string | null;
+}): Promise<FollowUpRow> {
+  return callRpc<FollowUpRow>('rpc_attach_calendar_to_follow_up', {
+    p_follow_up_id: input.followUpId,
+    p_event_id:     input.eventId,
+    p_html_link:    input.htmlLink,
+  });
+}
+
+export async function detachCalendarFromFollowUp(
+  followUpId: string,
+): Promise<FollowUpRow> {
+  return callRpc<FollowUpRow>('rpc_detach_calendar_from_follow_up', {
+    p_follow_up_id: followUpId,
+  });
 }

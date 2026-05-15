@@ -24,7 +24,11 @@ const CATEGORIES: FollowUpCategory[] = [
   'check_in_person',
 ];
 const PRIORITIES: TaskPriority[] = ['urgent', 'normal', 'low'];
-const STATUSES: FollowUpStatus[] = ['pending', 'done', 'snoozed', 'cancelled'];
+// F1.1: status set widened (was pending/done/snoozed/cancelled).
+const STATUSES: FollowUpStatus[] = [
+  'pending', 'working', 'waiting', 'no_answer',
+  'postponed', 'done', 'cancelled',
+];
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
