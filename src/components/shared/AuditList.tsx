@@ -17,6 +17,10 @@ const ACTION_VERB: Record<string, string> = {
   complete: 'Marked finished',
   snooze: 'Snoozed',
   delete: 'Deleted',
+  // Chunk X — admin/CEO force-delete of an archived recurring template.
+  // Distinct from 'delete' so audit readers can tell apart the soft-
+  // delete-from-archive path vs the regular delete flow.
+  delete_archived: 'Permanently deleted',
   comment: 'Added a comment',
   comment_delete: 'Removed a comment',
   attach: 'Attached a file',
@@ -62,6 +66,7 @@ const ACTION_TONE: Record<string, string> = {
   complete: 'bg-success',
   snooze: 'bg-warning',
   delete: 'bg-destructive',
+  delete_archived: 'bg-destructive',
   comment: 'bg-muted-foreground',
   comment_delete: 'bg-muted-foreground',
   attach: 'bg-muted-foreground',

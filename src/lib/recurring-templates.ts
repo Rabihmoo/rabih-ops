@@ -107,6 +107,17 @@ export async function unarchiveRecurringTemplate(id: string): Promise<TaskRow> {
   });
 }
 
+// Chunk X — admin/CEO-only force-delete of an archived template. The
+// RPC enforces both the role gate and the must-be-archived precondition;
+// the UI only adds a confirmation dialog and post-success navigation.
+export async function deleteArchivedRecurringTemplate(
+  id: string,
+): Promise<TaskRow> {
+  return callRpc<TaskRow>('rpc_delete_archived_template', {
+    p_template_id: id,
+  });
+}
+
 export async function spawnInstanceNow(
   templateId: string,
   targetDate?: string | null,

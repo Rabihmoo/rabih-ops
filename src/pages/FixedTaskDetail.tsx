@@ -8,6 +8,7 @@ import {
   PlayCircle,
   Repeat,
   RotateCcw,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -18,12 +19,13 @@ import { RecurringTemplateForm } from '@/components/fixed-tasks/RecurringTemplat
 import { BranchBadge, PriorityBadge } from '@/components/tasks/badges';
 import {
   useArchiveRecurringTemplate,
+  useDeleteArchivedRecurringTemplate,
   useRecurringTemplate,
   useSpawnInstanceNow,
   useUnarchiveRecurringTemplate,
   useUpdateRecurringTemplate,
 } from '@/hooks/useRecurringTemplates';
-import { useCanMutate } from '@/hooks/usePermissions';
+import { useCanAdminTemplates, useCanMutate } from '@/hooks/usePermissions';
 import { cadenceLabel, nextSpawnLabel } from '@/lib/recurring-templates';
 import type {
   CreateRecurringTemplateInput,
@@ -40,8 +42,10 @@ export function FixedTaskDetailPage() {
   const update = useUpdateRecurringTemplate();
   const archive = useArchiveRecurringTemplate();
   const unarchive = useUnarchiveRecurringTemplate();
+  const deleteArchived = useDeleteArchivedRecurringTemplate();
   const spawnNow = useSpawnInstanceNow();
   const canMutate = useCanMutate();
+  const canAdminTemplates = useCanAdminTemplates();
 
   const [editing, setEditing] = useState(false);
 
@@ -100,6 +104,31 @@ export function FixedTaskDetailPage() {
   const handleUnarchive = async () => {
     await unarchive.mutateAsync(id);
     toast({ title: 'Template re-enabled' });
+  };
+
+  const handleDeletePermanently = async () => {
+    // Two-step confirm copy: the explicit phrase "permanently delete"
+    // + the irrevocability hint. Matches the destructive-button
+    // pattern from H4.5 unlink.
+    if (
+      !confirm(
+        `Permanently delete "${template.title}"?\n\n` +
+          `It will disappear from every list, including Archived. ` +
+          `This cannot be undone. Spawned instances are not affected.`,
+      )
+    )
+      return;
+    try {
+      await deleteArchived.mutateAsync(id);
+      toast({ title: 'Template permanently deleted' });
+      navigate('/fixed-tasks');
+    } catch (err) {
+      toast({
+        title: 'Could not delete template',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleSpawnNow = async () => {
@@ -165,14 +194,32 @@ export function FixedTaskDetailPage() {
               </Button>
             )}
             {archived ? (
-              <Button
-                size="sm"
-                onClick={handleUnarchive}
-                disabled={unarchive.isPending}
-                data-testid="template-unarchive-button"
-              >
-                <RotateCcw className="mr-1 h-4 w-4" /> Re-enable
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  onClick={handleUnarchive}
+                  disabled={unarchive.isPending}
+                  data-testid="template-unarchive-button"
+                >
+                  <RotateCcw className="mr-1 h-4 w-4" /> Re-enable
+                </Button>
+                {canAdminTemplates && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={handleDeletePermanently}
+                    disabled={deleteArchived.isPending}
+                    data-testid="template-delete-permanently-button"
+                  >
+                    {deleteArchived.isPending ? (
+                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="mr-1 h-4 w-4" />
+                    )}
+                    Delete permanently
+                  </Button>
+                )}
+              </>
             ) : (
               <Button
                 size="sm"

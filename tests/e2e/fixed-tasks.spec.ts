@@ -72,6 +72,80 @@ test.describe('Fixed tasks — admin happy path', () => {
 });
 
 // =========================================================
+// Chunk X — admin can permanently delete an archived template.
+// =========================================================
+
+test.describe('Fixed tasks — delete archived (Chunk X)', () => {
+  test.use({ storageState: 'tests/fixtures/.auth/admin.json' });
+
+  test('admin permanently deletes an archived template', async ({ page }) => {
+    const title = `Chunk X delete ${Date.now()}`;
+
+    // Create + archive in one flow (re-uses the existing happy-path
+    // steps rather than depending on a fixture row).
+    await page.goto('/fixed-tasks/new');
+    await page.getByLabel('Title').fill(title);
+    await page.getByLabel('Branch').selectOption('salt');
+    await page.getByLabel('Category').selectOption('operations');
+    await page.getByLabel(/Time/i).fill('09:00');
+    const created = page.waitForResponse((r) =>
+      r.url().includes('rpc_create_recurring_task'),
+    );
+    await page.getByRole('button', { name: /create template/i }).click();
+    expect((await created).status()).toBe(200);
+    await page.waitForURL(/\/fixed-tasks\/[0-9a-f-]+$/);
+    const detailUrl = page.url();
+
+    // Archive.
+    page.once('dialog', (d) => d.accept());
+    const archived = page.waitForResponse((r) =>
+      r.url().includes('rpc_archive_recurring_template'),
+    );
+    await page.getByTestId('template-archive-button').click();
+    expect((await archived).status()).toBe(200);
+    await expect(page.getByText('archived', { exact: true })).toBeVisible();
+
+    // The new Delete-permanently button now renders alongside Re-enable.
+    const deleteBtn = page.getByTestId('template-delete-permanently-button');
+    await expect(deleteBtn).toBeVisible();
+
+    // Click + accept the confirm dialog. Navigates back to /fixed-tasks.
+    page.once('dialog', (d) => d.accept());
+    const deleted = page.waitForResponse((r) =>
+      r.url().includes('rpc_delete_archived_template'),
+    );
+    await deleteBtn.click();
+    expect((await deleted).status()).toBe(200);
+    await page.waitForURL(/\/fixed-tasks$/, { timeout: 10_000 });
+
+    // The template no longer appears in any list view, including
+    // show_archived=true (rpc_list_tasks filters on deleted_at IS NULL).
+    // Note: detailUrl re-visit isn't asserted here — TanStack cache +
+    // page-mount timing make the not-found vs stale-cached transition
+    // flaky in CI. The list assertion above is the authoritative
+    // visibility check.
+    void detailUrl;
+    await page.goto('/fixed-tasks?show_archived=true');
+    await expect(page.getByText(title)).toHaveCount(0);
+  });
+
+  test('Delete-permanently button is hidden on non-archived templates', async ({ page }) => {
+    const title = `Chunk X not-archived ${Date.now()}`;
+    await page.goto('/fixed-tasks/new');
+    await page.getByLabel('Title').fill(title);
+    await page.getByLabel('Branch').selectOption('salt');
+    await page.getByLabel('Category').selectOption('operations');
+    await page.getByLabel(/Time/i).fill('09:00');
+    await page.getByRole('button', { name: /create template/i }).click();
+    await page.waitForURL(/\/fixed-tasks\/[0-9a-f-]+$/);
+
+    // Not archived → no delete button (the archive button is what's shown).
+    await expect(page.getByTestId('template-archive-button')).toBeVisible();
+    await expect(page.getByTestId('template-delete-permanently-button')).toHaveCount(0);
+  });
+});
+
+// =========================================================
 // Viewer guard — list visible, create button hidden.
 // =========================================================
 

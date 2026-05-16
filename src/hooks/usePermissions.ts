@@ -24,3 +24,12 @@ export function useCanAdminPurchases(): boolean {
   const role = useAuthStore((s) => s.profile?.role);
   return role === 'admin' || role === 'ceo';
 }
+
+// Chunk X — admin/CEO-only force-delete of archived recurring templates.
+// Mirrors rpc_delete_archived_template's role gate. Future per-entity
+// delete-archived chunks (companies / contacts / notes / documents)
+// will share this predicate.
+export function useCanAdminTemplates(): boolean {
+  const role = useAuthStore((s) => s.profile?.role);
+  return role === 'admin' || role === 'ceo';
+}

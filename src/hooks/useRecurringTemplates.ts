@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   archiveRecurringTemplate,
   createRecurringTemplate,
+  deleteArchivedRecurringTemplate,
   getRecurringTemplate,
   listRecurringTemplates,
   spawnInstanceNow,
@@ -73,6 +74,17 @@ export function useUnarchiveRecurringTemplate() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: (id: string) => unarchiveRecurringTemplate(id),
+    onSuccess: () => invalidate(),
+  });
+}
+
+// Chunk X — wraps deleteArchivedRecurringTemplate. Invalidates the
+// templates list + detail; the deleted row falls out of every list
+// view (rpc_list_tasks filters on deleted_at is null).
+export function useDeleteArchivedRecurringTemplate() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (id: string) => deleteArchivedRecurringTemplate(id),
     onSuccess: () => invalidate(),
   });
 }
