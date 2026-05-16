@@ -132,6 +132,9 @@ export interface CreateCalendarEventInput {
   start: string; // ISO 8601
   end: string;
   calendar_id?: string;
+  // F1.5: optional invitee emails — passed straight through to Google;
+  // Google sends standard invitation emails. No new OAuth scope required.
+  attendees?: string[];
 }
 
 export async function createCalendarEvent(

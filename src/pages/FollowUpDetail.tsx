@@ -25,6 +25,7 @@ import { LinkedRecordsPanel } from '@/components/shared/LinkedRecordsPanel';
 import { FollowUpHistoryFeed } from '@/components/follow-ups/FollowUpHistoryFeed';
 import { FollowUpActionMenu } from '@/components/follow-ups/FollowUpActionMenu';
 import { FollowUpReminderCard } from '@/components/follow-ups/FollowUpReminderCard';
+import { FollowUpCalendarCard } from '@/components/follow-ups/FollowUpCalendarCard';
 import {
   useFollowUpDetail,
   useUpdateFollowUp,
@@ -316,6 +317,10 @@ export function FollowUpDetailPage() {
         reminderAt={row.reminder_at ?? null}
         canMutate={canMutate}
       />
+
+      {/* F1.5: Calendar event creation. Self-hides when Calendar is not
+          connected AND no historical link exists. */}
+      <FollowUpCalendarCard followUp={row} canMutate={canMutate} />
 
       {/* Comments */}
       <Card>

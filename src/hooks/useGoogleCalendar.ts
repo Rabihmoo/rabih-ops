@@ -44,6 +44,17 @@ export function useCalendarLinksForTask(taskId: string | null) {
   });
 }
 
+// F1.5: mirror of useCalendarLinksForTask for follow-ups. Same RPC,
+// same query key shape, distinct entity_type so the cache slots stay
+// separate.
+export function useCalendarLinksForFollowUp(followUpId: string | null) {
+  return useQuery({
+    queryKey: [...KEY, 'links', 'follow_up', followUpId],
+    queryFn: () => listCalendarLinksForEntity('follow_up', followUpId!),
+    enabled: !!followUpId,
+  });
+}
+
 export function useGoogleCalendarToday(enabled: boolean) {
   return useQuery({
     queryKey: [...KEY, 'today'],

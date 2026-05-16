@@ -5,7 +5,13 @@
 // Auth: user JWT.
 //
 // Body: { entity_type: 'task' | 'follow_up', entity_id: uuid,
-//         start: ISO, end: ISO, calendar_id?: string }
+//         start: ISO, end: ISO, calendar_id?: string,
+//         attendees?: string[] }
+//
+// Attendees are written to the Google event so invitees receive Google's
+// standard invitation email. No new scope — the existing calendar.events
+// scope covers writes with attendees. Invalid emails fail at Google;
+// we surface the 502 to the caller.
 
 // deno-lint-ignore-file no-explicit-any
 import { makeRpc } from '../_shared/rpc.ts';
@@ -29,6 +35,7 @@ interface Body {
   start: string;        // ISO 8601 (UTC or with offset)
   end: string;          // ISO 8601
   calendar_id?: string; // defaults to "primary"
+  attendees?: string[]; // optional invitee emails
 }
 
 interface TaskRow {
@@ -141,7 +148,20 @@ Deno.serve(async (req) => {
   }
 
   const calendarId = body.calendar_id || 'primary';
-  const eventBody = {
+  // De-dupe + drop empty entries. Google rejects malformed addresses
+  // at the API level; we don't validate ahead of time (their error
+  // message is more accurate than anything we could synthesize).
+  const attendees = Array.isArray(body.attendees)
+    ? Array.from(
+        new Set(
+          body.attendees
+            .filter((s): s is string => typeof s === 'string')
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0),
+        ),
+      ).map((email) => ({ email }))
+    : [];
+  const eventBody: Record<string, unknown> = {
     summary: title,
     description: [description, '', `View in RabihOS: ${appLink}`]
       .filter((x) => x !== null && x !== undefined)
@@ -149,6 +169,9 @@ Deno.serve(async (req) => {
     start: { dateTime: body.start, timeZone: 'Africa/Maputo' },
     end: { dateTime: body.end, timeZone: 'Africa/Maputo' },
   };
+  if (attendees.length > 0) {
+    eventBody.attendees = attendees;
+  }
 
   const gRes = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,

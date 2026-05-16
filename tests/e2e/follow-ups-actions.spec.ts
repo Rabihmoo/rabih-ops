@@ -131,6 +131,37 @@ test.describe('Follow-up action menu — admin happy path (F1.3)', () => {
     });
   });
 
+  test('calendar card defensive-skips when Calendar is not connected (F1.5)', async ({ page }) => {
+    // The card self-hides when Calendar is not connected AND the
+    // follow-up has no historical calendar links. Detect the connection
+    // state by checking the Settings page — same pattern as gmail.spec.ts.
+    await page.goto('/settings');
+    const connected = await page
+      .getByTestId('google-calendar-disconnect-button')
+      .isVisible()
+      .catch(() => false);
+
+    const ts = Date.now();
+    const title = `F1.5 calendar ${ts}`;
+    await createFollowUp(page, title);
+
+    if (!connected) {
+      // Card must not render its testid wrapper when fully hidden.
+      await expect(page.getByTestId('follow-up-calendar-card')).toHaveCount(0);
+      await expect(page.getByTestId('follow-up-add-to-calendar-button')).toHaveCount(0);
+      test.skip(true, 'Calendar not connected — full create flow needs a live OAuth session.');
+    }
+
+    // Connected branch: button visible; clicking opens the form with
+    // smart defaults (start derived from due_date 09:00 since no
+    // reminder_at is set on a fresh follow-up).
+    await expect(page.getByTestId('follow-up-calendar-card')).toBeVisible();
+    await page.getByTestId('follow-up-add-to-calendar-button').click();
+    await expect(page.getByTestId('follow-up-cal-start')).toBeVisible();
+    await expect(page.getByTestId('follow-up-cal-end')).toBeVisible();
+    await expect(page.getByTestId('follow-up-cal-invitees')).toBeVisible();
+  });
+
   test('current status menu item is disabled', async ({ page }) => {
     const ts = Date.now();
     const title = `F1.3 current-disabled ${ts}`;
