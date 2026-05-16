@@ -7,6 +7,7 @@ import type {
   FollowUpCategory,
   FollowUpEvent,
   FollowUpEventKind,
+  FollowUpEventWithActor,
   TaskPriority,
 } from '@/types/database';
 
@@ -66,6 +67,9 @@ export interface FollowUpDetailPayload {
   comments: CommentWithAuthor[];
   attachments: AttachmentWithUploader[];
   audit: FollowUpAuditEntry[];
+  // F1.2: append-only history log joined with actor names. Older Edge
+  // Function deploys won't return this; consumer reads default to [].
+  events?: FollowUpEventWithActor[];
 }
 
 export async function getFollowUp(id: string): Promise<FollowUpDetailPayload> {

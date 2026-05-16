@@ -2702,6 +2702,14 @@ export interface FollowUpEvent {
   created_by: string;
   created_at: string;
 }
+
+// F1.2: rpc_get_follow_up joins events with users.full_name so the feed
+// can render "Rabih marked it Done" without a second lookup. actor_name
+// falls back to 'system' on the server side when the user row is missing
+// (matches the audit list pattern).
+export interface FollowUpEventWithActor extends FollowUpEvent {
+  actor_name: string;
+}
 export type FollowUpCategory = 'call' | 'whatsapp' | 'email' | 'meeting' | 'check_in_person';
 
 export type InspectionArea =

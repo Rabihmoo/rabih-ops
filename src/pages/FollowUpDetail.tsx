@@ -22,6 +22,7 @@ import { AttachmentList } from '@/components/shared/AttachmentList';
 import { LinkedDocumentsCard } from '@/components/shared/LinkedDocumentsCard';
 import { LinkedEmailsCard } from '@/components/shared/LinkedEmailsCard';
 import { LinkedRecordsPanel } from '@/components/shared/LinkedRecordsPanel';
+import { FollowUpHistoryFeed } from '@/components/follow-ups/FollowUpHistoryFeed';
 import {
   useFollowUpDetail,
   useUpdateFollowUp,
@@ -83,6 +84,11 @@ export function FollowUpDetailPage() {
   }
   if (!data) return null;
   const { follow_up: row, audit, comments, attachments } = data;
+  // F1.2: events default to [] for tolerance against older RPC bodies
+  // (the migration is staging-only at first; defensive client code
+  // means the feed simply shows its empty-state if the field is
+  // missing).
+  const events = data.events ?? [];
   const status = row.status as FollowUpStatus;
   const priority = row.priority as TaskPriority;
   const closed = status === 'done' || status === 'cancelled';
@@ -289,6 +295,23 @@ export function FollowUpDetailPage() {
           </Card>
         )
       )}
+
+      {/* F1.2: user-facing History feed driven by follow_up_events.
+          The Activity card at the bottom keeps showing audit_log entries
+          as the back-office record. */}
+      <Card>
+        <CardContent className="space-y-4 p-5">
+          <div className="text-section-label flex items-center gap-2">
+            History
+            {events.length > 0 && (
+              <span className="text-foreground-72 normal-case tracking-normal">
+                ({events.length})
+              </span>
+            )}
+          </div>
+          <FollowUpHistoryFeed events={events} />
+        </CardContent>
+      </Card>
 
       {/* Comments */}
       <Card>
