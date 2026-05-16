@@ -11,11 +11,17 @@ import {
   deleteFollowUpComment,
   attachFileToFollowUp,
   removeFollowUpAttachment,
+  setFollowUpStatus,
+  addFollowUpEvent,
   type CreateFollowUpInput,
   type UpdateFollowUpInput,
   type AttachFileToFollowUpInput,
   type FollowUpListFilters,
 } from '@/lib/follow-ups';
+import type {
+  FollowUpEventKind,
+  FollowUpStatus,
+} from '@/types/database';
 import {
   useFollowUpFiltersStore,
   followUpFiltersToRpcParams,
@@ -140,6 +146,41 @@ export function useAttachFileToFollowUp() {
   return useMutation({
     mutationFn: (input: AttachFileToFollowUpInput) => attachFileToFollowUp(input),
     onSuccess: (_, input) => invalidate(input.followUpId),
+  });
+}
+
+// F1.3: quick-action menu wrappers. Both invalidate the detail query so
+// the History feed re-renders within one tick after the mutation lands.
+
+export function useSetFollowUpStatus() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (input: { id: string; status: FollowUpStatus; note?: string | null }) =>
+      setFollowUpStatus({
+        followUpId: input.id,
+        status:     input.status,
+        note:       input.note ?? null,
+      }),
+    onSuccess: (_, { id }) => invalidate(id),
+  });
+}
+
+export function useAddFollowUpEvent() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (input: {
+      id: string;
+      kind: FollowUpEventKind;
+      body?: string | null;
+      payload?: Record<string, unknown> | null;
+    }) =>
+      addFollowUpEvent({
+        followUpId: input.id,
+        kind:       input.kind,
+        body:       input.body ?? null,
+        payload:    input.payload ?? null,
+      }),
+    onSuccess: (_, { id }) => invalidate(id),
   });
 }
 

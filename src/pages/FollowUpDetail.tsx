@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Clock } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,15 +23,16 @@ import { LinkedDocumentsCard } from '@/components/shared/LinkedDocumentsCard';
 import { LinkedEmailsCard } from '@/components/shared/LinkedEmailsCard';
 import { LinkedRecordsPanel } from '@/components/shared/LinkedRecordsPanel';
 import { FollowUpHistoryFeed } from '@/components/follow-ups/FollowUpHistoryFeed';
+import { FollowUpActionMenu } from '@/components/follow-ups/FollowUpActionMenu';
 import {
   useFollowUpDetail,
   useUpdateFollowUp,
-  useMarkFollowUpDone,
   useSnoozeFollowUp,
   useAddFollowUpComment,
   useDeleteFollowUpComment,
   useAttachFileToFollowUp,
   useRemoveFollowUpAttachment,
+  useAddFollowUpEvent,
 } from '@/hooks/useFollowUps';
 import { effectiveDueDate } from '@/lib/follow-ups';
 import { useCanMutate } from '@/hooks/usePermissions';
@@ -49,8 +50,8 @@ export function FollowUpDetailPage() {
 
   const { data, isLoading, error } = useFollowUpDetail(id);
   const update = useUpdateFollowUp();
-  const markDone = useMarkFollowUpDone();
   const snooze = useSnoozeFollowUp();
+  const addEvent = useAddFollowUpEvent();
   const addComment = useAddFollowUpComment();
   const deleteComment = useDeleteFollowUpComment();
   const attach = useAttachFileToFollowUp();
@@ -107,12 +108,6 @@ export function FollowUpDetailPage() {
     toast({ title: 'Follow-up updated' });
   };
 
-  const handleMarkDone = async () => {
-    const outcome = window.prompt('Outcome (optional):') ?? undefined;
-    await markDone.mutateAsync({ id, outcome });
-    toast({ title: 'Follow-up completed' });
-  };
-
   const handleSnooze = async () => {
     if (!snoozeDate) return;
     await snooze.mutateAsync({
@@ -120,10 +115,24 @@ export function FollowUpDetailPage() {
       newDueDate: snoozeDate,
       reason: snoozeReason || undefined,
     });
+    // F1.3: also write a follow_up_events 'postponed' row so the History
+    // feed carries the new due date + optional reason. The trigger
+    // already wrote the status_change row; this adds the date/reason
+    // context that the snooze RPC keeps in comments.
+    try {
+      await addEvent.mutateAsync({
+        id,
+        kind: 'postponed',
+        body: snoozeReason || null,
+        payload: { new_due_date: snoozeDate },
+      });
+    } catch {
+      // Non-fatal — the snooze itself already succeeded.
+    }
     setSnoozeOpen(false);
     setSnoozeDate('');
     setSnoozeReason('');
-    toast({ title: 'Follow-up snoozed' });
+    toast({ title: 'Follow-up postponed' });
   };
 
   return (
@@ -175,25 +184,11 @@ export function FollowUpDetailPage() {
         {canMutate && !editing && (
           <div className="flex shrink-0 flex-wrap gap-2">
             {!closed && (
-              <Button
-                size="sm"
-                onClick={handleMarkDone}
-                disabled={markDone.isPending}
-                data-testid="follow-up-complete-button"
-              >
-                {markDone.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Mark done
-              </Button>
-            )}
-            {!closed && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setSnoozeOpen((v) => !v)}
-                data-testid="follow-up-snooze-button"
-              >
-                <Clock className="mr-1 h-4 w-4" /> Snooze
-              </Button>
+              <FollowUpActionMenu
+                followUpId={id}
+                currentStatus={status}
+                onOpenPostpone={() => setSnoozeOpen(true)}
+              />
             )}
             <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
               Edit
