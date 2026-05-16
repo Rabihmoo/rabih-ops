@@ -24,6 +24,7 @@ import { LinkedEmailsCard } from '@/components/shared/LinkedEmailsCard';
 import { LinkedRecordsPanel } from '@/components/shared/LinkedRecordsPanel';
 import { FollowUpHistoryFeed } from '@/components/follow-ups/FollowUpHistoryFeed';
 import { FollowUpActionMenu } from '@/components/follow-ups/FollowUpActionMenu';
+import { FollowUpReminderCard } from '@/components/follow-ups/FollowUpReminderCard';
 import {
   useFollowUpDetail,
   useUpdateFollowUp,
@@ -307,6 +308,14 @@ export function FollowUpDetailPage() {
           <FollowUpHistoryFeed events={events} />
         </CardContent>
       </Card>
+
+      {/* F1.4: reminder picker. Self-hides for viewers when no reminder
+          is set; shows current + Clear button when one exists. */}
+      <FollowUpReminderCard
+        followUpId={id}
+        reminderAt={row.reminder_at ?? null}
+        canMutate={canMutate}
+      />
 
       {/* Comments */}
       <Card>

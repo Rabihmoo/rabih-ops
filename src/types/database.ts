@@ -660,6 +660,8 @@ export type Database = {
         Row: {
           assigned_to: string | null
           branch: string | null
+          calendar_event_id: string | null
+          calendar_html_link: string | null
           category: string
           completed_at: string | null
           created_at: string
@@ -672,6 +674,7 @@ export type Database = {
           outcome: string | null
           person: string | null
           priority: string
+          reminder_at: string | null
           snoozed_until: string | null
           status: string
           task_id: string | null
@@ -681,6 +684,8 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           branch?: string | null
+          calendar_event_id?: string | null
+          calendar_html_link?: string | null
           category: string
           completed_at?: string | null
           created_at?: string
@@ -693,6 +698,7 @@ export type Database = {
           outcome?: string | null
           person?: string | null
           priority?: string
+          reminder_at?: string | null
           snoozed_until?: string | null
           status?: string
           task_id?: string | null
@@ -702,6 +708,8 @@ export type Database = {
         Update: {
           assigned_to?: string | null
           branch?: string | null
+          calendar_event_id?: string | null
+          calendar_html_link?: string | null
           category?: string
           completed_at?: string | null
           created_at?: string
@@ -714,6 +722,7 @@ export type Database = {
           outcome?: string | null
           person?: string | null
           priority?: string
+          reminder_at?: string | null
           snoozed_until?: string | null
           status?: string
           task_id?: string | null

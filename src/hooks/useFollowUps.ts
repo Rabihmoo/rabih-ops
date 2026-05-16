@@ -13,6 +13,7 @@ import {
   removeFollowUpAttachment,
   setFollowUpStatus,
   addFollowUpEvent,
+  setFollowUpReminder,
   type CreateFollowUpInput,
   type UpdateFollowUpInput,
   type AttachFileToFollowUpInput,
@@ -179,6 +180,27 @@ export function useAddFollowUpEvent() {
         kind:       input.kind,
         body:       input.body ?? null,
         payload:    input.payload ?? null,
+      }),
+    onSuccess: (_, { id }) => invalidate(id),
+  });
+}
+
+// F1.4: set or clear the reminder_at on a follow-up. The RPC cancels
+// any pending notifications_queue rows, sets reminder_at, enqueues one
+// row per channel, and writes the matching reminder_set/reminder_cleared
+// follow_up_events row. Passing reminderAt=null clears.
+export function useSetFollowUpReminder() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (input: {
+      id: string;
+      reminderAt: string | null;
+      channels?: string[];
+    }) =>
+      setFollowUpReminder({
+        followUpId: input.id,
+        reminderAt: input.reminderAt,
+        channels:   input.channels,
       }),
     onSuccess: (_, { id }) => invalidate(id),
   });

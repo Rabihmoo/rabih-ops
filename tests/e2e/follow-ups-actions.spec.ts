@@ -82,6 +82,55 @@ test.describe('Follow-up action menu — admin happy path (F1.3)', () => {
     await expect(page.getByText(/Pending/i).first()).toBeVisible();
   });
 
+  test('reminder picker: set then clear (F1.4)', async ({ page }) => {
+    const ts = Date.now();
+    const title = `F1.4 reminder ${ts}`;
+    await createFollowUp(page, title);
+
+    // Card defaults to today + 09:00 with in_app checked. Pick a time
+    // an hour from now to exercise the "future" branch (no warning) +
+    // capture the resulting reminder_at value.
+    const future = new Date(Date.now() + 60 * 60 * 1000);
+    const yyyy = future.getFullYear();
+    const mm = String(future.getMonth() + 1).padStart(2, '0');
+    const dd = String(future.getDate()).padStart(2, '0');
+    const hh = String(future.getHours()).padStart(2, '0');
+    const mi = String(future.getMinutes()).padStart(2, '0');
+    await page.getByTestId('follow-up-reminder-date').fill(`${yyyy}-${mm}-${dd}`);
+    await page.getByTestId('follow-up-reminder-time').fill(`${hh}:${mi}`);
+
+    const setResp = page.waitForResponse((r) =>
+      r.url().includes('rpc_set_follow_up_reminder'),
+    );
+    await page.getByTestId('follow-up-reminder-set').click();
+    expect((await setResp).status()).toBe(200);
+
+    // Card flips to the "current reminder" shape; History gains a
+    // reminder_set row.
+    await expect(page.getByTestId('follow-up-reminder-current')).toBeVisible({
+      timeout: 10_000,
+    });
+    const historyFeed = page.getByTestId('follow-up-history-feed');
+    await expect(historyFeed.locator('[data-kind="reminder_set"]').first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Clear it.
+    const clearResp = page.waitForResponse((r) =>
+      r.url().includes('rpc_set_follow_up_reminder'),
+    );
+    await page.getByTestId('follow-up-reminder-clear').click();
+    expect((await clearResp).status()).toBe(200);
+
+    // Picker form reappears + History gains a reminder_cleared row.
+    await expect(page.getByTestId('follow-up-reminder-set')).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(historyFeed.locator('[data-kind="reminder_cleared"]').first()).toBeVisible({
+      timeout: 10_000,
+    });
+  });
+
   test('current status menu item is disabled', async ({ page }) => {
     const ts = Date.now();
     const title = `F1.3 current-disabled ${ts}`;
