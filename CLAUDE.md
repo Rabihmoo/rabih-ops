@@ -37,7 +37,6 @@ The full product plan lives in `PLAN.md`. Read it before doing non-trivial work.
 - **Testing**: Playwright for E2E (`tests/e2e`), Vitest for units (not yet wired).
 - **Hosting**: Cloudflare Pages (setup pending — see "Cloudflare Pages deployment" below).
 - **CI**: GitHub Actions, `.github/workflows/ci.yml`.
-- **AI PR review**: `.github/workflows/ai-pr-review.yml` posts an OpenAI-generated review comment on pull requests.
 
 ## Repo layout
 
@@ -112,31 +111,6 @@ npm run db:push   # apply migrations + seed to staging
 ```
 
 The Playwright config boots `npm run build && npm run preview -- --host 127.0.0.1 --port 4173` itself — don't start it manually.
-
-## AI PR review workflow
-
-Pull requests to `main` run `.github/workflows/ai-pr-review.yml` in addition
-to CI. The workflow uses `pull_request_target` but deliberately checks out the
-trusted base commit only; it never executes PR code. `scripts/ai-pr-review.mjs`
-fetches the PR diff through the GitHub API, sends the diff to OpenAI's
-Responses API, and posts or updates one PR comment marked
-`rabih-ops-ai-pr-review`.
-
-Required repository secret:
-
-```
-OPENAI_API_KEY
-```
-
-Optional repository variable:
-
-```
-OPENAI_REVIEW_MODEL=gpt-4.1
-```
-
-If `OPENAI_API_KEY` is absent, the workflow skips without failing the PR. Treat
-the AI comment as a second reviewer, not an approval gate: CI, human/operator
-approval, and the project rules above still decide whether a PR merges.
 
 ## Deploying database changes
 
