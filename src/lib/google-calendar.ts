@@ -74,6 +74,56 @@ export async function listCalendarLinksForEntity(
   });
 }
 
+// C2: rpc_list_calendar_links_for_user — caller-visible calendar_event_links
+// whose event window overlaps [from, to], with entity titles joined in.
+export interface CalendarLinkForUser {
+  link_id: number;
+  entity_type: 'task' | 'follow_up' | 'fixed_task';
+  entity_id: string;
+  entity_title: string | null;
+  google_calendar_id: string;
+  google_event_id: string;
+  event_title: string | null;
+  event_start: string | null;
+  event_end: string | null;
+  event_html_link: string | null;
+  created_at: string;
+  mine: boolean;
+}
+
+export async function listCalendarLinksForUser(
+  from: string,
+  to: string,
+): Promise<CalendarLinkForUser[]> {
+  return callRpc<CalendarLinkForUser[]>('rpc_list_calendar_links_for_user', {
+    p_from: from,
+    p_to: to,
+  });
+}
+
+// C2: rpc_list_calendar_dismissals — caller's calendar_event_dismissals.
+// Used by /calendar to mask dismissed events in Today/Upcoming/Linked/
+// Unlinked AND to power the Ignored filter directly.
+export interface CalendarDismissal {
+  google_calendar_id: string;
+  google_event_id: string;
+  recurring_event_id: string | null;
+  is_series_dismiss: boolean;
+  summary: string | null;
+  event_start: string | null;
+  event_end: string | null;
+  all_day: boolean | null;
+  html_link: string | null;
+  rrule: string | null;
+  note: string | null;
+  dismissed_at: string;
+  updated_at: string;
+}
+
+export async function listCalendarDismissals(): Promise<CalendarDismissal[]> {
+  return callRpc<CalendarDismissal[]>('rpc_list_calendar_dismissals', {});
+}
+
 // =========================================================
 // Dashboard "Today's calendar" — calls calendar-list-today Edge Function
 // =========================================================

@@ -4,11 +4,17 @@ import {
   deleteCalendarEvent,
   disconnectCalendar,
   getCalendarLinkStatus,
+  listCalendarDismissals,
   listCalendarLinksForEntity,
+  listCalendarLinksForUser,
   listGoogleCalendarToday,
   requestCalendarAuthorize,
   type CreateCalendarEventInput,
 } from '@/lib/google-calendar';
+import {
+  listGoogleCalendarEvents,
+  type CalendarListResult,
+} from '@/lib/calendar-list-edge';
 
 const KEY = ['google-calendar'] as const;
 
@@ -84,5 +90,41 @@ export function useDeleteCalendarEvent() {
       qc.invalidateQueries({ queryKey: [...KEY, 'links'] });
       qc.invalidateQueries({ queryKey: [...KEY, 'today'] });
     },
+  });
+}
+
+// C2: /calendar page queries. Three hooks that feed the page's six
+// filter chips. Recurring's `useGoogleCalendarList(..., 'masters', ...)`
+// is fired lazily via the `enabled` flag so the masters Google call
+// only happens when the operator actually selects Recurring.
+export function useGoogleCalendarList(
+  from: string,
+  to: string,
+  mode: 'instances' | 'masters',
+  enabled: boolean,
+) {
+  return useQuery<CalendarListResult>({
+    queryKey: [...KEY, 'list', { from, to, mode }],
+    queryFn: () => listGoogleCalendarEvents({ from, to, mode }),
+    enabled,
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useCalendarLinksForUser(from: string, to: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...KEY, 'links-for-user', { from, to }],
+    queryFn: () => listCalendarLinksForUser(from, to),
+    enabled,
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useCalendarDismissals(enabled: boolean) {
+  return useQuery({
+    queryKey: [...KEY, 'dismissals'],
+    queryFn: () => listCalendarDismissals(),
+    enabled,
+    staleTime: 60 * 1000,
   });
 }

@@ -11,6 +11,7 @@ import { TaskDetailPage } from './pages/TaskDetail';
 import { FixedTasksPage } from './pages/FixedTasks';
 import { FixedTaskNewPage } from './pages/FixedTaskNew';
 import { FixedTaskDetailPage } from './pages/FixedTaskDetail';
+import { CalendarPage } from './pages/Calendar';
 import { DocumentsPage } from './pages/Documents';
 import { DocumentNewPage } from './pages/DocumentNew';
 import { DocumentDetailPage } from './pages/DocumentDetail';
@@ -71,6 +72,7 @@ export default function App() {
           <Route path="/fixed-tasks" element={<FixedTasksPage />} />
           <Route path="/fixed-tasks/new" element={<FixedTaskNewPage />} />
           <Route path="/fixed-tasks/:id" element={<FixedTaskDetailPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/documents" element={<DocumentsPage />} />
           <Route path="/documents/new" element={<DocumentNewPage />} />
           <Route path="/documents/:id" element={<DocumentDetailPage />} />
