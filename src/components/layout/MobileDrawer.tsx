@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
+  CalendarDays,
   ClipboardCheck,
   FileText,
   LogOut,
@@ -41,6 +42,7 @@ interface DrawerNavItem {
 
 const DRAWER_NAV: DrawerNavItem[] = [
   { to: '/fixed-tasks', label: 'Fixed tasks', icon: Repeat },
+  { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/inspections', label: 'Inspections', icon: ClipboardCheck },
   { to: '/purchases', label: 'Purchasing', icon: Receipt },
   { to: '/documents', label: 'Documents', icon: FileText },
