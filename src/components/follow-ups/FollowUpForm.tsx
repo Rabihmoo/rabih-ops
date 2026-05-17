@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/toast';
 import { BRANCH_LIST } from '@/lib/branches';
 import { useAuthStore } from '@/stores/authStore';
+import { useCalendarLinkStatus } from '@/hooks/useGoogleCalendar';
 import type {
   FollowUpCategory,
   FollowUpRow,
@@ -57,6 +59,62 @@ export interface FollowUpFormSeed {
   due_date?: string; // yyyy-mm-dd
 }
 
+// Phase-2 orchestration inputs surfaced by create mode only. The form
+// collects + validates these fields; the page runs the actual reminder
+// + calendar mutations after rpc_create_follow_up succeeds. Edit mode
+// never emits an extras object.
+export interface FollowUpCreateExtras {
+  reminderAt: string | null;
+  calendar: {
+    start: string; // ISO 8601
+    end: string;   // ISO 8601
+    invitees: string[];
+  } | null;
+}
+
+function pad(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+function toLocalInputValue(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function composeIsoFromLocalDateTime(date: string, time: string): string | null {
+  if (!date || !time) return null;
+  const hhmmss = time.length === 5 ? `${time}:00` : time;
+  const d = new Date(`${date}T${hhmmss}`);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function parseInviteeList(raw: string): string[] {
+  return Array.from(
+    new Set(
+      raw
+        .split(/[,\n;]+/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0),
+    ),
+  );
+}
+
+function defaultCalendarStart(opts: {
+  reminderIso: string | null;
+  dueDate: string | null;
+}): Date {
+  if (opts.reminderIso) {
+    const d = new Date(opts.reminderIso);
+    if (!isNaN(d.getTime())) return d;
+  }
+  if (opts.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(opts.dueDate)) {
+    const [y, m, d] = opts.dueDate.split('-').map((s) => parseInt(s, 10));
+    return new Date(y, m - 1, d, 9, 0, 0, 0);
+  }
+  const f = new Date();
+  f.setHours(f.getHours() + 1, 0, 0, 0);
+  return f;
+}
+
 export function FollowUpForm({
   initial,
   initialTaskId,
@@ -70,7 +128,10 @@ export function FollowUpForm({
   seed?: FollowUpFormSeed;
   submitting?: boolean;
   submitLabel: string;
-  onSubmit: (input: CreateFollowUpInput | UpdateFollowUpInput) => Promise<void>;
+  onSubmit: (
+    input: CreateFollowUpInput | UpdateFollowUpInput,
+    extras?: FollowUpCreateExtras,
+  ) => Promise<void>;
 }) {
   const profile = useAuthStore((s) => s.profile);
   const allowedBranches = BRANCH_LIST.filter((b) => {
@@ -120,6 +181,51 @@ export function FollowUpForm({
         },
   });
 
+  // ===== Create-only state: optional reminder + calendar invitee fields.
+  // These run after rpc_create_follow_up succeeds (best-effort phase 2 in
+  // the page); the form is just the input surface. App assignment lives
+  // on the row itself and never touches this state.
+  const calendarStatus = useCalendarLinkStatus();
+  const calendarConnected = calendarStatus.data?.connected === true;
+  const [reminderDate, setReminderDate] = useState('');
+  const [reminderTime, setReminderTime] = useState('');
+  const [addToCalendar, setAddToCalendar] = useState(false);
+  const [calStart, setCalStart] = useState('');
+  const [calEnd, setCalEnd] = useState('');
+  const [invitees, setInvitees] = useState('');
+  // Once the operator manually edits calStart/calEnd, suppress further
+  // auto-rederivation from reminder/due_date changes. Resets when the
+  // checkbox is unchecked.
+  const calTouchedRef = useRef(false);
+
+  const dueDateValue = form.watch('due_date');
+  const composedReminder = composeIsoFromLocalDateTime(reminderDate, reminderTime);
+  const reminderInPast =
+    composedReminder !== null && new Date(composedReminder).getTime() < Date.now();
+
+  useEffect(() => {
+    if (!addToCalendar) {
+      calTouchedRef.current = false;
+      return;
+    }
+    if (calTouchedRef.current) return;
+    const start = defaultCalendarStart({
+      reminderIso: composedReminder,
+      dueDate: dueDateValue ?? null,
+    });
+    setCalStart(toLocalInputValue(start));
+    setCalEnd(toLocalInputValue(new Date(start.getTime() + 30 * 60 * 1000)));
+  }, [addToCalendar, composedReminder, dueDateValue]);
+
+  function handleCalStartChange(value: string) {
+    calTouchedRef.current = true;
+    setCalStart(value);
+  }
+  function handleCalEndChange(value: string) {
+    calTouchedRef.current = true;
+    setCalEnd(value);
+  }
+
   const handleSubmit = form.handleSubmit(async (values) => {
     try {
       const assigned_to = values.assignment === 'me' ? (profile?.id ?? null) : null;
@@ -161,7 +267,31 @@ export function FollowUpForm({
           assigned_to,
           task_id,
         };
-        await onSubmit(payload);
+
+        let calendar: FollowUpCreateExtras['calendar'] = null;
+        if (addToCalendar && calendarConnected) {
+          const sDate = new Date(calStart);
+          const eDate = new Date(calEnd);
+          if (!calStart || !calEnd || isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+            toast({ title: 'Invalid calendar date/time', variant: 'destructive' });
+            return;
+          }
+          if (eDate <= sDate) {
+            toast({ title: 'Calendar end must be after start', variant: 'destructive' });
+            return;
+          }
+          calendar = {
+            start: sDate.toISOString(),
+            end: eDate.toISOString(),
+            invitees: parseInviteeList(invitees),
+          };
+        }
+
+        const extras: FollowUpCreateExtras | undefined =
+          composedReminder !== null || calendar !== null
+            ? { reminderAt: composedReminder, calendar }
+            : undefined;
+        await onSubmit(payload, extras);
       }
     } catch (err) {
       toast({
@@ -279,6 +409,107 @@ export function FollowUpForm({
 
       {/* task_id is a hidden field set by URL or by edit mode */}
       <input type="hidden" {...form.register('task_id')} />
+
+      {!isEdit && (
+        <div
+          className="border-border space-y-3 rounded-md border p-4"
+          data-testid="follow-up-create-reminder-section"
+        >
+          <div className="text-section-label">Reminder (optional)</div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="create-reminder-date" className="text-xs">Date</Label>
+              <Input
+                id="create-reminder-date"
+                type="date"
+                value={reminderDate}
+                onChange={(e) => setReminderDate(e.target.value)}
+                data-testid="follow-up-create-reminder-date"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="create-reminder-time" className="text-xs">Time</Label>
+              <Input
+                id="create-reminder-time"
+                type="time"
+                value={reminderTime}
+                onChange={(e) => setReminderTime(e.target.value)}
+                data-testid="follow-up-create-reminder-time"
+              />
+            </div>
+          </div>
+          {reminderInPast && (
+            <p
+              data-testid="follow-up-create-reminder-past-warning"
+              className="text-warning-ink text-xs"
+            >
+              That time is in the past — the reminder will fire on the next drain cycle.
+            </p>
+          )}
+          <p className="text-subtle-foreground text-xs">
+            Adds an in-app reminder. Manage other channels (Telegram, etc.) after creation.
+          </p>
+        </div>
+      )}
+
+      {!isEdit && calendarConnected && (
+        <div
+          className="border-border space-y-3 rounded-md border p-4"
+          data-testid="follow-up-create-calendar-section"
+        >
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={addToCalendar}
+              onChange={(e) => setAddToCalendar(e.target.checked)}
+              data-testid="follow-up-create-add-to-calendar"
+            />
+            Add to Google Calendar
+          </label>
+          {addToCalendar && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="create-cal-start" className="text-xs">Starts</Label>
+                  <Input
+                    id="create-cal-start"
+                    type="datetime-local"
+                    value={calStart}
+                    onChange={(e) => handleCalStartChange(e.target.value)}
+                    data-testid="follow-up-create-cal-start"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="create-cal-end" className="text-xs">Ends</Label>
+                  <Input
+                    id="create-cal-end"
+                    type="datetime-local"
+                    value={calEnd}
+                    onChange={(e) => handleCalEndChange(e.target.value)}
+                    data-testid="follow-up-create-cal-end"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="create-cal-invitees" className="text-xs">
+                  Calendar invitees (optional)
+                </Label>
+                <Input
+                  id="create-cal-invitees"
+                  type="text"
+                  placeholder="email@example.com, another@example.com"
+                  value={invitees}
+                  onChange={(e) => setInvitees(e.target.value)}
+                  data-testid="follow-up-create-cal-invitees"
+                />
+                <p className="text-subtle-foreground text-xs">
+                  Comma-separated. Google sends each one a calendar invite. This does not change who's responsible in Rabih Ops.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <Button type="submit" disabled={submitting || form.formState.isSubmitting}>
         {(submitting || form.formState.isSubmitting) && (
