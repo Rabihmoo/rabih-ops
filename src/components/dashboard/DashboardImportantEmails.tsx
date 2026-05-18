@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { Loader2, Mail } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AlertCircle, Loader2, Mail } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   useEmailLinkPresence,
@@ -11,9 +12,41 @@ import type { EmailLinkPresence, EmailStateRow } from '@/lib/email-status';
 import type { GmailImportantMessage } from '@/lib/gmail';
 import { EmailRow } from './EmailRow';
 
+function ReconnectNotice({ statusEmail }: { statusEmail?: string }) {
+  return (
+    <Card>
+      <CardContent className="space-y-2 p-5">
+        <div className="border-border mb-1 flex items-baseline justify-between border-b pb-3">
+          <span className="text-section-label text-primary-ink/80 inline-flex items-center gap-1.5">
+            <Mail className="h-3.5 w-3.5" /> Important this week
+          </span>
+          {statusEmail && (
+            <span className="text-subtle-foreground text-xs">{statusEmail}</span>
+          )}
+        </div>
+        <div className="text-foreground-72 inline-flex items-start gap-2 text-sm">
+          <AlertCircle className="text-amber-600 mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            Gmail needs reconnect.{' '}
+            <Link
+              to="/settings"
+              className="text-primary-ink underline-offset-2 hover:underline"
+            >
+              Reconnect in Settings
+            </Link>
+            .
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function DashboardImportantEmails() {
   const status = useGmailLinkStatus();
-  const emails = useGmailImportant(status.data?.connected === true);
+  const needsReconnect = status.data?.needs_reconnect === true;
+  const isConnected = status.data?.connected === true;
+  const emails = useGmailImportant(isConnected);
   const accountId = status.data?.google_account_id ?? null;
   // Same parent-level state fetch as DashboardTodayEmails — single
   // DB roundtrip per dashboard load, looked up per row by message_id.
@@ -30,7 +63,11 @@ export function DashboardImportantEmails() {
     return map;
   }, [states.data]);
 
-  if (!status.data?.connected) return null;
+  if (!isConnected && !needsReconnect) return null;
+
+  if (needsReconnect) {
+    return <ReconnectNotice statusEmail={status.data?.email} />;
+  }
 
   const messages: GmailImportantMessage[] = emails.data?.messages ?? [];
 
@@ -40,6 +77,7 @@ export function DashboardImportantEmails() {
       messages={messages}
       isLoading={emails.isLoading}
       error={emails.data?.error}
+      perFetchNeedsReconnect={emails.data?.needs_reconnect === true}
       statusEmail={status.data?.email}
       statesByMessageId={statesByMessageId}
     />
@@ -51,6 +89,10 @@ interface BodyProps {
   messages: GmailImportantMessage[];
   isLoading: boolean;
   error?: string;
+  // True when the per-fetch response (not the cached link-status) just
+  // discovered invalid_grant. Race-window safety so the card never
+  // renders a raw error string.
+  perFetchNeedsReconnect: boolean;
   statusEmail?: string;
   statesByMessageId: Map<string, EmailStateRow>;
 }
@@ -60,6 +102,7 @@ function ImportantBody({
   messages,
   isLoading,
   error,
+  perFetchNeedsReconnect,
   statusEmail,
   statesByMessageId,
 }: BodyProps) {
@@ -99,13 +142,36 @@ function ImportantBody({
           </div>
         )}
 
-        {!isLoading && error && (
-          <div className="text-destructive-ink text-xs">
-            Could not load emails: {error}
+        {!isLoading && perFetchNeedsReconnect && (
+          <div className="text-foreground-72 inline-flex items-start gap-2 text-sm">
+            <AlertCircle className="text-amber-600 mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              Gmail needs reconnect.{' '}
+              <Link
+                to="/settings"
+                className="text-primary-ink underline-offset-2 hover:underline"
+              >
+                Reconnect in Settings
+              </Link>
+              .
+            </div>
           </div>
         )}
 
-        {!isLoading && !error && messages.length === 0 && (
+        {!isLoading && !perFetchNeedsReconnect && error && (
+          <div className="text-foreground-72 text-xs">
+            Could not load emails.{' '}
+            <Link
+              to="/settings"
+              className="text-primary-ink underline-offset-2 hover:underline"
+            >
+              Open Settings
+            </Link>
+            .
+          </div>
+        )}
+
+        {!isLoading && !perFetchNeedsReconnect && !error && messages.length === 0 && (
           <div className="text-muted-foreground py-2 text-sm">
             No important unread emails from the last 7 days.
           </div>

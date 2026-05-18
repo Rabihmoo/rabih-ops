@@ -47,6 +47,7 @@ export function GoogleCalendarCard() {
   }, []);
 
   const linked = status.data?.connected === true;
+  const needsReconnect = status.data?.needs_reconnect === true;
 
   const handleConnect = async () => {
     try {
@@ -137,7 +138,39 @@ export function GoogleCalendarCard() {
           </>
         )}
 
-        {!status.isLoading && !linked && (
+        {!status.isLoading && !linked && needsReconnect && (
+          <>
+            <div className="flex items-center gap-2">
+              <StatusChip tone="warning" size="xs" dot>Needs reconnect</StatusChip>
+              {status.data?.email && (
+                <span className="text-foreground-72 text-xs">as {status.data.email}</span>
+              )}
+            </div>
+            <p className="text-foreground-72">
+              Google revoked or expired the connection — most commonly because
+              the OAuth app is still in Testing mode (refresh tokens expire
+              after about 7 days for non-owner users). Reconnect once to
+              continue. To make this permanent, publish the OAuth app in
+              Google Cloud Console.
+            </p>
+            <Button
+              size="sm"
+              variant="gradient"
+              onClick={handleConnect}
+              disabled={request.isPending}
+              data-testid="calendar-reconnect-button"
+            >
+              {request.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Reconnect Google Calendar
+            </Button>
+            <div className="text-subtle-foreground text-xs">
+              You'll be redirected to Google to re-authorise{' '}
+              <ExternalLink className="inline h-3 w-3" />, then bounced back here.
+            </div>
+          </>
+        )}
+
+        {!status.isLoading && !linked && !needsReconnect && (
           <>
             <div>
               <StatusChip tone="muted" size="xs" dot>Not connected</StatusChip>

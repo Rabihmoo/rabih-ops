@@ -6,6 +6,10 @@ import { callRpc } from './rpc';
 
 export interface GmailLinkStatus {
   connected: boolean;
+  // True when Google revoked / expired the refresh token. UI surfaces a
+  // Reconnect prompt; `email` is still populated so we can say
+  // "Reconnect as you@gmail.com".
+  needs_reconnect?: boolean;
   email?: string;
   // Added by migration 20260603_rpc_gmail_link_status_account_id.sql.
   // Frontend mutations on email_states (G2.1 RPCs) require the Gmail
@@ -16,6 +20,9 @@ export interface GmailLinkStatus {
   // is universal).
   google_account_id?: string;
   connected_at?: string;
+  // Timestamp of the first invalid_grant. Present only when
+  // needs_reconnect is true.
+  expired_at?: string;
   last_used_at?: string | null;
   scope?: string;
 }
@@ -79,6 +86,11 @@ export interface GmailImportantMessage {
 }
 export interface GmailImportantResult {
   connected: boolean;
+  // True iff the Edge Function detected an expired refresh token for
+  // this caller. The messages array is empty in that case; the UI
+  // shows a Reconnect prompt instead of an error string.
+  needs_reconnect?: boolean;
+  service?: 'gmail';
   email?: string;
   messages: GmailImportantMessage[];
   error?: string;
@@ -130,11 +142,11 @@ export async function listGmailImportant(): Promise<GmailImportantResult> {
     headers: { Authorization: `Bearer ${jwt}` },
   });
   const text = await res.text();
-  // The Edge Function returns JSON with `error` even on non-OK status — try
-  // to surface that so we can see what Gmail is actually complaining about.
+  // The Edge Function returns JSON (with `error` and/or `needs_reconnect`)
+  // even on non-OK status — parse so both signals survive.
   try {
     const j = JSON.parse(text);
-    if (!res.ok) {
+    if (!res.ok && !j.needs_reconnect) {
       return {
         connected: j.connected ?? false,
         messages: [],

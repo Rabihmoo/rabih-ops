@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Mail } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AlertCircle, Loader2, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -38,10 +39,44 @@ function writeStoredMode(mode: GmailTodayMode): void {
   }
 }
 
+function ReconnectNotice({ statusEmail }: { statusEmail?: string }) {
+  return (
+    <Card>
+      <CardContent className="space-y-2 p-5">
+        <div className="border-border mb-1 flex items-baseline justify-between gap-3 border-b pb-3">
+          <span className="text-section-label text-primary-ink/80 inline-flex items-center gap-1.5">
+            <Mail className="h-3.5 w-3.5" /> Today's emails
+          </span>
+          {statusEmail && (
+            <span className="text-subtle-foreground hidden text-xs sm:inline">
+              {statusEmail}
+            </span>
+          )}
+        </div>
+        <div className="text-foreground-72 inline-flex items-start gap-2 text-sm">
+          <AlertCircle className="text-amber-600 mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            Gmail needs reconnect.{' '}
+            <Link
+              to="/settings"
+              className="text-primary-ink underline-offset-2 hover:underline"
+            >
+              Reconnect in Settings
+            </Link>
+            .
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function DashboardTodayEmails() {
   const status = useGmailLinkStatus();
+  const needsReconnect = status.data?.needs_reconnect === true;
+  const isConnected = status.data?.connected === true;
   const [mode, setMode] = useState<GmailTodayMode>(() => readStoredMode());
-  const emails = useGmailToday(status.data?.connected === true, mode);
+  const emails = useGmailToday(isConnected, mode);
   const accountId = status.data?.google_account_id ?? null;
   // Fetch all of the caller's email_state rows for this account once
   // at the parent level (1 DB roundtrip), then look up by message_id
@@ -65,7 +100,11 @@ export function DashboardTodayEmails() {
     writeStoredMode(mode);
   }, [mode]);
 
-  if (!status.data?.connected) return null;
+  if (!isConnected && !needsReconnect) return null;
+
+  if (needsReconnect) {
+    return <ReconnectNotice statusEmail={status.data?.email} />;
+  }
 
   const messages: GmailTodayMessage[] = emails.data?.today ?? [];
 
@@ -80,6 +119,7 @@ export function DashboardTodayEmails() {
       messages={messages}
       isLoading={emails.isLoading}
       error={emails.data?.error}
+      perFetchNeedsReconnect={emails.data?.needs_reconnect === true}
       statusEmail={status.data?.email}
       statesByMessageId={statesByMessageId}
     />
@@ -93,6 +133,10 @@ interface BodyProps {
   messages: GmailTodayMessage[];
   isLoading: boolean;
   error?: string;
+  // True when the per-fetch response (not the cached link-status) just
+  // discovered invalid_grant. Race-window safety so the card never
+  // renders a raw error string.
+  perFetchNeedsReconnect: boolean;
   statusEmail?: string;
   statesByMessageId: Map<string, EmailStateRow>;
 }
@@ -104,6 +148,7 @@ function DashboardTodayEmailsBody({
   messages,
   isLoading,
   error,
+  perFetchNeedsReconnect,
   statusEmail,
   statesByMessageId,
 }: BodyProps) {
@@ -171,13 +216,36 @@ function DashboardTodayEmailsBody({
           </div>
         )}
 
-        {!isLoading && error && (
-          <div className="text-destructive-ink text-xs">
-            Could not load emails: {error}
+        {!isLoading && perFetchNeedsReconnect && (
+          <div className="text-foreground-72 inline-flex items-start gap-2 text-sm">
+            <AlertCircle className="text-amber-600 mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              Gmail needs reconnect.{' '}
+              <Link
+                to="/settings"
+                className="text-primary-ink underline-offset-2 hover:underline"
+              >
+                Reconnect in Settings
+              </Link>
+              .
+            </div>
           </div>
         )}
 
-        {!isLoading && !error && messages.length === 0 && (
+        {!isLoading && !perFetchNeedsReconnect && error && (
+          <div className="text-foreground-72 text-xs">
+            Could not load emails.{' '}
+            <Link
+              to="/settings"
+              className="text-primary-ink underline-offset-2 hover:underline"
+            >
+              Open Settings
+            </Link>
+            .
+          </div>
+        )}
+
+        {!isLoading && !perFetchNeedsReconnect && !error && messages.length === 0 && (
           <div className="text-muted-foreground py-2 text-sm">
             {mode === 'sent'
               ? "You haven't sent anything today."

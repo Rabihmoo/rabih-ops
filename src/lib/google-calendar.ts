@@ -2,8 +2,15 @@ import { callRpc } from './rpc';
 
 export interface CalendarLinkStatus {
   connected: boolean;
+  // True when Google revoked / expired the refresh token. UI surfaces a
+  // Reconnect prompt; `email` is still populated so we can say
+  // "Reconnect as you@gmail.com".
+  needs_reconnect?: boolean;
   email?: string;
   connected_at?: string;
+  // Timestamp of the first invalid_grant. Present only when
+  // needs_reconnect is true.
+  expired_at?: string;
   last_used_at?: string | null;
   scope?: string;
 }
@@ -139,6 +146,11 @@ export interface CalendarTodayEvent {
 }
 export interface CalendarTodayResult {
   connected: boolean;
+  // True iff the Edge Function detected an expired refresh token for
+  // this caller. The events array is empty in that case; the UI shows
+  // a Reconnect prompt instead of an error string.
+  needs_reconnect?: boolean;
+  service?: 'calendar';
   email?: string;
   events: CalendarTodayEvent[];
   error?: string;
@@ -218,10 +230,18 @@ export async function listGoogleCalendarToday(): Promise<CalendarTodayResult> {
     method: 'GET',
     headers: { Authorization: `Bearer ${jwt}` },
   });
-  if (!res.ok) {
-    return { connected: false, events: [], error: `HTTP ${res.status}` };
+  const text = await res.text();
+  // The Edge Function returns 200 with { connected:false, needs_reconnect, error }
+  // on token failures so the needs_reconnect signal survives parsing.
+  try {
+    const j = JSON.parse(text);
+    if (!res.ok && !j) {
+      return { connected: false, events: [], error: `HTTP ${res.status}` };
+    }
+    return j as CalendarTodayResult;
+  } catch {
+    return { connected: false, events: [], error: text || `HTTP ${res.status}` };
   }
-  return res.json();
 }
 
 // =========================================================
