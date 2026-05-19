@@ -341,6 +341,30 @@ Automatic pruning would require either `gmail.modify` (to subscribe to history) 
 
 The Today card has three modes selectable via the toggle: **Focused** (operational incoming), **All today** (incoming including promotions), **Sent** (your outgoing mail since local midnight). Every mode anchors on `local-midnight in PROJECT_TZ` (`Africa/Maputo`). Focused / All scope to `in:inbox`; Sent scopes to `in:sent`. Each row carries labelIds-derived signals: `is_unread` bolds the subject, `is_important` shows a leading star, `is_sent` shows a leading "Sent" chip (always — including the rare self-sent edge case where a message is in both Inbox and Sent).
 
+## Test data hygiene
+
+CI runs Playwright against staging — the same database the operator uses for real work. Two mechanisms keep test rows out of admin views:
+
+1. **Post-test cleanup**: `scripts/cleanup-test-data.mjs` runs after every Playwright job in CI (`if: always()`, `continue-on-error: true`). It soft-deletes rows where `created_by` matches any `e2e-*@*` fixture user, plus rows whose title starts with a known test prefix (`[E2E] `, `H4.x`, `Smoke `, etc.). It also cancels pending reminders for those users and hard-deletes their `comments` / `attachments` / link rows. It never touches `users`, `branches`, OAuth tokens, `audit_log`, or any real-operator data.
+
+2. **Naming convention for new specs**: import `e2eTitle` from `tests/helpers/e2e-title.ts` and use it for every title/name the test writes to the database:
+
+   ```ts
+   import { e2eTitle } from '../helpers/e2e-title';
+   const title = e2eTitle('overdue task'); // → "[E2E] overdue task 1779021080881"
+   ```
+
+   The `[E2E] ` prefix is already in the cleanup allowlist. The trailing timestamp prevents collisions between parallel test workers.
+
+The `created_by IN (e2e users)` path is the source of truth — every fixture user (`e2e-admin`, `e2e-manager`, `e2e-viewer`) is caught regardless of whether the test used `e2eTitle`. The prefix path is defense-in-depth and a visual signal for any stray rows that escape cleanup.
+
+Run a manual dry-run before pushing changes that affect a lot of test data:
+
+```
+node scripts/cleanup-test-data.mjs dry      # preview, no changes
+node scripts/cleanup-test-data.mjs commit   # apply
+```
+
 ## Things to avoid
 
 - Adding libraries not already in `package.json` without reading `PLAN.md` Part 4 first.
