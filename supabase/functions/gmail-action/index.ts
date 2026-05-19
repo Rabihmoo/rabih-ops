@@ -11,6 +11,7 @@ import { makeRpc } from '../_shared/rpc.ts';
 import {
   getFreshGoogleAccessTokenFor,
   getUserIdFromJwt,
+  isNeedsReconnectError,
 } from '../_shared/google.ts';
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
 
@@ -108,6 +109,16 @@ Deno.serve(async (req) => {
       GOOGLE_OAUTH_CLIENT_SECRET,
     );
   } catch (err) {
+    if (isNeedsReconnectError(err)) {
+      return jsonResponse(
+        {
+          error: 'Gmail connection expired. Reconnect in Settings.',
+          needs_reconnect: true,
+          service: 'gmail',
+        },
+        409,
+      );
+    }
     return jsonResponse(
       { error: err instanceof Error ? err.message : 'token error' },
       500,

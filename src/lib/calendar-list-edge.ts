@@ -30,6 +30,12 @@ export interface CalendarListEvent {
 
 export interface CalendarListResult {
   connected: boolean;
+  // True iff the Edge Function detected an expired refresh token. The
+  // /calendar page reads this from useCalendarLinkStatus (the chip-row
+  // shell hides itself when needs_reconnect=true), but the shape stays
+  // forward-compatible if a per-call signal is needed later.
+  needs_reconnect?: boolean;
+  service?: 'calendar';
   email?: string;
   mode: 'instances' | 'masters';
   events: CalendarListEvent[];

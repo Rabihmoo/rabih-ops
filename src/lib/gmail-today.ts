@@ -39,6 +39,11 @@ export type GmailTodayMode = 'focused' | 'all' | 'sent';
 
 export interface GmailTodayResult {
   connected: boolean;
+  // True iff the Edge Function detected an expired refresh token for
+  // this caller. Both arrays are empty in that case; the UI shows a
+  // Reconnect prompt instead of an error string.
+  needs_reconnect?: boolean;
+  service?: 'gmail';
   email?: string;
   /** Echoed by the Edge Function so the client can sanity-check
    *  the response matches the mode it asked for. */
@@ -88,7 +93,7 @@ export async function listGmailToday(
   const text = await res.text();
   try {
     const j = JSON.parse(text);
-    if (!res.ok) {
+    if (!res.ok && !j.needs_reconnect) {
       return {
         connected: j.connected ?? false,
         important: [],

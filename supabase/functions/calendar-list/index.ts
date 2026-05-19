@@ -22,6 +22,7 @@ import { makeRpc } from '../_shared/rpc.ts';
 import {
   getFreshGoogleAccessToken,
   getUserIdFromJwt,
+  isNeedsReconnectError,
 } from '../_shared/google.ts';
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
 
@@ -150,6 +151,21 @@ Deno.serve(async (req) => {
       GOOGLE_OAUTH_CLIENT_SECRET,
     );
   } catch (err) {
+    if (isNeedsReconnectError(err)) {
+      return jsonResponse(
+        {
+          connected: false,
+          needs_reconnect: true,
+          service: 'calendar',
+          email: err.email,
+          mode,
+          events: [],
+          more: false,
+          next_page_token: null,
+        },
+        200,
+      );
+    }
     return jsonResponse(
       {
         connected: false,

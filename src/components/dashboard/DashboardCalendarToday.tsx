@@ -1,4 +1,5 @@
-import { Calendar, ExternalLink, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AlertCircle, Calendar, ExternalLink, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   useCalendarLinkStatus,
@@ -23,12 +24,51 @@ function formatRange(start: string | null, end: string | null, allDay: boolean):
 
 export function DashboardCalendarToday() {
   const status = useCalendarLinkStatus();
-  const today = useGoogleCalendarToday(status.data?.connected === true);
+  // needs_reconnect rows have connected=false but still warrant a card —
+  // hiding would leave the operator with no signal that their connection
+  // is broken.
+  const needsReconnect = status.data?.needs_reconnect === true;
+  const isConnected = status.data?.connected === true;
+  const today = useGoogleCalendarToday(isConnected);
 
-  // Hide entirely when not connected — the Settings card is the entry point.
-  if (!status.data?.connected) return null;
+  // Hide entirely only when there's truly no connection on file. The
+  // Settings card is the entry point in that state.
+  if (!isConnected && !needsReconnect) return null;
+
+  if (needsReconnect) {
+    return (
+      <Card>
+        <CardContent className="space-y-2 p-5">
+          <div className="border-border mb-1 flex items-baseline justify-between border-b pb-3">
+            <span className="text-section-label text-primary-ink/80 inline-flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5" /> Today's calendar
+            </span>
+            <span className="text-subtle-foreground text-xs">
+              {status.data?.email}
+            </span>
+          </div>
+          <div className="text-foreground-72 inline-flex items-start gap-2 text-sm">
+            <AlertCircle className="text-amber-600 mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              Google Calendar needs reconnect.{' '}
+              <Link
+                to="/settings"
+                className="text-primary-ink underline-offset-2 hover:underline"
+              >
+                Reconnect in Settings
+              </Link>
+              .
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const events = today.data?.events ?? [];
+  // Per-fetch needs_reconnect (race window where the cached link-status
+  // says connected but the Edge Function just discovered invalid_grant).
+  const todayNeedsReconnect = today.data?.needs_reconnect === true;
 
   return (
     <Card>
@@ -53,13 +93,36 @@ export function DashboardCalendarToday() {
           </div>
         )}
 
-        {!today.isLoading && today.data?.error && (
-          <div className="text-destructive-ink text-xs">
-            Could not load events: {today.data.error}
+        {!today.isLoading && todayNeedsReconnect && (
+          <div className="text-foreground-72 inline-flex items-start gap-2 text-sm">
+            <AlertCircle className="text-amber-600 mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              Google Calendar needs reconnect.{' '}
+              <Link
+                to="/settings"
+                className="text-primary-ink underline-offset-2 hover:underline"
+              >
+                Reconnect in Settings
+              </Link>
+              .
+            </div>
           </div>
         )}
 
-        {!today.isLoading && !today.data?.error && events.length === 0 && (
+        {!today.isLoading && !todayNeedsReconnect && today.data?.error && (
+          <div className="text-foreground-72 text-xs">
+            Could not load events.{' '}
+            <Link
+              to="/settings"
+              className="text-primary-ink underline-offset-2 hover:underline"
+            >
+              Open Settings
+            </Link>
+            .
+          </div>
+        )}
+
+        {!today.isLoading && !todayNeedsReconnect && !today.data?.error && events.length === 0 && (
           <div className="text-muted-foreground py-2 text-sm">
             Nothing scheduled in Google Calendar today.
           </div>
