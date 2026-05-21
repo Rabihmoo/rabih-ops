@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  cancelMyPendingReminder,
   countUnreadNotifications,
   listNotifications,
   markAllNotificationsRead,
@@ -52,6 +53,16 @@ export function useMarkAllNotificationsRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => markAllNotificationsRead(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...KEY] });
+    },
+  });
+}
+
+export function useCancelMyPendingReminder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (queueId: number) => cancelMyPendingReminder(queueId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [...KEY] });
     },

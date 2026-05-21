@@ -35,6 +35,7 @@ import { ContactDetailPage } from './pages/ContactDetail';
 import { NotesPage } from './pages/Notes';
 import { NoteNewPage } from './pages/NoteNew';
 import { NoteDetailPage } from './pages/NoteDetail';
+import { NotificationsPage } from './pages/Notifications';
 import { AuthCallbackPage } from './pages/AuthCallback';
 import { Toaster } from './components/ui/toaster';
 
@@ -95,6 +96,7 @@ export default function App() {
           <Route path="/notes" element={<NotesPage />} />
           <Route path="/notes/new" element={<NoteNewPage />} />
           <Route path="/notes/:id" element={<NoteDetailPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           {DesignPreviewPage && (
             <Route

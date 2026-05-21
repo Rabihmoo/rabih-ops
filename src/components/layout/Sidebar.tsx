@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
+  Bell,
   CalendarDays,
   Inbox,
   LayoutDashboard,
@@ -48,6 +49,7 @@ const NAV_SECTIONS: NavSection[] = [
       { to: '/tasks', label: 'Tasks', icon: ListChecks },
       { to: '/fixed-tasks', label: 'Fixed tasks', icon: Repeat },
       { to: '/calendar', label: 'Calendar', icon: CalendarDays },
+      { to: '/notifications', label: 'Notifications', icon: Bell },
     ],
   },
   {
