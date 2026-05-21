@@ -159,19 +159,20 @@ interface PageCapture {
 }
 
 const PHASE_4_PAGES: PageCapture[] = [
-  { slug: 'dashboard',   route: '/',            settle: 'h1' },
-  { slug: 'inbox',       route: '/inbox',       settle: 'h1' },
-  { slug: 'tasks',       route: '/tasks',       settle: 'h1' },
-  { slug: 'follow-ups',  route: '/follow-ups',  settle: 'h1' },
-  { slug: 'settings',    route: '/settings',    settle: 'h1' },
-  { slug: 'directory',   route: '/directory',   settle: 'h1' },
-  { slug: 'companies',   route: '/companies',   settle: 'h1' },
-  { slug: 'contacts',    route: '/contacts',    settle: 'h1' },
-  { slug: 'documents',   route: '/documents',   settle: 'h1' },
-  { slug: 'notes',       route: '/notes',       settle: 'h1' },
-  { slug: 'purchases',   route: '/purchases',   settle: 'h1' },
-  { slug: 'inspections', route: '/inspections', settle: 'h1' },
-  { slug: 'fixed-tasks', route: '/fixed-tasks', settle: 'h1' },
+  { slug: 'dashboard',     route: '/',              settle: 'h1' },
+  { slug: 'inbox',         route: '/inbox',         settle: 'h1' },
+  { slug: 'tasks',         route: '/tasks',         settle: 'h1' },
+  { slug: 'follow-ups',    route: '/follow-ups',    settle: 'h1' },
+  { slug: 'settings',      route: '/settings',      settle: 'h1' },
+  { slug: 'directory',     route: '/directory',     settle: 'h1' },
+  { slug: 'companies',     route: '/companies',     settle: 'h1' },
+  { slug: 'contacts',      route: '/contacts',      settle: 'h1' },
+  { slug: 'documents',     route: '/documents',     settle: 'h1' },
+  { slug: 'notes',         route: '/notes',         settle: 'h1' },
+  { slug: 'purchases',     route: '/purchases',     settle: 'h1' },
+  { slug: 'inspections',   route: '/inspections',   settle: 'h1' },
+  { slug: 'fixed-tasks',   route: '/fixed-tasks',   settle: 'h1' },
+  { slug: 'notifications', route: '/notifications', settle: 'h1' },
 ];
 
 // Desktop captures.

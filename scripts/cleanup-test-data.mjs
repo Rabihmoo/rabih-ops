@@ -320,6 +320,12 @@ update notifications_queue
     or recipient_id in (select id from _test_users)
  );
 
+-- 3b. Hard-delete notification_log rows for fixture users so /notifications
+-- starts clean on each CI run and the topbar badge count is deterministic.
+-- The log is append-only and operator-private — no soft-delete column.
+delete from notification_log
+ where recipient_id in (select id from _test_users);
+
 -- 4. Soft-delete the parents themselves.
 update tasks             set deleted_at = now() where id in (select id from _test_tasks);
 update follow_ups        set deleted_at = now() where id in (select id from _test_follow_ups);
