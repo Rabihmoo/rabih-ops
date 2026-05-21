@@ -111,6 +111,12 @@ export async function markAllNotificationsRead(): Promise<number> {
   return data ?? 0;
 }
 
+export async function cancelMyPendingReminder(queueId: number): Promise<unknown> {
+  return await callRpc<unknown>('rpc_cancel_my_pending_reminder', {
+    p_queue_id: queueId,
+  });
+}
+
 // =====================================================================
 // Day-grouping helper (pure, tested)
 // =====================================================================
