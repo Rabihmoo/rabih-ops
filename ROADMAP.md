@@ -9,6 +9,116 @@ This document is a plan, not a license to ship. See **Project rules** below.
 
 ---
 
+## Product north star
+
+Quick product note (Gemini feedback, kept here so it doesn't drift into a slide
+deck nobody reads):
+
+- **RabihOS is a daily operations command center, not a generic Notion clone.**
+  The home page is a launchpad for the next decision, not a wiki landing page.
+- The compounding investments are: a strong **dashboard**, a fast **global
+  search**, a reliable **reminder/notification center**, a tight **linked-
+  records graph**, **supplier intelligence** rolled up from real operational
+  events, and — only after those are stable — a **safe assistant** that reads
+  the graph and surfaces context.
+- Everything below should reinforce that loop. If a phase doesn't, it's a
+  candidate for Phase 10 (gated) rather than V1.
+
+---
+
+## Current shipped state (2026-05-21)
+
+This is the actual state of `main`, derived from git history and the live
+repo — not a wishlist. Items here override any "queued" / "in progress" label
+that may still appear in older parts of this document.
+
+**Phase 0.5 — Gmail Today View** — *largely shipped*
+- `src/lib/timezone.ts` with `PROJECT_TZ='Africa/Maputo'` + `localMidnightUnix`
+  helper (chunk G.1). Vitest covers DST + cross-year boundary cases.
+- Edge Function `gmail-list-today` deployed; reuses Calendar's shared OAuth
+  refresh helper (chunk G.2).
+- Client lib + `useGmailToday` hook + persister opt-out for **both** Gmail
+  queries (`meta.persist=false`) (chunk G.3).
+- Dashboard cards live: `DashboardTodayEmails`, `DashboardImportantEmails`
+  (renamed "Important this week", capped at last 7 days),
+  `DashboardPendingEmails` (chunk G.4).
+- **Today Focused / All toggle** on the Today card (Focused = `in:inbox`,
+  All = include promotions; Sent mode also shipped via 57f3e52).
+- **HTML entity decoding** for Gmail snippets (232aae0).
+- **`email_states` table + state RPCs** + status pill + row action menu on
+  email cards: Pending / Done / Followed up / Dismissed / Clear (6f41ef6,
+  df1b9a1, 9e6d2f3, 2b810ef).
+- **Gmail "Linked to task / follow-up" pills** on email rows via
+  `rpc_email_link_presence_for_messages` (db61186, b2edb20).
+- **Create follow-up from email row** (b394f58).
+- Remaining: chunk **G.5** (Inbox `Today's emails` chip + section headers
+  in `ActivityInbox.tsx`) is **not yet wired**.
+
+**Phase 1 — Business Memory (Notes UI)** — *shipped*
+- Notes table + visibility rules already in staging (`20260528_notes_*`).
+- 4 RPCs + lib + hook + filter components shipped (44667f9).
+- `/notes`, `/notes/new`, `/notes/:id` pages + sidebar wiring (e2ef584).
+- Playwright coverage + screenshot script (997c01b).
+
+**Phase 2 — Relationship Graph (linked records)** — *shipped*
+- `record_links` foundation (56283e3), widened to companies/contacts
+  (8eeaf0f) and notes (79d67c9).
+- Lib + hooks + grouping helper kept pure for Vitest (5bcd340, c9640eb).
+- Read-only `LinkedRecordsPanel` on NoteDetail (bd80ea1) and TaskDetail
+  (8cb246d, 1b0fa61), then mounted on **all remaining detail pages**
+  (55bfc20).
+- Internal link picker (`RecordLinkDialog`, chunk H4.4 — 67e6e55).
+- Unlink action with permission gating (chunk H4.5 — ac79f37).
+- Display fixes: `to_entity_title` projection + stacked mobile rows
+  (6570c95, 69e88b5, 9ec1971).
+
+**Calendar Inbox (Phase C)** — *foundation + page shell shipped*
+- C1 — Calendar Inbox foundation (PR #2, 45c7246).
+- C2 — `/calendar` page shell (PR #3, 0c0da34).
+- Follow-up calendar events + invitees + reminder picker + quick action menu
+  + history on detail page (5ec2efb, 9de5ef3, b48d291, b5c04df, 52471a6).
+
+**Infra / hygiene**
+- 20260612 migration: OAuth `needs_reconnect` flag — dashboards now show
+  amber "Reconnect in Settings" instead of raw JSON (PR #5, 62b0a90).
+- Test data isolation: `scripts/cleanup-test-data.mjs`, CI cleanup step,
+  `tests/helpers/e2e-title.ts`, `[E2E] ` allowlist (PR #6, acd70ea).
+- Google OAuth app moved Testing → In Production 2026-05-19 (no more 7-day
+  token expiry).
+- Staging drift remediation: H3.3 widened function bodies restored
+  (d9114f4, 1b47213); `20260527` migration made replay-safe (29369d0);
+  `db:push` no longer trips on the notes record-links bridge.
+
+---
+
+## Next recommended priorities
+
+Suggested order. Each item still requires a design-only plan + operator
+green-light per the Project rules below before code lands.
+
+1. **Phase 3 — Global Search / Cmd-K.** 11+ entity types and growing; click
+   nav breaks down past ~50 of each. Highest compounding ROI now that
+   linked records ship — search is the spine that makes the graph fast.
+2. **Phase 7 — Reminder / Notification Center.** The reminder engine already
+   fires telegram + email; the missing surface is a single chronological
+   in-app log + topbar badge + mute. Cheap win, big perceived quality.
+3. **Phase 5 — Supplier / Company Intelligence.** Rollup the linked-records
+   graph into company stats (recent purchases, lead time, last contact,
+   open follow-ups). Unlocks the "should I keep using this supplier?"
+   question.
+4. **Gmail Inbox tabs (closes Phase 0.5 G.5, plus per-tab views).** Finish
+   the `Today's emails` chip in ActivityInbox; consider lightweight tabs
+   for Focused / All / Sent / Pending inside the inbox surface (no write
+   scopes added).
+5. **Phase 8 — Daily Command Center upgrade.** Quick-capture rows, pinning,
+   "morning triage" rollups. Best **after** search + reminders so the
+   dashboard can compose them rather than reinvent them.
+6. **Assistant (later).** Reads the link graph + audit log to surface
+   context; never writes. Phase 10 gated; do not draft until items 1–5 are
+   stable in production.
+
+---
+
 ## Project rules
 
 These bind every chunk of work below. They are non-negotiable unless explicitly
@@ -46,24 +156,30 @@ relaxed by the operator (Rabih) in a written instruction.
 
 ## Phase index
 
-| #    | Phase                                                      | Status      |
-|------|------------------------------------------------------------|-------------|
-| 0    | Finish Current Work                                        | in progress |
-| 0.5  | Gmail Today View                                           | in progress |
-| 1    | Business Memory — Notes UI                                 | shipped     |
-| 2  | Relationship Graph — `record_links` notes + Universal Panel  | in progress |
-| 3  | Find Anything Fast — global search + Cmd-K                   | queued      |
-| 4  | Full Visual Consistency — maintenance / audit                | continuous  |
-| 5  | Supplier / Company Intelligence                              | queued      |
-| 6  | Smart Suggestions v2                                         | queued      |
-| 7  | Reminder / Notification Center                               | queued      |
-| 8  | Daily Command Center Upgrade                                 | queued      |
-| 9  | Reports                                                      | queued      |
-| 10 | Optional Future Power                                        | gated       |
+| #    | Phase                                                      | Status                     |
+|------|------------------------------------------------------------|----------------------------|
+| 0    | Finish Current Work                                        | shipped                    |
+| 0.5  | Gmail Today View                                           | G.1–G.4 shipped; G.5 open  |
+| 1    | Business Memory — Notes UI                                 | shipped                    |
+| 2  | Relationship Graph — `record_links` notes + Universal Panel  | shipped                    |
+| 3  | Find Anything Fast — global search + Cmd-K                   | next                       |
+| 4  | Full Visual Consistency — maintenance / audit                | continuous                 |
+| 5  | Supplier / Company Intelligence                              | queued                     |
+| 6  | Smart Suggestions v2                                         | queued                     |
+| 7  | Reminder / Notification Center                               | queued (recommended next)  |
+| 8  | Daily Command Center Upgrade                                 | queued                     |
+| 9  | Reports                                                      | queued                     |
+| 10 | Optional Future Power                                        | gated                      |
+|  —  | Calendar Inbox (Phase C) — foundation + page shell           | shipped (C1, C2)           |
 
 ---
 
 ## Phase 0 — Finish Current Work
+
+**Status: shipped.** Lint warnings resolved via file splits (db716c8), the
+`rpc_list_tasks` ORDER-BY-before-LIMIT fix landed (71b781e), and the design-
+preview screenshot script captured the Phase 4.4 surfaces (249ee5e, ba0aaa2).
+Section retained for historical context.
 
 ### Goal
 Land any leftovers from the Phase 4.1 → 4.4 visual-consistency arc and the
@@ -132,6 +248,14 @@ harder to reason about.
 ---
 
 ## Phase 0.5 — Gmail Today View
+
+**Status: G.1 → G.4 shipped; G.5 open.** The dashboard side is live with
+three cards (Today, Important this week, Pending) plus row-level status pill
++ action menu, plus the Focused/All/Sent toggle, plus linked-to pills and
+"create follow-up from email row". HTML entity decoding and `email_states`
+taxonomy shipped alongside. **Open work:** wire the `Today's emails` chip +
+section headers into `ActivityInbox.tsx` (chunk G.5) to mirror the dashboard
+filter inside the Inbox surface.
 
 ### Goal
 Show today's operational email in the Dashboard and the Activity Inbox
@@ -290,21 +414,21 @@ inbox clone.
 - CI green at the head of the commit that closes the phase.
 
 ### Chunk breakdown
-- **G.1** `src/lib/timezone.ts` exporting `PROJECT_TZ = 'Africa/Maputo'`
-  and `localMidnightUnix(date, tz)` helper. Vitest. Touches nothing
-  else. Push.
-- **G.2** Edge Function `gmail-list-today` deployed to staging. No
-  client wiring. Manual smoke against the operator's JWT to verify
-  payload shape and query correctness. Push (deploy is via
-  `supabase functions deploy`, not in the repo build).
-- **G.3** Client lib (`gmail-query.ts`, `gmail-compose.ts`) + hook
-  `useGmailToday` + persister opt-out for **both** Gmail queries
-  (`meta.persist=false`) + Vitest for compose/dedupe. No UI wiring
-  yet. Push.
-- **G.4** Dashboard "From today" card. Screenshots (dark/light ×
-  desktop/mobile) for `dashboard-*` updated. Push.
-- **G.5** Inbox `Today's emails` chip + section headers. Playwright
-  extension. Screenshots for the populated inbox view. Push.
+- **G.1** — ✅ shipped (3225560). `src/lib/timezone.ts` exporting
+  `PROJECT_TZ = 'Africa/Maputo'` and `localMidnightUnix(date, tz)` helper +
+  Vitest.
+- **G.2** — ✅ shipped (3e9e5b7). Edge Function `gmail-list-today` deployed
+  to staging.
+- **G.3** — ✅ shipped (eba0beb). Client lib + `useGmailToday` hook +
+  persister opt-out for both Gmail queries + Vitest for compose/dedupe.
+- **G.4** — ✅ shipped (4c821a6 + follow-ups df1b9a1 / 2b810ef / 232aae0 /
+  b2edb20 / b394f58 / 57f3e52). Dashboard cards: Today (with Focused / All
+  / Sent toggle), Important this week (7-day cap), Pending. Status pill +
+  row action menu, linked-to-task/follow-up pills, create-follow-up-from-
+  email, HTML entity decoding.
+- **G.5** — ⏳ open. Inbox `Today's emails` chip + section headers in
+  `ActivityInbox.tsx`. Playwright extension. Screenshots for the populated
+  inbox view.
 
 ### Operator pre-flight (one-time, before G.2 deploy)
 - Confirm the operator's Gmail account is currently connected; if not,
@@ -316,6 +440,10 @@ inbox clone.
 ---
 
 ## Phase 1 — Business Memory (Notes UI)
+
+**Status: shipped.** All 4 chunks landed: RPCs + lib + hook + filter
+components (44667f9), pages + sidebar (e2ef584), Playwright + screenshot
+script (997c01b). Notes are a first-class linkable entity via Phase 2.
 
 ### Goal
 Give Rabih a first-class place to write durable notes (meeting summaries,
@@ -377,14 +505,23 @@ schema into a usable module.
 - CI green.
 
 ### Chunk breakdown
-- **1.1** Migration with 4 RPCs + lib + hook.
-- **1.2** `/notes` list page + nav.
-- **1.3** `/notes/new` + `/notes/:id` form/editor.
-- **1.4** Tests + screenshot captures.
+- **1.1** — ✅ shipped. Migration + 4 RPCs + lib + hook (44667f9).
+- **1.2** — ✅ shipped. `/notes` list page + nav (e2ef584).
+- **1.3** — ✅ shipped. `/notes/new` + `/notes/:id` form/editor (e2ef584).
+- **1.4** — ✅ shipped. Tests + screenshot captures (997c01b).
 
 ---
 
 ## Phase 2 — Relationship Graph
+
+**Status: shipped.** `record_links` foundation, widened to cover note ↔
+everything (79d67c9). Lib + hook + grouping helper kept pure for Vitest
+(5bcd340, c9640eb). `LinkedRecordsPanel` mounted on NoteDetail, TaskDetail,
+and **all remaining detail pages** (bd80ea1 → 8cb246d → 55bfc20). Internal
+link picker (H4.4) and unlink action with permission gating (H4.5) shipped.
+Display fixes for `to_entity_title` projection + stacked mobile rows
+(6570c95, 69e88b5, 9ec1971). Any follow-up work happens under Phase 4
+(continuous visual audit) or as part of Phase 5 (supplier intel rollup).
 
 ### Goal
 Make any two entities linkable, and surface those links uniformly on every
@@ -445,16 +582,24 @@ Until linking is one component everywhere, the graph is invisible.
 - CI green.
 
 ### Chunk breakdown
-- **2.1** Migration (if needed) + RPC verification.
-- **2.2** Lib + hook + permission helpers.
-- **2.3** `LinkedRecordsPanel` + `LinkRecordModal` components.
-- **2.4** Wire into 9 detail pages (split into 2 sub-chunks if a single PR
-  feels too wide).
-- **2.5** Tests + screenshots.
+- **2.1** — ✅ shipped. `record_links` widened to cover companies/contacts
+  (8eeaf0f) and notes (79d67c9); RPCs verified.
+- **2.2** — ✅ shipped. Lib + hook + permission helpers (5bcd340, c9640eb).
+- **2.3** — ✅ shipped. `LinkedRecordsPanel` (bd80ea1) + `RecordLinkDialog`
+  internal link picker (67e6e55) + unlink action (ac79f37).
+- **2.4** — ✅ shipped. Wired into NoteDetail, TaskDetail, then **all
+  remaining detail pages** (bd80ea1 → 8cb246d → 55bfc20).
+- **2.5** — partial. TaskDetail panel coverage exists (1b0fa61); full
+  screenshot capture set across all 9 pages may still want a sweep — track
+  under Phase 4 continuous audit.
 
 ---
 
 ## Phase 3 — Find Anything Fast
+
+**Status: next.** Recommended starting point for the next major chunk of
+work — Phases 1 and 2 are stable, so a typed search across the 11+ entity
+types delivers the biggest perceived speed jump now.
 
 ### Goal
 Single keyboard-driven palette (`Cmd-K` / `Ctrl-K`) that searches across
@@ -706,6 +851,10 @@ multiple tables.
 ---
 
 ## Phase 7 — Reminder / Notification Center
+
+**Status: recommended after Phase 3.** The reminder engine already fires on
+telegram + email — adding the in-app surface is mostly UI plus one channel
+enum value, which makes this the cheapest meaningful win after search.
 
 ### Goal
 A single place in the app where pending reminders, snoozed items, and
