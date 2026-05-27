@@ -19,6 +19,7 @@ import { COMPANY_CATEGORY_LABEL } from '@/lib/companies';
 import { BRANCHES, type BranchCode } from '@/lib/branches';
 import type { CompanyCategory } from '@/types/database';
 import { ContactListItem } from '@/components/contacts/ContactListItem';
+import { CompanyIntelligenceCard } from '@/components/companies/CompanyIntelligenceCard';
 import { LinkedRecordsPanel } from '@/components/shared/LinkedRecordsPanel';
 
 export function CompanyDetailPage() {
@@ -273,6 +274,12 @@ export function CompanyDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <CompanyIntelligenceCard
+        companyId={id}
+        companyName={c.name}
+        companyBranch={c.branches?.[0] ?? null}
+      />
 
       <LinkedRecordsPanel entityType="company" entityId={id} />
 
