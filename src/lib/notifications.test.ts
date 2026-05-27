@@ -4,7 +4,7 @@ import {
   type FiredNotificationRow,
   type NotificationRow,
   type PendingNotificationRow,
-} from './notifications';
+} from './notifications-display';
 
 // Helpers — minimal valid rows. Tests only care about `effective_at`
 // and `state`; other fields are filled with believable placeholders so
