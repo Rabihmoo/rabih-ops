@@ -24,6 +24,7 @@ function row(overrides: Partial<RecordRelation>): RecordRelation {
     to_entity_type: null,
     to_entity_id: null,
     to_entity_title: null,
+    to_entity_status: null,
     external_app: null,
     external_record_type: null,
     external_record_id: null,
