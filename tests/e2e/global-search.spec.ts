@@ -181,8 +181,8 @@ test.describe('Global search — mobile', () => {
       expect(box.y + box.height).toBeGreaterThan(viewportHeight - 10);
     }
 
-    // Close button should be visible on mobile
-    await page.getByLabel('Close').click();
+    // Close via Escape (avoids strict-mode ambiguity with MobileDrawer close button)
+    await page.keyboard.press('Escape');
     await expect(palette).not.toBeVisible();
   });
 });
