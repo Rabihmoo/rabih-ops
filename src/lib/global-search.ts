@@ -259,3 +259,47 @@ export function pushRecent(
   const filtered = current.filter((r) => `${r.type}:${r.id}` !== key);
   return [row, ...filtered].slice(0, RECENTS_LIMIT);
 }
+
+// =====================================================================
+// UI helpers (pure, tested)
+// =====================================================================
+
+/** Wrapping index cycle for keyboard navigation.
+ *  Returns -1 when the list is empty. */
+export function cycleIndex(current: number, delta: number, length: number): number {
+  if (length === 0) return -1;
+  return ((current + delta) % length + length) % length;
+}
+
+const ENTITY_TYPE_LABELS: Record<SearchEntityType, string> = {
+  task: 'Task',
+  follow_up: 'Follow-up',
+  note: 'Note',
+  document: 'Document',
+  purchase: 'Purchase',
+  inspection: 'Inspection',
+  company: 'Company',
+  contact: 'Contact',
+};
+
+export function entityTypeLabel(type: SearchEntityType): string {
+  return ENTITY_TYPE_LABELS[type];
+}
+
+/** Human-friendly relative time string. No date-fns — keeps it light. */
+export function relativeTime(iso: string, now: Date = new Date()): string {
+  const ms = now.getTime() - new Date(iso).getTime();
+  if (ms < 0) return 'just now'; // future timestamps treated as "just now"
+  const sec = Math.floor(ms / 1000);
+  if (sec < 60) return 'just now';
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hrs = Math.floor(min / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  // Older than a week — show short date
+  const d = new Date(iso);
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${monthNames[d.getMonth()]} ${d.getDate()}`;
+}

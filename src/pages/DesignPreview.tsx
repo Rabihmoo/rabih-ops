@@ -31,6 +31,7 @@ import { ProgressBar } from '@/components/ui/progress-bar';
 import { DashboardTile } from '@/components/ui/dashboard-tile';
 import { AmbientBackground } from '@/components/ui/ambient-background';
 import { SearchInput } from '@/components/ui/search-input';
+import { CommandPalette } from '@/components/shared/CommandPalette';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { PageHeader, HeaderStat } from '@/components/shared/PageHeader';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
@@ -78,8 +79,22 @@ function Section({
   );
 }
 
+// Static fixtures for CommandPalette dev-only preview.
+const STATIC_SEARCH_RESULTS: import('@/lib/global-search').SearchResultRow[] = [
+  { id: '1', type: 'task', title: 'Restock charcoal bags', branch: 'bbqhouse', updated_at: new Date(Date.now() - 3600_000).toISOString(), href: '/tasks/1' },
+  { id: '2', type: 'follow_up', title: 'Call SALT refrigerator supplier', branch: 'salt', updated_at: new Date(Date.now() - 7200_000).toISOString(), href: '/follow-ups/2' },
+  { id: '3', type: 'document', title: 'Health inspection certificate 2026', branch: 'centralkitchen', updated_at: new Date(Date.now() - 86400_000).toISOString(), href: '/documents/3' },
+  { id: '4', type: 'company', title: 'Al Amin Supplies', branch: null, updated_at: new Date(Date.now() - 172800_000).toISOString(), href: '/companies/4' },
+];
+
+const STATIC_RECENTS: import('@/lib/global-search').SearchResultRow[] = [
+  STATIC_SEARCH_RESULTS[0],
+  STATIC_SEARCH_RESULTS[2],
+];
+
 export function DesignPreviewPage() {
   const { mode, setMode } = useLocalThemeOverride();
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   return (
     <div className="space-y-8 pb-16">
@@ -453,6 +468,17 @@ export function DesignPreviewPage() {
             </p>
           </div>
         </div>
+      </Section>
+
+      {/* Command Palette (Phase 3) */}
+      <Section title="Command Palette" description="Cmd-K search palette. Click Open to preview with static fixtures.">
+        <Button onClick={() => setPaletteOpen(true)}>Open palette</Button>
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          devResults={STATIC_SEARCH_RESULTS}
+          devRecents={STATIC_RECENTS}
+        />
       </Section>
     </div>
   );
