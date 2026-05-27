@@ -74,6 +74,10 @@ export interface RecordRelation {
   //                                                     first-80-of-body,
   //                                                     'Untitled note')
   to_entity_title: string | null;
+  // Status / result of the linked entity. Populated for task (status),
+  // follow_up (status), purchase_request (status), inspection (result),
+  // document (status). NULL for external arms, notes, companies, contacts.
+  to_entity_status: string | null;
   external_app: RecordLinkExternalApp | null;
   external_record_type: string | null;
   external_record_id: string | null;
