@@ -6,8 +6,11 @@ import {
   RECENTS_STORAGE_KEY,
   companyToResultRow,
   contactToResultRow,
+  cycleIndex,
   documentToResultRow,
+  entityTypeLabel,
   followUpToResultRow,
+  relativeTime,
   inspectionToResultRow,
   loadRecents,
   noteToResultRow,
@@ -409,5 +412,76 @@ describe('recents — selection round-trip via storage', () => {
     saveRecents(pushRecent([], a), storage);
     saveRecents(pushRecent(loadRecents(storage), b), storage);
     expect(loadRecents(storage)).toEqual([b, a]);
+  });
+});
+
+// =====================================================================
+// cycleIndex
+// =====================================================================
+
+describe('cycleIndex', () => {
+  it('returns -1 for empty list', () => {
+    expect(cycleIndex(0, 1, 0)).toBe(-1);
+  });
+
+  it('moves forward', () => {
+    expect(cycleIndex(0, 1, 5)).toBe(1);
+    expect(cycleIndex(3, 1, 5)).toBe(4);
+  });
+
+  it('wraps forward', () => {
+    expect(cycleIndex(4, 1, 5)).toBe(0);
+  });
+
+  it('moves backward', () => {
+    expect(cycleIndex(3, -1, 5)).toBe(2);
+  });
+
+  it('wraps backward', () => {
+    expect(cycleIndex(0, -1, 5)).toBe(4);
+  });
+});
+
+// =====================================================================
+// entityTypeLabel
+// =====================================================================
+
+describe('entityTypeLabel', () => {
+  it('returns human labels', () => {
+    expect(entityTypeLabel('task')).toBe('Task');
+    expect(entityTypeLabel('follow_up')).toBe('Follow-up');
+    expect(entityTypeLabel('company')).toBe('Company');
+  });
+});
+
+// =====================================================================
+// relativeTime
+// =====================================================================
+
+describe('relativeTime', () => {
+  const now = new Date('2026-06-15T12:00:00Z');
+
+  it('returns "just now" for < 60s', () => {
+    expect(relativeTime('2026-06-15T11:59:30Z', now)).toBe('just now');
+  });
+
+  it('returns minutes', () => {
+    expect(relativeTime('2026-06-15T11:55:00Z', now)).toBe('5m ago');
+  });
+
+  it('returns hours', () => {
+    expect(relativeTime('2026-06-15T09:00:00Z', now)).toBe('3h ago');
+  });
+
+  it('returns days', () => {
+    expect(relativeTime('2026-06-13T12:00:00Z', now)).toBe('2d ago');
+  });
+
+  it('returns short date for > 7 days', () => {
+    expect(relativeTime('2026-06-01T12:00:00Z', now)).toBe('Jun 1');
+  });
+
+  it('treats future timestamps as "just now"', () => {
+    expect(relativeTime('2026-06-16T00:00:00Z', now)).toBe('just now');
   });
 });
