@@ -349,4 +349,51 @@ async function loginContext(viewport: Viewport): Promise<BrowserContext> {
   await ctx.close();
 }
 
+// -------------------------------------------------------------------
+// 9. Intelligence card captures — navigate to first company/contact
+// detail, wait for the intelligence card, then capture.
+// Desktop + mobile × dark + light = 8 captures total.
+// -------------------------------------------------------------------
+async function captureIntelligenceCard(
+  slug: string,
+  listRoute: string,
+  cardTestId: string,
+  viewport: { width: number; height: number },
+) {
+  const ctx = await makeContext(viewport);
+  const page = await ctx.newPage();
+  const suffix = viewport.width < 500 ? '-mobile' : '';
+  for (const theme of ['dark', 'light'] as const) {
+    await gotoRoute(page, listRoute, 'h1');
+    await applyTheme(page, theme);
+    // Click first item to navigate to detail
+    const row = page.locator('main ul li a, main ul li button').first();
+    try {
+      await row.waitFor({ timeout: 5000 });
+    } catch {
+      console.log(`⚠ ${slug}${suffix}-${theme}: no rows, skipping`);
+      continue;
+    }
+    await row.click();
+    // Wait for intelligence card
+    try {
+      await page.waitForSelector(`[data-testid="${cardTestId}"]`, { timeout: 8000 });
+    } catch {
+      console.log(`⚠ ${slug}${suffix}-${theme}: intelligence card not found, skipping`);
+      continue;
+    }
+    await page.waitForTimeout(800);
+    await applyTheme(page, theme);
+    const out = path.join(OUT_DIR, `${slug}${suffix}-${theme}.png`);
+    await page.screenshot({ path: out, fullPage: false });
+    console.log(`✓ ${out}`);
+  }
+  await ctx.close();
+}
+
+await captureIntelligenceCard('company-intel', '/companies', 'company-intelligence-card', { width: 1440, height: 900 });
+await captureIntelligenceCard('company-intel', '/companies', 'company-intelligence-card', { width: 390, height: 844 });
+await captureIntelligenceCard('contact-intel', '/contacts', 'contact-intelligence-card', { width: 1440, height: 900 });
+await captureIntelligenceCard('contact-intel', '/contacts', 'contact-intelligence-card', { width: 390, height: 844 });
+
 await browser.close();
