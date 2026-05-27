@@ -305,4 +305,48 @@ async function loginContext(viewport: Viewport): Promise<BrowserContext> {
   await mobile.close();
 }
 
+// -------------------------------------------------------------------
+// 8. Command Palette captures — open palette via DesignPreview button,
+// type a query to show static fixtures, then capture the palette overlay.
+// Desktop + mobile × dark + light = 4 captures.
+// -------------------------------------------------------------------
+{
+  const ctx = await makeContext({ width: 1440, height: 900 });
+  const page = await ctx.newPage();
+  for (const theme of ['dark', 'light'] as const) {
+    await gotoPreview(page);
+    await applyTheme(page, theme);
+    // Click the "Open palette" button in the Command Palette section
+    await page.getByRole('button', { name: 'Open palette' }).click();
+    await page.waitForSelector('[data-testid="command-palette"]', { timeout: 3000 });
+    // Type enough chars to trigger the static devResults
+    await page.getByTestId('command-palette-input').fill('charcoal');
+    await page.waitForTimeout(300);
+    const out = path.join(OUT_DIR, `command-palette-${theme}.png`);
+    await page.screenshot({ path: out, fullPage: false });
+    console.log(`✓ ${out}`);
+    // Close palette before next iteration
+    await page.keyboard.press('Escape');
+  }
+  await ctx.close();
+}
+
+{
+  const ctx = await makeContext({ width: 390, height: 844 });
+  const page = await ctx.newPage();
+  for (const theme of ['dark', 'light'] as const) {
+    await gotoPreview(page);
+    await applyTheme(page, theme);
+    await page.getByRole('button', { name: 'Open palette' }).click();
+    await page.waitForSelector('[data-testid="command-palette"]', { timeout: 3000 });
+    await page.getByTestId('command-palette-input').fill('charcoal');
+    await page.waitForTimeout(300);
+    const out = path.join(OUT_DIR, `command-palette-mobile-${theme}.png`);
+    await page.screenshot({ path: out, fullPage: false });
+    console.log(`✓ ${out}`);
+    await page.keyboard.press('Escape');
+  }
+  await ctx.close();
+}
+
 await browser.close();
