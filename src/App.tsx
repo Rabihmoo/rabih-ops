@@ -37,6 +37,8 @@ import { NoteNewPage } from './pages/NoteNew';
 import { NoteDetailPage } from './pages/NoteDetail';
 import { NotificationsPage } from './pages/Notifications';
 import { AuthCallbackPage } from './pages/AuthCallback';
+import { ReportsPage } from './pages/Reports';
+import { AdminCeoGuard } from './components/auth/AdminCeoGuard';
 import { Toaster } from './components/ui/toaster';
 
 // Dev-only design preview. Vite tree-shakes the lazy import in
@@ -98,6 +100,9 @@ export default function App() {
           <Route path="/notes/:id" element={<NoteDetailPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route element={<AdminCeoGuard />}>
+            <Route path="/reports" element={<ReportsPage />} />
+          </Route>
           {DesignPreviewPage && (
             <Route
               path="/design-preview"
