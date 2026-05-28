@@ -2,9 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   cancelMyPendingReminder,
   countUnreadNotifications,
+  listNotificationMutes,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  muteNotificationKind,
+  unmuteNotificationKind,
   type ListNotificationsOptions,
 } from '@/lib/notifications';
 
@@ -65,6 +68,45 @@ export function useCancelMyPendingReminder() {
     mutationFn: (queueId: number) => cancelMyPendingReminder(queueId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [...KEY] });
+    },
+  });
+}
+
+// =====================================================================
+// Mute hooks
+// =====================================================================
+
+const MUTE_KEY = [...KEY, 'mutes'] as const;
+
+export function useNotificationMutes() {
+  return useQuery({
+    queryKey: [...MUTE_KEY],
+    queryFn: () => listNotificationMutes(),
+    staleTime: 60_000,
+    ...NO_PERSIST,
+  });
+}
+
+export function useMuteNotificationKind() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (kind: string) => muteNotificationKind(kind),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...MUTE_KEY] });
+      qc.invalidateQueries({ queryKey: [...KEY, 'list'] });
+      qc.invalidateQueries({ queryKey: [...KEY, 'unread-count'] });
+    },
+  });
+}
+
+export function useUnmuteNotificationKind() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (kind: string) => unmuteNotificationKind(kind),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...MUTE_KEY] });
+      qc.invalidateQueries({ queryKey: [...KEY, 'list'] });
+      qc.invalidateQueries({ queryKey: [...KEY, 'unread-count'] });
     },
   });
 }
