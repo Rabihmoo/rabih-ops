@@ -39,6 +39,7 @@ import {
 import { BRANCHES, type BranchCode } from '@/lib/branches';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { TodayRollupRow } from '@/components/dashboard/TodayRollupRow';
+import { QuickCaptureRow } from '@/components/dashboard/QuickCaptureRow';
 import { DashboardCalendarToday } from '@/components/dashboard/DashboardCalendarToday';
 import { DashboardImportantEmails } from '@/components/dashboard/DashboardImportantEmails';
 import { DashboardPendingEmails } from '@/components/dashboard/DashboardPendingEmails';
@@ -504,6 +505,8 @@ export function DashboardPage() {
         onDueSoonClick={goToTasksBucket('today')}
         onWaitingClick={goToTasksBucket('waiting')}
       />
+
+      <QuickCaptureRow />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         <DashboardTile
