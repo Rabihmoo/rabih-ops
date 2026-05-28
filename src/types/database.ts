@@ -1581,6 +1581,7 @@ export type Database = {
         Row: {
           branches: string[]
           created_at: string
+          dashboard_pins: string[]
           email: string
           full_name: string
           id: string
@@ -1591,6 +1592,7 @@ export type Database = {
         Insert: {
           branches?: string[]
           created_at?: string
+          dashboard_pins?: string[]
           email: string
           full_name: string
           id: string
@@ -1601,6 +1603,7 @@ export type Database = {
         Update: {
           branches?: string[]
           created_at?: string
+          dashboard_pins?: string[]
           email?: string
           full_name?: string
           id?: string
