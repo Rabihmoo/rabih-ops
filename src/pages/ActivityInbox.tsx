@@ -48,6 +48,7 @@ const FILTER_LABEL: Record<FilterKey, string> = {
   critical: 'critical',
   overdue: 'overdue',
   today: "due today",
+  today_emails: "today's emails",
   gmail: 'email',
   calendar: 'calendar',
   task: 'task',
@@ -202,18 +203,90 @@ export function ActivityInboxPage() {
           filterLabel={FILTER_LABEL[filter]}
         />
       ) : (
-        <ul className="space-y-2" data-testid="inbox-list">
-          {filtered.map((item) => (
-            <li key={item.id}>
-              <ActivityRow
-                item={item}
-                suggestions={suggestionsByItem.get(item.id) ?? []}
-                onDismissSuggestion={handleDismissSuggestion}
-              />
-            </li>
-          ))}
-        </ul>
+        <SectionedList
+          items={filtered}
+          suggestionsByItem={suggestionsByItem}
+          onDismissSuggestion={handleDismissSuggestion}
+        />
       )}
+    </div>
+  );
+}
+
+// =========================================================
+// Sectioned list — groups items by severity with headers
+// =========================================================
+
+const SEVERITY_ORDER = ['critical', 'overdue', 'due_today', 'soon', 'info'] as const;
+
+const SEVERITY_LABEL: Record<string, string> = {
+  critical: 'Critical',
+  overdue: 'Overdue',
+  due_today: 'Due today',
+  soon: 'Coming up',
+  info: 'Other',
+};
+
+function SectionedList({
+  items,
+  suggestionsByItem,
+  onDismissSuggestion,
+}: {
+  items: import('@/lib/activity-inbox').ActivityItem[];
+  suggestionsByItem: Map<string, Suggestion[]>;
+  onDismissSuggestion: (id: string) => void;
+}) {
+  // Group items by severity
+  const groups = useMemo(() => {
+    const map = new Map<string, typeof items>();
+    for (const item of items) {
+      const key = item.severity;
+      const list = map.get(key) ?? [];
+      list.push(item);
+      map.set(key, list);
+    }
+    return SEVERITY_ORDER
+      .filter((s) => map.has(s))
+      .map((s) => ({ severity: s, label: SEVERITY_LABEL[s], items: map.get(s)! }));
+  }, [items]);
+
+  // Skip section headers if all items are in one group
+  if (groups.length <= 1) {
+    return (
+      <ul className="space-y-2" data-testid="inbox-list">
+        {items.map((item) => (
+          <li key={item.id}>
+            <ActivityRow
+              item={item}
+              suggestions={suggestionsByItem.get(item.id) ?? []}
+              onDismissSuggestion={onDismissSuggestion}
+            />
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <div className="space-y-4" data-testid="inbox-list">
+      {groups.map((g) => (
+        <section key={g.severity}>
+          <div className="text-foreground-56 mb-2 text-xs font-semibold uppercase tracking-wider" data-testid={`inbox-section-${g.severity}`}>
+            {g.label} <span className="text-foreground-40 tabular-nums">({g.items.length})</span>
+          </div>
+          <ul className="space-y-2">
+            {g.items.map((item) => (
+              <li key={item.id}>
+                <ActivityRow
+                  item={item}
+                  suggestions={suggestionsByItem.get(item.id) ?? []}
+                  onDismissSuggestion={onDismissSuggestion}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }
