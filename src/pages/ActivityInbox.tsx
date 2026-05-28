@@ -30,6 +30,11 @@ import { FOLLOWUP_RULES } from '@/lib/inbox-suggestions/rules/followup';
 import { PURCHASE_RULES } from '@/lib/inbox-suggestions/rules/purchase';
 import { FINDING_RULES } from '@/lib/inbox-suggestions/rules/finding';
 import { DOCUMENT_RULES } from '@/lib/inbox-suggestions/rules/document';
+import { STALE_FOLLOWUP_RULES } from '@/lib/inbox-suggestions/rules/stale-followup';
+import { RECURRING_MISSING_RULES } from '@/lib/inbox-suggestions/rules/recurring-missing';
+import { SUPPLIER_SILENCE_RULES } from '@/lib/inbox-suggestions/rules/supplier-silence';
+import { DRAFT_DOC_AGING_RULES } from '@/lib/inbox-suggestions/rules/draft-doc-aging';
+import { OVERDUE_FINDING_RULES } from '@/lib/inbox-suggestions/rules/overdue-finding';
 import type { Suggestion } from '@/lib/inbox-suggestions/types';
 
 const ALL_RULES = [
@@ -41,6 +46,11 @@ const ALL_RULES = [
   ...PURCHASE_RULES,
   ...FINDING_RULES,
   ...DOCUMENT_RULES,
+  ...STALE_FOLLOWUP_RULES,
+  ...RECURRING_MISSING_RULES,
+  ...SUPPLIER_SILENCE_RULES,
+  ...DRAFT_DOC_AGING_RULES,
+  ...OVERDUE_FINDING_RULES,
 ];
 
 const FILTER_LABEL: Record<FilterKey, string> = {
