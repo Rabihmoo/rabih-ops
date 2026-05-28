@@ -41,6 +41,7 @@ import { ReportsPage } from './pages/Reports';
 import { ReportTaskVelocityPage } from './pages/ReportTaskVelocity';
 import { ReportSupplierSpendPage } from './pages/ReportSupplierSpend';
 import { ReportInspectionPassRatePage } from './pages/ReportInspectionPassRate';
+import { ReportFollowUpCloseRatePage } from './pages/ReportFollowUpCloseRate';
 import { AdminCeoGuard } from './components/auth/AdminCeoGuard';
 import { Toaster } from './components/ui/toaster';
 
@@ -108,6 +109,7 @@ export default function App() {
             <Route path="/reports/task-velocity" element={<ReportTaskVelocityPage />} />
             <Route path="/reports/supplier-spend" element={<ReportSupplierSpendPage />} />
             <Route path="/reports/inspection-pass-rate" element={<ReportInspectionPassRatePage />} />
+            <Route path="/reports/follow-up-close-rate" element={<ReportFollowUpCloseRatePage />} />
           </Route>
           {DesignPreviewPage && (
             <Route
