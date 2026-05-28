@@ -156,21 +156,26 @@ relaxed by the operator (Rabih) in a written instruction.
 
 ## Phase index
 
-| #    | Phase                                                      | Status                     |
-|------|------------------------------------------------------------|----------------------------|
-| 0    | Finish Current Work                                        | shipped                    |
-| 0.5  | Gmail Today View                                           | G.1–G.4 shipped; G.5 open  |
-| 1    | Business Memory — Notes UI                                 | shipped                    |
-| 2  | Relationship Graph — `record_links` notes + Universal Panel  | shipped                    |
-| 3  | Find Anything Fast — global search + Cmd-K                   | next                       |
-| 4  | Full Visual Consistency — maintenance / audit                | continuous                 |
-| 5  | Supplier / Company Intelligence                              | queued                     |
-| 6  | Smart Suggestions v2                                         | queued                     |
-| 7  | Reminder / Notification Center                               | queued (recommended next)  |
-| 8  | Daily Command Center Upgrade                                 | queued                     |
-| 9  | Reports                                                      | queued                     |
-| 10 | Optional Future Power                                        | gated                      |
-|  —  | Calendar Inbox (Phase C) — foundation + page shell           | shipped (C1, C2)           |
+**Current shipped state: 2026-05-28. V1 complete.**
+
+| #    | Phase                                                      | Status              | PRs         |
+|------|------------------------------------------------------------|---------------------|-------------|
+| 0    | Finish Current Work                                        | shipped             | pre-#8      |
+| 0.5  | Gmail Today View                                           | shipped             | pre-#8, #28 |
+| 1    | Business Memory — Notes UI                                 | shipped             | pre-#8      |
+| 2    | Relationship Graph — `record_links` + Universal Panel      | shipped             | pre-#8      |
+| 3    | Find Anything Fast — global search + Cmd-K                 | shipped             | #13–#18     |
+| 4    | Full Visual Consistency — maintenance / audit              | shipped (continuous) | —          |
+| 5    | Supplier / Company Intelligence                            | shipped             | #19–#22     |
+| 6    | Smart Suggestions v2                                       | shipped             | #31–#32     |
+| 7    | Reminder / Notification Center                             | shipped             | #8–#12, #29–#30 |
+| 8    | Daily Command Center Upgrade                               | shipped             | #23–#27     |
+| 9    | Reports                                                    | shipped             | #33–#39     |
+| 10   | Optional Future Power                                      | gated (V2+)        | —           |
+| —    | Calendar Inbox (Phase C) — foundation + page shell         | shipped             | pre-#8      |
+| —    | Telegram bot (Phase C)                                     | shipped             | pre-#8      |
+| —    | Google Calendar (Phase D)                                  | shipped             | pre-#8      |
+| —    | Gmail integration (Phase F)                                | shipped             | pre-#8      |
 
 ---
 
@@ -249,7 +254,7 @@ harder to reason about.
 
 ## Phase 0.5 — Gmail Today View
 
-**Status: G.1 → G.4 shipped; G.5 open.** The dashboard side is live with
+**Status: G.1 → G.5 shipped (PR #28).** The dashboard side is live with
 three cards (Today, Important this week, Pending) plus row-level status pill
 + action menu, plus the Focused/All/Sent toggle, plus linked-to pills and
 "create follow-up from email row". HTML entity decoding and `email_states`
@@ -426,9 +431,8 @@ inbox clone.
   / Sent toggle), Important this week (7-day cap), Pending. Status pill +
   row action menu, linked-to-task/follow-up pills, create-follow-up-from-
   email, HTML entity decoding.
-- **G.5** — ⏳ open. Inbox `Today's emails` chip + section headers in
-  `ActivityInbox.tsx`. Playwright extension. Screenshots for the populated
-  inbox view.
+- **G.5** — ✅ shipped (PR #28). Inbox `Today's emails` chip + severity
+  section headers in `ActivityInbox.tsx`.
 
 ### Operator pre-flight (one-time, before G.2 deploy)
 - Confirm the operator's Gmail account is currently connected; if not,
@@ -1057,6 +1061,25 @@ Rabih before any plan is drafted.**
 - Audit-log UI for non-admins.
 - Visual-regression CI (screenshot-diffing job).
 - Gmail write scopes — compose, send, modify, label.
+
+---
+
+## V2 backlog
+
+Items parked during V1 execution. Each requires a separate green-light
+before any plan is drafted.
+
+**From Phase 10 (pre-existing):**
+- Calendar two-way sync (event changes flow back into RabihOS)
+- Gmail write scopes (compose, send, modify, label)
+- Native mobile app (PWA-first audit before React Native)
+- AI assistant (read-and-surface first, no write actions)
+
+**Parked during V1 execution:**
+- Company tags (label + color, admin-only manage) — schema delta designed in Phase 5 plan, not implemented
+- Inbox settings UI — `user_inbox_settings` thresholds editable only via RPC; no editing UI shipped
+- Pin section reordering — pinned sections bubble to top but don't reorder within pinned block
+- Auto-link purchase→company — CTA creates manual link; automatic `record_link` on purchase creation is V2
 
 ---
 
