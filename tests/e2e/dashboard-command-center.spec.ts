@@ -36,7 +36,7 @@ test.describe('Dashboard Command Center — admin', () => {
     await input.press('Enter');
 
     // Wait for success toast
-    await expect(page.getByText('Task created')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Task created', { exact: true })).toBeVisible({ timeout: 10_000 });
 
     // Input should be cleared after success
     await expect(input).toHaveValue('');
@@ -56,7 +56,7 @@ test.describe('Dashboard Command Center — admin', () => {
     await input.fill(text);
     await input.press('Enter');
 
-    await expect(page.getByText('Note created')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Note created', { exact: true })).toBeVisible({ timeout: 10_000 });
     await expect(input).toHaveValue('');
   });
 
@@ -74,7 +74,7 @@ test.describe('Dashboard Command Center — admin', () => {
     await input.fill(title);
     await input.press('Enter');
 
-    await expect(page.getByText('Follow-up created')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Follow-up created', { exact: true })).toBeVisible({ timeout: 10_000 });
     await expect(input).toHaveValue('');
   });
 
