@@ -39,6 +39,7 @@ import { NotificationsPage } from './pages/Notifications';
 import { AuthCallbackPage } from './pages/AuthCallback';
 import { ReportsPage } from './pages/Reports';
 import { ReportTaskVelocityPage } from './pages/ReportTaskVelocity';
+import { ReportSupplierSpendPage } from './pages/ReportSupplierSpend';
 import { AdminCeoGuard } from './components/auth/AdminCeoGuard';
 import { Toaster } from './components/ui/toaster';
 
@@ -104,6 +105,7 @@ export default function App() {
           <Route element={<AdminCeoGuard />}>
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/reports/task-velocity" element={<ReportTaskVelocityPage />} />
+            <Route path="/reports/supplier-spend" element={<ReportSupplierSpendPage />} />
           </Route>
           {DesignPreviewPage && (
             <Route
