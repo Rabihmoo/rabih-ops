@@ -38,6 +38,7 @@ import {
 } from '@/lib/purchase-requests';
 import { BRANCHES, type BranchCode } from '@/lib/branches';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { TodayRollupRow } from '@/components/dashboard/TodayRollupRow';
 import { DashboardCalendarToday } from '@/components/dashboard/DashboardCalendarToday';
 import { DashboardImportantEmails } from '@/components/dashboard/DashboardImportantEmails';
 import { DashboardPendingEmails } from '@/components/dashboard/DashboardPendingEmails';
@@ -123,6 +124,24 @@ function useFollowUpsDueToday() {
         limit: 50,
       });
       return rows.filter((r) => r.status !== 'done' && r.status !== 'cancelled');
+    },
+  });
+}
+
+function useDueSoon() {
+  const today = todayIso();
+  const dayAfterTomorrow = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
+  return useQuery({
+    queryKey: ['tasks', 'dashboard', 'due-soon', today, dayAfterTomorrow],
+    queryFn: async (): Promise<TaskRow[]> => {
+      const rows = await listTasks({
+        dueBefore: dayAfterTomorrow,
+        dueAfter: today,
+        limit: 50,
+      });
+      return rows.filter(
+        (t) => t.status !== 'finished' && t.status !== 'archived',
+      );
     },
   });
 }
@@ -415,6 +434,7 @@ export function DashboardPage() {
   const delayed = useBucketTasks('delayed', userId);
   const repeat = useBucketTasks('repeat', userId);
   const followUpsToday = useFollowUpsDueToday();
+  const dueSoon = useDueSoon();
   const criticalFindings = useDashboardCriticalFindings();
   const purchases = useDashboardPurchases();
   const reminders = useMyReminders({ unreadOnly: true, limit: 50 });
@@ -468,6 +488,21 @@ export function DashboardPage() {
       <PageHeader
         eyebrow={dateLabel}
         title={`${greeting}, ${displayName}.`}
+      />
+
+      <TodayRollupRow
+        overdueCount={overdue.data?.length ?? null}
+        overdueLoading={overdue.isLoading}
+        followUpsTodayCount={followUpsToday.data?.length ?? null}
+        followUpsTodayLoading={followUpsToday.isLoading}
+        dueSoonCount={dueSoon.data?.length ?? null}
+        dueSoonLoading={dueSoon.isLoading}
+        waitingCount={waiting.data?.length ?? null}
+        waitingLoading={waiting.isLoading}
+        onOverdueClick={goToTasksBucket('overdue')}
+        onFollowUpsClick={goToFollowUpsToday}
+        onDueSoonClick={goToTasksBucket('today')}
+        onWaitingClick={goToTasksBucket('waiting')}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
