@@ -38,6 +38,7 @@ import { NoteDetailPage } from './pages/NoteDetail';
 import { NotificationsPage } from './pages/Notifications';
 import { AuthCallbackPage } from './pages/AuthCallback';
 import { ReportsPage } from './pages/Reports';
+import { ReportTaskVelocityPage } from './pages/ReportTaskVelocity';
 import { AdminCeoGuard } from './components/auth/AdminCeoGuard';
 import { Toaster } from './components/ui/toaster';
 
@@ -102,6 +103,7 @@ export default function App() {
           <Route path="/settings" element={<SettingsPage />} />
           <Route element={<AdminCeoGuard />}>
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/reports/task-velocity" element={<ReportTaskVelocityPage />} />
           </Route>
           {DesignPreviewPage && (
             <Route
