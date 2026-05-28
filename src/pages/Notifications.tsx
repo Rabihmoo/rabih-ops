@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Bell, CheckCheck, Loader2 } from 'lucide-react';
+import { Bell, BellOff, CheckCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader, HeaderStat } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -9,7 +9,10 @@ import {
   useCancelMyPendingReminder,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
+  useMuteNotificationKind,
+  useNotificationMutes,
   useNotificationsList,
+  useUnmuteNotificationKind,
   useUnreadNotificationCount,
 } from '@/hooks/useNotifications';
 import {
@@ -43,6 +46,10 @@ export function NotificationsPage() {
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const cancelPending = useCancelMyPendingReminder();
+  const mutes = useNotificationMutes();
+  const muteKind = useMuteNotificationKind();
+  const unmuteKind = useUnmuteNotificationKind();
+  const mutedKinds = mutes.data ?? [];
 
   // Stabilize `rows` reference so the downstream useMemos don't recompute
   // every render. `list.data` already changes identity only on refetch.
@@ -115,6 +122,11 @@ export function NotificationsPage() {
         channel={channel}
         onChannelChange={setChannel}
         presentChannels={presentChannels}
+        mutedKinds={mutedKinds}
+        onToggleMute={(kind) => {
+          if (mutedKinds.includes(kind)) unmuteKind.mutate(kind);
+          else muteKind.mutate(kind);
+        }}
       />
 
       {list.isLoading && (
@@ -175,18 +187,30 @@ export function NotificationsPage() {
   );
 }
 
+const NOTIFICATION_KINDS = [
+  { key: 'start_reminder', label: 'Start reminders' },
+  { key: 'follow_up_reminder', label: 'Follow-up reminders' },
+  { key: 'deadline_reminder', label: 'Deadline reminders' },
+  { key: 'recurring_spawn', label: 'Recurring spawns' },
+  { key: 'followup_due', label: 'Follow-up due' },
+] as const;
+
 function FilterRow({
   unreadOnly,
   onUnreadOnlyChange,
   channel,
   onChannelChange,
   presentChannels,
+  mutedKinds,
+  onToggleMute,
 }: {
   unreadOnly: boolean;
   onUnreadOnlyChange: (v: boolean) => void;
   channel: NotificationChannel | null;
   onChannelChange: (v: NotificationChannel | null) => void;
   presentChannels: NotificationChannel[];
+  mutedKinds: string[];
+  onToggleMute: (kind: string) => void;
 }) {
   return (
     <div className="border-border bg-card flex flex-wrap items-center gap-3 rounded-lg border p-3">
@@ -221,6 +245,23 @@ function FilterRow({
           </div>
         </>
       )}
+      <span className="bg-border h-4 w-px" aria-hidden />
+      <div className="flex items-center gap-1.5">
+        <BellOff className="text-foreground-40 h-3.5 w-3.5 shrink-0" aria-hidden />
+        {NOTIFICATION_KINDS.map((k) => {
+          const isMuted = mutedKinds.includes(k.key);
+          return (
+            <Chip
+              key={k.key}
+              selected={isMuted}
+              onClick={() => onToggleMute(k.key)}
+              data-testid={`mute-chip-${k.key}`}
+            >
+              {k.label}{isMuted ? ' (muted)' : ''}
+            </Chip>
+          );
+        })}
+      </div>
     </div>
   );
 }
