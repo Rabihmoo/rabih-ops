@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -12,6 +12,8 @@ import {
   PackageCheck,
   PhoneCall,
   Repeat2,
+  Pin,
+  PinOff,
   ShieldAlert,
   ShieldCheck,
   TimerReset,
@@ -40,6 +42,12 @@ import { BRANCHES, type BranchCode } from '@/lib/branches';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { TodayRollupRow } from '@/components/dashboard/TodayRollupRow';
 import { QuickCaptureRow } from '@/components/dashboard/QuickCaptureRow';
+import {
+  setDashboardPins,
+  togglePin,
+  validatePins,
+  type DashboardSectionKey,
+} from '@/lib/dashboard-pins';
 import { DashboardCalendarToday } from '@/components/dashboard/DashboardCalendarToday';
 import { DashboardImportantEmails } from '@/components/dashboard/DashboardImportantEmails';
 import { DashboardPendingEmails } from '@/components/dashboard/DashboardPendingEmails';
@@ -56,6 +64,7 @@ import type {
   FollowUpRow,
   TaskPriority,
   TaskRow,
+  UserRow,
 } from '@/types/database';
 
 // =========================================================
@@ -356,6 +365,9 @@ function CompactList<T>({
   viewAllTo,
   onViewAll,
   renderItem,
+  pinKey,
+  pinned,
+  onTogglePin,
 }: {
   label: string;
   count: number;
@@ -366,6 +378,9 @@ function CompactList<T>({
   viewAllTo: string;
   onViewAll: () => void;
   renderItem: (item: T) => React.ReactNode;
+  pinKey?: DashboardSectionKey;
+  pinned?: boolean;
+  onTogglePin?: (key: DashboardSectionKey) => void;
 }) {
   const t = TONE_CLASS[count > 0 ? tone : 'muted'];
   const previewCount = 5;
@@ -379,6 +394,22 @@ function CompactList<T>({
               {label}
             </span>
             <span className={cn('text-xs tabular-nums', t.label)}>{count}</span>
+            {pinKey && onTogglePin && (
+              <button
+                type="button"
+                onClick={() => onTogglePin(pinKey)}
+                aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`}
+                data-testid={`pin-${pinKey}`}
+                className={cn(
+                  'inline-flex h-5 w-5 items-center justify-center rounded transition-colors',
+                  pinned
+                    ? 'text-primary-ink hover:text-primary'
+                    : 'text-foreground-24 hover:text-foreground-56',
+                )}
+              >
+                {pinned ? <Pin className="h-3 w-3" /> : <PinOff className="h-3 w-3" />}
+              </button>
+            )}
           </div>
           {count > 0 && (
             <Link
@@ -440,6 +471,20 @@ export function DashboardPage() {
   const purchases = useDashboardPurchases();
   const reminders = useMyReminders({ unreadOnly: true, limit: 50 });
   const dismissReminder = useDismissReminder();
+
+  // Pin/unpin
+  const pins = validatePins(profile?.dashboard_pins);
+  const setPinsMut = useMutation({
+    mutationFn: setDashboardPins,
+    onSuccess: (updatedUser: UserRow) => {
+      useAuthStore.getState().setProfile(updatedUser);
+    },
+  });
+  const handleTogglePin = (key: DashboardSectionKey) => {
+    setPinsMut.mutate(togglePin(pins, key));
+  };
+  const isPinned = (key: DashboardSectionKey) => pins.includes(key);
+
   const pendingDeliveries = purchases.data?.pending_deliveries ?? [];
   const unpaidPurchases = purchases.data?.unpaid ?? [];
   const purchaseReminders = purchases.data?.reminders_today ?? [];
@@ -725,6 +770,9 @@ export function DashboardPage() {
               viewAllTo="/tasks"
               onViewAll={goToTasksBucket('overdue')}
               renderItem={(t) => <DashboardTaskRow key={t.id} task={t} now={now} />}
+              pinKey="overdue"
+              pinned={isPinned('overdue')}
+              onTogglePin={handleTogglePin}
             />
             <CompactList
               label="Due today"
@@ -736,6 +784,9 @@ export function DashboardPage() {
               viewAllTo="/tasks"
               onViewAll={goToTasksBucket('today')}
               renderItem={(t) => <DashboardTaskRow key={t.id} task={t} now={now} />}
+              pinKey="today"
+              pinned={isPinned('today')}
+              onTogglePin={handleTogglePin}
             />
             <CompactList
               label="Follow-ups today"
@@ -749,6 +800,9 @@ export function DashboardPage() {
               renderItem={(f) => (
                 <DashboardFollowUpRow key={f.id} followUp={f} now={now} />
               )}
+              pinKey="follow_ups_today"
+              pinned={isPinned('follow_ups_today')}
+              onTogglePin={handleTogglePin}
             />
           </div>
 
