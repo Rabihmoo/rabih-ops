@@ -4,12 +4,14 @@
 // only exports React components and is eligible for Vite fast refresh.
 
 import type { ActivityItem } from '@/lib/activity-inbox';
+import { PROJECT_TZ, localMidnightUnix } from '@/lib/timezone';
 
 export type FilterKey =
   | 'all'
   | 'critical'
   | 'overdue'
   | 'today'
+  | 'today_emails'
   | 'gmail'
   | 'calendar'
   | 'task'
@@ -29,6 +31,7 @@ export const FILTER_CHIPS: FilterChip[] = [
   { key: 'critical',           label: 'Critical' },
   { key: 'overdue',            label: 'Overdue' },
   { key: 'today',              label: 'Today' },
+  { key: 'today_emails',       label: "Today's emails" },
   { key: 'gmail',              label: 'Email' },
   { key: 'calendar',           label: 'Calendar' },
   { key: 'task',               label: 'Tasks' },
@@ -41,6 +44,16 @@ export const FILTER_CHIPS: FilterChip[] = [
 
 const VALID_KEYS = new Set<string>(FILTER_CHIPS.map((c) => c.key));
 
+/** Check if a timestamp falls on "today" in the project timezone. */
+function isToday(iso: string): boolean {
+  const now = new Date();
+  const todayMs = localMidnightUnix(now, PROJECT_TZ) * 1000;
+  const dayMs = 24 * 60 * 60 * 1000;
+  const tomorrowMs = localMidnightUnix(new Date(now.getTime() + dayMs), PROJECT_TZ) * 1000;
+  const ts = new Date(iso).getTime();
+  return ts >= todayMs && ts < tomorrowMs;
+}
+
 export function matchesFilter(item: ActivityItem, key: FilterKey): boolean {
   switch (key) {
     case 'all':
@@ -51,6 +64,8 @@ export function matchesFilter(item: ActivityItem, key: FilterKey): boolean {
       return item.severity === 'overdue';
     case 'today':
       return item.severity === 'due_today';
+    case 'today_emails':
+      return item.source === 'gmail' && isToday(item.occurred_at);
     default:
       return item.source === key;
   }
