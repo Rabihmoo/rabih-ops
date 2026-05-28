@@ -87,3 +87,20 @@ export async function cancelMyPendingReminder(queueId: number): Promise<unknown>
     p_queue_id: queueId,
   });
 }
+
+// =====================================================================
+// Mute RPCs
+// =====================================================================
+
+export async function listNotificationMutes(): Promise<string[]> {
+  const data = await callRpc<string[] | null>('rpc_list_notification_mutes', {});
+  return data ?? [];
+}
+
+export async function muteNotificationKind(kind: string): Promise<void> {
+  await callRpc<void>('rpc_mute_notification_kind', { p_kind: kind });
+}
+
+export async function unmuteNotificationKind(kind: string): Promise<void> {
+  await callRpc<void>('rpc_unmute_notification_kind', { p_kind: kind });
+}
