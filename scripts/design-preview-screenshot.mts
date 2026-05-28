@@ -391,6 +391,36 @@ async function captureIntelligenceCard(
   await ctx.close();
 }
 
+// -------------------------------------------------------------------
+// 10. Dashboard command center captures — rollup + quick capture.
+// Desktop + mobile × dark + light = 4 captures.
+// -------------------------------------------------------------------
+{
+  const ctx = await makeContext({ width: 1440, height: 900 });
+  const page = await ctx.newPage();
+  for (const theme of ['dark', 'light'] as const) {
+    await gotoRoute(page, '/', 'h1');
+    await applyTheme(page, theme);
+    const out = path.join(OUT_DIR, `dashboard-command-center-${theme}.png`);
+    await page.screenshot({ path: out, fullPage: false });
+    console.log(`✓ ${out}`);
+  }
+  await ctx.close();
+}
+
+{
+  const ctx = await makeContext({ width: 390, height: 844 });
+  const page = await ctx.newPage();
+  for (const theme of ['dark', 'light'] as const) {
+    await gotoRoute(page, '/', 'h1');
+    await applyTheme(page, theme);
+    const out = path.join(OUT_DIR, `dashboard-command-center-mobile-${theme}.png`);
+    await page.screenshot({ path: out, fullPage: false });
+    console.log(`✓ ${out}`);
+  }
+  await ctx.close();
+}
+
 await captureIntelligenceCard('company-intel', '/companies', 'company-intelligence-card', { width: 1440, height: 900 });
 await captureIntelligenceCard('company-intel', '/companies', 'company-intelligence-card', { width: 390, height: 844 });
 await captureIntelligenceCard('contact-intel', '/contacts', 'contact-intelligence-card', { width: 1440, height: 900 });
