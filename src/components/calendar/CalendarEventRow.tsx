@@ -65,13 +65,10 @@ export function CalendarEventRow({
       </StatusChip>,
     );
   }
-  if (event.all_day) {
-    subParts.push(
-      <StatusChip key="allday" tone="muted" size="xs">
-        All day
-      </StatusChip>,
-    );
-  }
+  // All-day indication lives in the time column (and the mobile sub-line
+  // copy underneath the title) — formatTimeRange returns "All day" for
+  // those rows. No badge needed; a second "All day" chip here would
+  // duplicate the information.
 
   return (
     <li
